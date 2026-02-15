@@ -117,17 +117,22 @@ body {
 /* Banner Login */
 .banner-container {
     width: 100%;
-    margin-bottom: -20px; /* Sobrepõe levemente o card */
+    margin-bottom: 1.5rem;
+    margin-top: -1rem;
     position: relative;
-    z-index: 10;
     display: flex;
     justify-content: center;
+    align-items: center;
+    overflow: hidden;
 }
 
 .banner-img {
-    max-width: 220px; /* Logo tamanho controlado */
+    max-width: 100%;
+    width: 100%;
     height: auto;
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    max-height: 120px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
 
 /* Banner no Menu */
@@ -161,6 +166,7 @@ body {
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    overflow-y: visible;
     box-sizing: border-box;
 }
 
@@ -170,8 +176,9 @@ body {
 }
 
 .login-card {
-    padding-top: 3rem;
+    padding-top: 2rem;
     border-top: none; /* Login tem tratamento especial */
+    overflow: hidden;
 }
 
 /* Tipografia */
@@ -218,6 +225,7 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
     transition: all 0.2s ease;
     box-shadow: var(--sombra-input);
     box-sizing: border-box;
+    margin: 0;
 }
 
 .textarea-campo {
@@ -237,6 +245,10 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
 /* Input com botão de mostrar senha */
 .grupo-input > div[style*="position: relative"] {
     position: relative;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .btn-toggle-senha {
@@ -551,17 +563,21 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
     }
     
     .conteiner { 
-        padding: 15px; 
+        padding: 12px; 
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+        margin-left: 0;
+        margin-right: 0;
     }
     
     .card { 
-        padding: 1.5rem; 
+        padding: 1.25rem; 
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+        margin-left: 0;
+        margin-right: 0;
     }
     
     .menu-card {
@@ -632,7 +648,33 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
-        padding: 0 1rem;
+        padding: 0 0.875rem;
+        margin: 0;
+    }
+    
+    .grupo-input {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 0;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    .grupo-input > div[style*="position: relative"] {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
+    }
+    
+    form {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
     }
     
     .textarea-campo {
@@ -644,6 +686,27 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
         max-width: 150px;
         width: 100%;
         height: auto;
+    }
+    
+    .banner-img {
+        max-height: 100px;
+    }
+    
+    .banner-container {
+        margin-bottom: 1rem;
+        margin-top: -0.5rem;
+    }
+    
+    .login-card {
+        padding: 1.25rem;
+        padding-top: 1.5rem;
+    }
+    
+    .banner-container {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
     
     /* Garantir que títulos com botões não sejam cortados */
@@ -695,7 +758,13 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
     
     /* Prevenir overflow em elementos com position absolute */
     .btn-toggle-senha {
-        right: 10px;
+        right: 8px;
+        padding: 5px;
+    }
+    
+    /* Garantir que inputs dentro de divs com position relative não ultrapassem */
+    .grupo-input > div[style*="position: relative"] input {
+        padding-right: 45px;
     }
     
     /* Garantir que o header não cause overflow */
@@ -772,6 +841,20 @@ input[type="file"] {
 
 /* Garantir que elementos com position relative não causem overflow */
 .grupo-input > div {
+    max-width: 100%;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+/* Garantir que todos os elementos dentro do card fiquem contidos */
+.card * {
+    max-width: 100%;
+}
+
+.card input,
+.card select,
+.card textarea,
+.card button {
     max-width: 100%;
     box-sizing: border-box;
 }
