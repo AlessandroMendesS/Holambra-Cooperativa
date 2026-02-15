@@ -14,7 +14,10 @@ const telas = {
     menu: document.getElementById('tela-menu'),
     dashboard: document.getElementById('tela-dashboard'),
     historico: document.getElementById('tela-historico'),
-    admin: document.getElementById('tela-admin')
+    admin: document.getElementById('tela-admin'),
+    bancoHoras: document.getElementById('tela-banco-horas'),
+    horaExtra: document.getElementById('tela-hora-extra'),
+    ferias: document.getElementById('tela-ferias')
 };
 
 const cabecalho = document.getElementById('cabecalho-principal');
@@ -100,9 +103,23 @@ function navegarPara(idTela) {
             document.getElementById('menu-admin').classList.add('oculto');
         }
     }
-    if (idTela === 'dashboard') carregarUsuarios();
+    if (idTela === 'dashboard') {
+        carregarUsuarios();
+    }
     if (idTela === 'historico') carregarHistorico();
     if (idTela === 'admin') carregarDadosAdmin();
+    if (idTela === 'bancoHoras') {
+        carregarUsuarios();
+        carregarBancoHoras();
+    }
+    if (idTela === 'horaExtra') {
+        carregarUsuarios();
+        carregarHoraExtra();
+    }
+    if (idTela === 'ferias') {
+        carregarUsuarios();
+        carregarFerias();
+    }
 }
 
 // Listeners Menu
@@ -164,7 +181,22 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
 });
 document.getElementById('btn-menu-historico').addEventListener('click', () => navegarPara('historico'));
 document.getElementById('btn-menu-admin').addEventListener('click', () => navegarPara('admin'));
+document.getElementById('btn-menu-banco-horas').addEventListener('click', () => {
+    navegarPara('bancoHoras');
+    carregarBancoHoras();
+});
+document.getElementById('btn-menu-hora-extra').addEventListener('click', () => {
+    navegarPara('horaExtra');
+    carregarHoraExtra();
+});
+document.getElementById('btn-menu-ferias').addEventListener('click', () => {
+    navegarPara('ferias');
+    carregarFerias();
+});
 document.getElementById('btn-voltar-menu').addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-bh').addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-he').addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-ferias').addEventListener('click', () => navegarPara('menu'));
 
 // --- Autenticação ---
 
@@ -221,16 +253,47 @@ async function verificarUsuario() {
     }
 }
 
-// Login (EMAIL)
+// Login (NOME para usuários, EMAIL para admin)
 document.getElementById('formulario-login').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
+    const inputLogin = document.getElementById('login-email').value.trim();
     const senha = document.getElementById('login-senha').value;
 
-    // Verificação de Admin
+    // Verificação de Admin (usa email)
     const ADMIN_EMAIL = 'leticiamendes123z@gmail.com';
     const ADMIN_SENHA = 'Hab16313@';
-    const isAdmin = email === ADMIN_EMAIL && senha === ADMIN_SENHA;
+    const isAdmin = inputLogin === ADMIN_EMAIL && senha === ADMIN_SENHA;
+
+    let email = inputLogin;
+
+    // Se não for admin, buscar email pelo nome
+    if (!isAdmin) {
+        const { data: perfisData, error: perfilError } = await supabase
+            .from('perfis')
+            .select('email, nome_completo')
+            .ilike('nome_completo', `%${inputLogin}%`);
+
+        if (perfilError || !perfisData || perfisData.length === 0) {
+            mostrarErro('Falha no Login', 'Nome de usuário não encontrado. Verifique se digitou corretamente.');
+            return;
+        }
+
+        // Se houver múltiplos resultados, tentar encontrar correspondência exata
+        let perfilData = perfisData.find(p => p.nome_completo.toLowerCase() === inputLogin.toLowerCase());
+        if (!perfilData && perfisData.length === 1) {
+            perfilData = perfisData[0];
+        } else if (!perfilData && perfisData.length > 1) {
+            mostrarErro('Falha no Login', 'Múltiplos usuários encontrados. Digite o nome completo.');
+            return;
+        }
+
+        if (!perfilData || !perfilData.email) {
+            mostrarErro('Falha no Login', 'Email não encontrado para este usuário.');
+            return;
+        }
+
+        email = perfilData.email;
+    }
 
     let { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
 
@@ -672,10 +735,21 @@ async function carregarDadosAdmin() {
                                 <i data-lucide="briefcase" style="width:14px; height:14px; vertical-align:middle;"></i> 
                                 <strong>Departamento:</strong> ${user.tag}
                             </p>` : ''}
-                            <p style="font-size:0.85rem; color:#666;">
+                            <p style="font-size:0.85rem; color:#666; margin-bottom:1rem;">
                                 <i data-lucide="calendar" style="width:14px; height:14px; vertical-align:middle;"></i> 
                                 <strong>Cadastrado em:</strong> ${dataCadastro}
                             </p>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-top: 1rem;">
+                                <button class="btn btn-secundario" style="font-size: 0.85rem; padding: 0.5rem; height: auto;" onclick="editarBancoHoras('${user.id}')">
+                                    <i data-lucide="clock" style="width:14px; height:14px;"></i> Banco de Horas
+                                </button>
+                                <button class="btn btn-secundario" style="font-size: 0.85rem; padding: 0.5rem; height: auto;" onclick="editarHoraExtra('${user.id}')">
+                                    <i data-lucide="timer" style="width:14px; height:14px;"></i> Hora Extra
+                                </button>
+                                <button class="btn btn-secundario" style="font-size: 0.85rem; padding: 0.5rem; height: auto;" onclick="editarFerias('${user.id}')">
+                                    <i data-lucide="calendar" style="width:14px; height:14px;"></i> Férias
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -764,6 +838,9 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
         const nomeManutentor = log.manutentor?.nome_completo || 'N/A';
         const nomeUsuario = log.usuario?.nome_completo || 'N/A';
 
+        // Verificar se o usuário pode editar (é dono do apontamento ou é admin)
+        const podeEditar = isAdmin || (log.id_usuario === estado.usuario?.id);
+
         let htmlFotos = '';
         if (log.fotos && log.fotos.length > 0) {
             htmlFotos = `<div class="imgs-galeria">`;
@@ -790,14 +867,17 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
                         <span class="badge ${log.concluido ? 'badge-ok' : 'badge-wait'}">
                             ${log.concluido ? 'CONCLUÍDO' : 'PENDENTE'}
                         </span>
-                        <button class="btn-editar-apt" data-id="${log.id}" onclick="event.stopPropagation();" style="background:none; border:none; cursor:pointer; padding:5px; color:var(--cor-primaria);" title="Editar">
-                            <i data-lucide="edit-2" style="width:18px; height:18px;"></i>
-                        </button>
                     </div>
                 </div>
             </button>
             <div class="accordion-content" id="${accordionId}">
                 <div style="font-size: 0.95rem; color: #444; padding-top: 1rem;">
+                    ${podeEditar ? `<div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+                        <button class="btn-editar-apt" data-id="${log.id}" onclick="event.stopPropagation();" style="background:none; border:none; cursor:pointer; padding:5px; color:var(--cor-primaria); display:flex; align-items:center; gap:5px;" title="Editar">
+                            <i data-lucide="edit-2" style="width:18px; height:18px;"></i>
+                            <span style="font-size:0.85rem;">Editar</span>
+                        </button>
+                    </div>` : ''}
                     <p style="margin-bottom:4px;"><strong>${log.descricao}</strong></p>
                     <p style="font-size:0.85rem; color:#666;">
                         <i data-lucide="map-pin" style="width:14px; height:14px; vertical-align:middle;"></i> 
@@ -823,13 +903,25 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
         `;
         conteiner.appendChild(div);
 
-        // Adicionar listener para edição
+        // Adicionar listener para edição (usuários podem editar seus próprios apontamentos, admins podem editar todos)
         const btnEditar = div.querySelector('.btn-editar-apt');
         if (btnEditar) {
+            btnEditar.style.display = 'none'; // Inicialmente oculto
             btnEditar.addEventListener('click', (e) => {
                 e.stopPropagation();
                 abrirEdicaoApontamento(log);
             });
+
+            // Mostrar/esconder botão quando acordeão abrir/fechar
+            const content = div.querySelector('.accordion-content');
+            const observer = new MutationObserver(() => {
+                if (content.classList.contains('active')) {
+                    btnEditar.style.display = 'flex';
+                } else {
+                    btnEditar.style.display = 'none';
+                }
+            });
+            observer.observe(content, { attributes: true, attributeFilter: ['class'] });
         }
     });
     lucide.createIcons();
@@ -910,6 +1002,586 @@ document.getElementById('btn-exportar-excel').addEventListener('click', async ()
         mostrarErro('Erro', 'Não foi possível gerar o relatório.');
     }
 });
+
+// --- Funções para Banco de Horas, Hora Extra e Férias ---
+
+async function carregarBancoHoras() {
+    const lista = document.getElementById('lista-banco-horas');
+    lista.innerHTML = '<div class="centro">Carregando...</div>';
+
+    // Garantir que usuários estejam carregados
+    if (estado.usuarios.length === 0) {
+        await carregarUsuarios();
+    }
+
+    // Buscar todos os usuários
+    const { data: usuarios, error: errorUsuarios } = await supabase
+        .from('perfis')
+        .select('id, nome_completo')
+        .order('nome_completo');
+
+    if (errorUsuarios) {
+        lista.innerHTML = '<p class="centro">Erro ao carregar usuários.</p>';
+        return;
+    }
+
+    // Buscar horas salvas no banco
+    const { data: horasSalvas, error: errorHoras } = await supabase
+        .from('horas_usuarios')
+        .select('*');
+
+    const horasPorUsuario = {};
+
+    // Inicializar com dados do banco ou zeros
+    usuarios.forEach(user => {
+        const horasUsuario = horasSalvas?.find(h => h.id_usuario === user.id);
+        horasPorUsuario[user.id] = {
+            id: user.id,
+            nome: user.nome_completo || 'Desconhecido',
+            horasPositivas: parseFloat(horasUsuario?.horas_positivas || 0),
+            horasNegativas: parseFloat(horasUsuario?.horas_negativas || 0),
+            horasExtras: parseFloat(horasUsuario?.horas_extras || 0),
+            horasExtrasFimSemana: parseFloat(horasUsuario?.horas_extras_fim_semana || 0),
+            total: (parseFloat(horasUsuario?.horas_positivas || 0) - parseFloat(horasUsuario?.horas_negativas || 0))
+        };
+    });
+
+    // Converter para array e ordenar (usuário logado primeiro)
+    let usuariosArray = Object.values(horasPorUsuario);
+    const usuarioLogadoId = estado.usuario?.id;
+
+    usuariosArray.sort((a, b) => {
+        if (a.id === usuarioLogadoId) return -1;
+        if (b.id === usuarioLogadoId) return 1;
+        return a.nome.localeCompare(b.nome);
+    });
+
+    // Renderizar
+    lista.innerHTML = '';
+    if (usuariosArray.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhum dado encontrado.</p></div>';
+        return;
+    }
+
+    usuariosArray.forEach(usuario => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const isUsuarioLogado = usuario.id === usuarioLogadoId;
+        card.style.border = isUsuarioLogado ? '2px solid var(--cor-primaria)' : '';
+        card.style.backgroundColor = isUsuarioLogado ? '#f0f7ff' : '';
+        const isAdmin = estado.perfil?.funcao === 'admin';
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 style="margin: 0; color: var(--cor-primaria); font-size: 1.1rem; flex: 1; min-width: 200px;">${usuario.nome}${isUsuarioLogado ? ' <span style="font-size:0.8rem; color:#666;">(Você)</span>' : ''}</h3>
+                ${isAdmin ? `<button class="btn btn-secundario" style="width: auto; min-width: 120px; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;" onclick="editarBancoHoras('${usuario.id}')">
+                    <i data-lucide="edit-2" style="width:16px; height:16px;"></i> Editar
+                </button>` : ''}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="padding: 1rem; background: #d1fae5; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: #065f46; margin-bottom: 5px;">Horas Positivas</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #065f46;">+${usuario.horasPositivas.toFixed(2)}h</div>
+                </div>
+                <div style="padding: 1rem; background: #fee2e2; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: #991b1b; margin-bottom: 5px;">Horas Negativas</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #991b1b;">-${usuario.horasNegativas.toFixed(2)}h</div>
+                </div>
+            </div>
+            <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 5px;">Total Banco de Horas</div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #1e40af;">${usuario.total >= 0 ? '+' : ''}${usuario.total.toFixed(2)}h</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="padding: 0.75rem; background: #fef3c7; border-radius: 8px;">
+                    <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 3px;">Hora Extra Total</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #92400e;">${usuario.horasExtras.toFixed(2)}h</div>
+                </div>
+                <div style="padding: 0.75rem; background: #fce7f3; border-radius: 8px;">
+                    <div style="font-size: 0.8rem; color: #9f1239; margin-bottom: 3px;">Hora Extra Fim de Semana</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #9f1239;">${usuario.horasExtrasFimSemana.toFixed(2)}h</div>
+                </div>
+            </div>
+        `;
+        lista.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+async function carregarHoraExtra() {
+    const lista = document.getElementById('lista-hora-extra');
+    lista.innerHTML = '<div class="centro">Carregando...</div>';
+
+    // Garantir que usuários estejam carregados
+    if (estado.usuarios.length === 0) {
+        await carregarUsuarios();
+    }
+
+    // Buscar todos os usuários
+    const { data: usuarios, error: errorUsuarios } = await supabase
+        .from('perfis')
+        .select('id, nome_completo')
+        .order('nome_completo');
+
+    if (errorUsuarios) {
+        lista.innerHTML = '<p class="centro">Erro ao carregar usuários.</p>';
+        return;
+    }
+
+    // Buscar horas salvas no banco
+    const { data: horasSalvas, error: errorHoras } = await supabase
+        .from('horas_usuarios')
+        .select('*');
+
+    const horasExtrasPorUsuario = {};
+
+    // Inicializar com dados do banco ou zeros
+    usuarios.forEach(user => {
+        const horasUsuario = horasSalvas?.find(h => h.id_usuario === user.id);
+        const horasExtras = parseFloat(horasUsuario?.horas_extras || 0);
+        const horasExtrasFS = parseFloat(horasUsuario?.horas_extras_fim_semana || 0);
+
+        // Só mostrar usuários com hora extra
+        if (horasExtras > 0 || horasExtrasFS > 0) {
+            horasExtrasPorUsuario[user.id] = {
+                id: user.id,
+                nome: user.nome_completo || 'Desconhecido',
+                horasExtras: horasExtras,
+                horasExtrasFimSemana: horasExtrasFS,
+                registros: []
+            };
+        }
+    });
+
+    // Filtrar apenas usuários com hora extra
+    let usuariosArray = Object.values(horasExtrasPorUsuario).filter(u => u.horasExtras > 0);
+    const usuarioLogadoId = estado.usuario?.id;
+
+    usuariosArray.sort((a, b) => {
+        if (a.id === usuarioLogadoId) return -1;
+        if (b.id === usuarioLogadoId) return 1;
+        return b.horasExtras - a.horasExtras;
+    });
+
+    // Renderizar
+    lista.innerHTML = '';
+    if (usuariosArray.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhuma hora extra registrada.</p></div>';
+        return;
+    }
+
+    usuariosArray.forEach(usuario => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const isUsuarioLogado = usuario.id === usuarioLogadoId;
+        card.style.border = isUsuarioLogado ? '2px solid var(--cor-primaria)' : '';
+        card.style.backgroundColor = isUsuarioLogado ? '#f0f7ff' : '';
+
+        const registrosHTML = usuario.registros.slice(0, 5).map(reg => {
+            const dataFormatada = new Date(reg.data).toLocaleDateString('pt-BR');
+            return `
+                <div style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span><strong>${dataFormatada}</strong> ${reg.isFimSemana ? '<span style="color: #dc2626;">(Fim de Semana)</span>' : ''}</span>
+                        <span style="font-weight: 600; color: var(--cor-primaria);">+${reg.horas.toFixed(2)}h</span>
+                    </div>
+                    <div style="color: #666; font-size: 0.8rem; margin-top: 3px;">${reg.descricao}</div>
+                </div>
+            `;
+        }).join('');
+
+        const isAdmin = estado.perfil?.funcao === 'admin';
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 style="margin: 0; color: var(--cor-primaria); font-size: 1.1rem; flex: 1; min-width: 200px;">${usuario.nome}${isUsuarioLogado ? ' <span style="font-size:0.8rem; color:#666;">(Você)</span>' : ''}</h3>
+                ${isAdmin ? `<button class="btn btn-secundario" style="width: auto; min-width: 120px; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;" onclick="editarHoraExtra('${usuario.id}')">
+                    <i data-lucide="edit-2" style="width:16px; height:16px;"></i> Editar
+                </button>` : ''}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="padding: 1rem; background: #fef3c7; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: #92400e; margin-bottom: 5px;">Total Hora Extra</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #92400e;">${usuario.horasExtras.toFixed(2)}h</div>
+                </div>
+                <div style="padding: 1rem; background: #fce7f3; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: #9f1239; margin-bottom: 5px;">Fim de Semana</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #9f1239;">${usuario.horasExtrasFimSemana.toFixed(2)}h</div>
+                </div>
+            </div>
+            ${usuario.registros.length > 0 ? `
+                <div style="margin-top: 1rem;">
+                    <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem; color: #555;">Últimos Registros:</div>
+                    ${registrosHTML}
+                    ${usuario.registros.length > 5 ? `<div style="text-align: center; color: #666; font-size: 0.85rem; margin-top: 0.5rem;">+${usuario.registros.length - 5} registro(s)</div>` : ''}
+                </div>
+            ` : ''}
+        `;
+        lista.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+async function carregarFerias() {
+    const lista = document.getElementById('lista-ferias');
+    lista.innerHTML = '<div class="centro">Carregando...</div>';
+
+    // Garantir que usuários estejam carregados
+    if (estado.usuarios.length === 0) {
+        await carregarUsuarios();
+    }
+
+    // Buscar todos os usuários
+    const { data: usuarios, error: errorUsuarios } = await supabase
+        .from('perfis')
+        .select('id, nome_completo')
+        .order('nome_completo');
+
+    if (errorUsuarios) {
+        lista.innerHTML = '<p class="centro">Erro ao carregar dados.</p>';
+        return;
+    }
+
+    // Buscar férias salvas no banco
+    const { data: horasSalvas, error: errorHoras } = await supabase
+        .from('horas_usuarios')
+        .select('id_usuario, ferias');
+
+    // Ordenar (usuário logado primeiro)
+    let usuariosArray = [...usuarios];
+    const usuarioLogadoId = estado.usuario?.id;
+
+    usuariosArray.sort((a, b) => {
+        if (a.id === usuarioLogadoId) return -1;
+        if (b.id === usuarioLogadoId) return 1;
+        return a.nome_completo.localeCompare(b.nome_completo);
+    });
+
+    // Renderizar
+    lista.innerHTML = '';
+    if (usuariosArray.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhum usuário encontrado.</p></div>';
+        return;
+    }
+
+    usuariosArray.forEach(usuario => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const isUsuarioLogado = usuario.id === usuarioLogadoId;
+        card.style.border = isUsuarioLogado ? '2px solid var(--cor-primaria)' : '';
+        card.style.backgroundColor = isUsuarioLogado ? '#f0f7ff' : '';
+
+        const isAdmin = estado.perfil?.funcao === 'admin';
+
+        // Buscar férias do usuário
+        const horasUsuario = horasSalvas?.find(h => h.id_usuario === usuario.id);
+        let feriasArray = [];
+        try {
+            if (horasUsuario?.ferias) {
+                feriasArray = JSON.parse(horasUsuario.ferias);
+            }
+        } catch (e) {
+            feriasArray = [];
+        }
+
+        const feriasHTML = feriasArray.length > 0
+            ? feriasArray.map(f => `<div style="padding: 0.5rem; background: #f0f7ff; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                <strong>${f.inicio || 'N/A'}</strong> até <strong>${f.fim || 'N/A'}</strong>
+            </div>`).join('')
+            : '<p style="color: #999; font-size: 0.9rem;">Nenhum período de férias cadastrado.</p>';
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 style="margin: 0; color: var(--cor-primaria); font-size: 1.1rem; flex: 1; min-width: 200px;">${usuario.nome_completo}${isUsuarioLogado ? ' <span style="font-size:0.8rem; color:#666;">(Você)</span>' : ''}</h3>
+                ${isAdmin ? `<button class="btn btn-secundario" style="width: auto; min-width: 120px; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;" onclick="editarFerias('${usuario.id}')">
+                    <i data-lucide="edit-2" style="width:16px; height:16px;"></i> Editar
+                </button>` : ''}
+            </div>
+            <div style="padding: 1rem; background: #f9fafb; border-radius: 8px;">
+                ${feriasHTML}
+            </div>
+        `;
+        lista.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+// Funções auxiliares para buscar e salvar horas
+async function buscarHorasUsuario(userId) {
+    const { data, error } = await supabase
+        .from('horas_usuarios')
+        .select('*')
+        .eq('id_usuario', userId)
+        .single();
+
+    if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao buscar horas:', error);
+        return null;
+    }
+
+    return data || {
+        id_usuario: userId,
+        horas_positivas: 0,
+        horas_negativas: 0,
+        horas_extras: 0,
+        horas_extras_fim_semana: 0,
+        ferias: null
+    };
+}
+
+async function salvarHorasUsuario(userId, dados) {
+    const { data, error } = await supabase
+        .from('horas_usuarios')
+        .upsert({
+            id_usuario: userId,
+            horas_positivas: parseFloat(dados.horas_positivas) || 0,
+            horas_negativas: parseFloat(dados.horas_negativas) || 0,
+            horas_extras: parseFloat(dados.horas_extras) || 0,
+            horas_extras_fim_semana: parseFloat(dados.horas_extras_fim_semana) || 0,
+            ferias: dados.ferias || null,
+            atualizado_em: new Date().toISOString()
+        }, {
+            onConflict: 'id_usuario'
+        });
+
+    if (error) {
+        console.error('Erro ao salvar horas:', error);
+        throw error;
+    }
+
+    return data;
+}
+
+// Funções de edição para admins (apenas nas novas telas)
+window.editarBancoHoras = async function (userId) {
+    if (estado.perfil?.funcao !== 'admin') {
+        mostrarErro('Acesso Restrito', 'Apenas administradores podem editar essas informações.');
+        return;
+    }
+
+    // Buscar dados atuais
+    const horasAtuais = await buscarHorasUsuario(userId);
+
+    // Buscar nome do usuário
+    let usuario = estado.usuarios.find(u => u.id === userId);
+    if (!usuario) {
+        const { data: perfilData } = await supabase
+            .from('perfis')
+            .select('nome_completo')
+            .eq('id', userId)
+            .single();
+        usuario = { nome_completo: perfilData?.nome_completo || 'Usuário' };
+    }
+
+    const { value: formValues } = await Swal.fire({
+        title: `Editar Banco de Horas - ${usuario.nome_completo}`,
+        html: `
+            <div style="text-align: left; margin: 1rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #065f46;">Horas Positivas:</label>
+                <input id="swal-horas-positivas" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_positivas || 0}" placeholder="0.00" style="margin-bottom: 1rem;">
+                
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #991b1b;">Horas Negativas:</label>
+                <input id="swal-horas-negativas" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_negativas || 0}" placeholder="0.00" style="margin-bottom: 1rem;">
+                
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #92400e;">Hora Extra Total:</label>
+                <input id="swal-horas-extras" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_extras || 0}" placeholder="0.00" style="margin-bottom: 1rem;">
+                
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #9f1239;">Hora Extra Fim de Semana:</label>
+                <input id="swal-horas-extras-fs" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_extras_fim_semana || 0}" placeholder="0.00">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: () => {
+            return {
+                horas_positivas: document.getElementById('swal-horas-positivas').value,
+                horas_negativas: document.getElementById('swal-horas-negativas').value,
+                horas_extras: document.getElementById('swal-horas-extras').value,
+                horas_extras_fim_semana: document.getElementById('swal-horas-extras-fs').value,
+                ferias: horasAtuais.ferias
+            };
+        }
+    });
+
+    if (formValues) {
+        try {
+            Swal.fire({
+                title: 'Salvando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            await salvarHorasUsuario(userId, formValues);
+
+            Swal.close();
+            mostrarSucesso('Banco de Horas atualizado!');
+            carregarBancoHoras();
+        } catch (error) {
+            Swal.close();
+            mostrarErro('Erro', 'Não foi possível salvar as alterações.');
+        }
+    }
+};
+
+window.editarHoraExtra = async function (userId) {
+    if (estado.perfil?.funcao !== 'admin') {
+        mostrarErro('Acesso Restrito', 'Apenas administradores podem editar essas informações.');
+        return;
+    }
+
+    // Buscar dados atuais
+    const horasAtuais = await buscarHorasUsuario(userId);
+
+    // Buscar nome do usuário
+    let usuario = estado.usuarios.find(u => u.id === userId);
+    if (!usuario) {
+        const { data: perfilData } = await supabase
+            .from('perfis')
+            .select('nome_completo')
+            .eq('id', userId)
+            .single();
+        usuario = { nome_completo: perfilData?.nome_completo || 'Usuário' };
+    }
+
+    const { value: formValues } = await Swal.fire({
+        title: `Editar Hora Extra - ${usuario.nome_completo}`,
+        html: `
+            <div style="text-align: left; margin: 1rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #92400e;">Total Hora Extra:</label>
+                <input id="swal-he-total" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_extras || 0}" placeholder="0.00" style="margin-bottom: 1rem;">
+                
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #9f1239;">Hora Extra Fim de Semana:</label>
+                <input id="swal-he-fs" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_extras_fim_semana || 0}" placeholder="0.00">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: () => {
+            return {
+                horas_positivas: horasAtuais.horas_positivas || 0,
+                horas_negativas: horasAtuais.horas_negativas || 0,
+                horas_extras: document.getElementById('swal-he-total').value,
+                horas_extras_fim_semana: document.getElementById('swal-he-fs').value,
+                ferias: horasAtuais.ferias
+            };
+        }
+    });
+
+    if (formValues) {
+        try {
+            Swal.fire({
+                title: 'Salvando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            await salvarHorasUsuario(userId, formValues);
+
+            Swal.close();
+            mostrarSucesso('Hora Extra atualizada!');
+            carregarHoraExtra();
+        } catch (error) {
+            Swal.close();
+            mostrarErro('Erro', 'Não foi possível salvar as alterações.');
+        }
+    }
+};
+
+window.editarFerias = async function (userId) {
+    if (estado.perfil?.funcao !== 'admin') {
+        mostrarErro('Acesso Restrito', 'Apenas administradores podem editar essas informações.');
+        return;
+    }
+
+    // Buscar dados atuais
+    const horasAtuais = await buscarHorasUsuario(userId);
+
+    // Buscar nome do usuário
+    let usuario = estado.usuarios.find(u => u.id === userId);
+    if (!usuario) {
+        const { data: perfilData } = await supabase
+            .from('perfis')
+            .select('nome_completo')
+            .eq('id', userId)
+            .single();
+        usuario = { nome_completo: perfilData?.nome_completo || 'Usuário' };
+    }
+
+    // Parsear férias (JSON array)
+    let feriasArray = [];
+    try {
+        if (horasAtuais.ferias) {
+            feriasArray = JSON.parse(horasAtuais.ferias);
+        }
+    } catch (e) {
+        feriasArray = [];
+    }
+
+    const feriasTexto = feriasArray.map((f, i) => {
+        const inicio = f.inicio || '';
+        const fim = f.fim || '';
+        return `${i + 1}. ${inicio} até ${fim}`;
+    }).join('\n') || '';
+
+    const { value: formValues } = await Swal.fire({
+        title: `Editar Férias - ${usuario.nome_completo}`,
+        html: `
+            <div style="text-align: left; margin: 1rem 0;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Períodos de Férias:</label>
+                <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">Formato: uma linha por período (ex: 01/01/2024 até 31/01/2024)</p>
+                <textarea id="swal-ferias" class="swal2-textarea" rows="5" placeholder="01/01/2024 até 31/01/2024&#10;01/07/2024 até 31/07/2024">${feriasTexto}</textarea>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: () => {
+            const texto = document.getElementById('swal-ferias').value;
+            const linhas = texto.split('\n').filter(l => l.trim());
+            const ferias = linhas.map(linha => {
+                const partes = linha.split(' até ');
+                return {
+                    inicio: partes[0]?.trim() || '',
+                    fim: partes[1]?.trim() || ''
+                };
+            });
+
+            return {
+                horas_positivas: horasAtuais.horas_positivas || 0,
+                horas_negativas: horasAtuais.horas_negativas || 0,
+                horas_extras: horasAtuais.horas_extras || 0,
+                horas_extras_fim_semana: horasAtuais.horas_extras_fim_semana || 0,
+                ferias: JSON.stringify(ferias)
+            };
+        }
+    });
+
+    if (formValues) {
+        try {
+            Swal.fire({
+                title: 'Salvando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            await salvarHorasUsuario(userId, formValues);
+
+            Swal.close();
+            mostrarSucesso('Férias atualizadas!');
+            carregarFerias();
+        } catch (error) {
+            Swal.close();
+            mostrarErro('Erro', 'Não foi possível salvar as alterações.');
+        }
+    }
+};
 
 // Inicializar
 verificarUsuario();
