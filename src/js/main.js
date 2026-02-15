@@ -1,0 +1,915 @@
+
+import { supabase } from './supabase.js';
+
+// --- Estado e Refs ---
+const estado = {
+    usuario: null,
+    perfil: null,
+    usuarios: []
+};
+
+const telas = {
+    login: document.getElementById('tela-login'),
+    cadastro: document.getElementById('tela-cadastro'),
+    menu: document.getElementById('tela-menu'),
+    dashboard: document.getElementById('tela-dashboard'),
+    historico: document.getElementById('tela-historico'),
+    admin: document.getElementById('tela-admin')
+};
+
+const cabecalho = document.getElementById('cabecalho-principal');
+const menuMobile = document.getElementById('menu-mobile');
+
+// --- Teste de Conexão ---
+async function testarConexao() {
+    const statusDiv = document.getElementById('status-sistema');
+    if (!statusDiv) return;
+
+    try {
+        const { data, error } = await supabase.from('perfis').select('count', { count: 'exact', head: true });
+
+        if (error && error.code !== 'PGRST116') {
+            console.log('Erro conexao:', error);
+            if (error.message.includes('fetch')) throw error;
+        }
+
+        statusDiv.innerHTML = '<span style="color: green;">● Sistema Online</span>';
+        console.log('Supabase Conectado!');
+    } catch (err) {
+        console.error(err);
+        statusDiv.innerHTML = '<span style="color: red;">● Erro de Conexão</span>';
+    }
+}
+testarConexao();
+
+// --- Utils: SweetAlert2 ---
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+});
+
+function mostrarErro(titulo, mensagem) {
+    Swal.fire({
+        icon: 'error',
+        title: titulo,
+        text: mensagem,
+        confirmButtonColor: '#004175'
+    });
+}
+
+function mostrarSucesso(titulo) {
+    Swal.fire({
+        icon: 'success',
+        title: titulo,
+        showConfirmButton: false,
+        timer: 1500
+    });
+}
+
+// --- Navegação ---
+function navegarPara(idTela) {
+    window.scrollTo(0, 0);
+    Object.values(telas).forEach(el => el.classList.add('oculto'));
+
+    if (telas[idTela]) {
+        telas[idTela].classList.remove('oculto');
+        lucide.createIcons();
+    }
+
+    if (idTela === 'login' || idTela === 'cadastro') {
+        cabecalho.classList.add('oculto');
+    } else {
+        cabecalho.classList.remove('oculto');
+    }
+
+    menuMobile.classList.add('oculto');
+
+    if (idTela === 'menu') {
+        // Atualizar visibilidade dos menus baseado no perfil
+        const navAdmin = document.getElementById('nav-admin');
+        if (estado.perfil && estado.perfil.funcao === 'admin') {
+            navAdmin.classList.remove('oculto');
+            document.getElementById('menu-usuario').classList.add('oculto');
+            document.getElementById('menu-admin').classList.remove('oculto');
+        } else {
+            navAdmin.classList.add('oculto');
+            document.getElementById('menu-usuario').classList.remove('oculto');
+            document.getElementById('menu-admin').classList.add('oculto');
+        }
+    }
+    if (idTela === 'dashboard') carregarUsuarios();
+    if (idTela === 'historico') carregarHistorico();
+    if (idTela === 'admin') carregarDadosAdmin();
+}
+
+// Listeners Menu
+document.getElementById('alternar-menu').addEventListener('click', () => menuMobile.classList.remove('oculto'));
+document.getElementById('fechar-menu').addEventListener('click', () => menuMobile.classList.add('oculto'));
+
+document.getElementById('nav-inicio').addEventListener('click', () => navegarPara('menu'));
+document.getElementById('nav-historico').addEventListener('click', () => navegarPara('historico'));
+document.getElementById('nav-admin').addEventListener('click', () => navegarPara('admin'));
+document.getElementById('nav-sair').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    estado.usuario = null;
+    estado.perfil = null;
+    // Ocultar menu admin ao sair
+    document.getElementById('nav-admin').classList.add('oculto');
+    document.getElementById('menu-usuario').classList.remove('oculto');
+    document.getElementById('menu-admin').classList.add('oculto');
+    navegarPara('login');
+});
+
+document.getElementById('btn-ir-cadastro').addEventListener('click', () => navegarPara('cadastro'));
+document.getElementById('btn-voltar-login').addEventListener('click', () => navegarPara('login'));
+
+// Toggle mostrar/ocultar senha
+document.getElementById('toggle-senha').addEventListener('click', () => {
+    const inputSenha = document.getElementById('login-senha');
+    const iconSenha = document.getElementById('icon-senha');
+
+    if (inputSenha.type === 'password') {
+        inputSenha.type = 'text';
+        iconSenha.setAttribute('data-lucide', 'eye-off');
+    } else {
+        inputSenha.type = 'password';
+        iconSenha.setAttribute('data-lucide', 'eye');
+    }
+    lucide.createIcons();
+});
+document.getElementById('btn-novo-apt').addEventListener('click', () => {
+    apontamentoEditando = null;
+    document.getElementById('formulario-apontamento').reset();
+    document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
+    const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
+    if (btnSubmit) {
+        btnSubmit.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
+        btnSubmit.dataset.modo = '';
+    }
+    navegarPara('dashboard');
+});
+document.getElementById('btn-menu-apontamentos').addEventListener('click', () => {
+    apontamentoEditando = null;
+    document.getElementById('formulario-apontamento').reset();
+    document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
+    const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
+    if (btnSubmit) {
+        btnSubmit.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
+        btnSubmit.dataset.modo = '';
+    }
+    navegarPara('dashboard');
+});
+document.getElementById('btn-menu-historico').addEventListener('click', () => navegarPara('historico'));
+document.getElementById('btn-menu-admin').addEventListener('click', () => navegarPara('admin'));
+document.getElementById('btn-voltar-menu').addEventListener('click', () => navegarPara('menu'));
+
+// --- Autenticação ---
+
+async function verificarUsuario() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+        estado.usuario = session.user;
+
+        // Tentar buscar perfil com retentativa (pois o trigger pode demorar ms)
+        let tentativas = 0;
+        let perfilEncontrado = null;
+
+        while (tentativas < 5 && !perfilEncontrado) {
+            const { data, error } = await supabase
+                .from('perfis')
+                .select('*')
+                .eq('id', estado.usuario.id)
+                .single();
+
+            if (data) {
+                perfilEncontrado = data;
+            } else {
+                tentativas++;
+                // Esperar 500ms antes de tentar de novo
+                await new Promise(r => setTimeout(r, 500));
+            }
+        }
+
+        if (perfilEncontrado) {
+            estado.perfil = perfilEncontrado;
+            const navAdmin = document.getElementById('nav-admin');
+            if (estado.perfil.funcao === 'admin') {
+                navAdmin.classList.remove('oculto');
+                // Mostrar apenas menu admin na tela inicial
+                document.getElementById('menu-usuario').classList.add('oculto');
+                document.getElementById('menu-admin').classList.remove('oculto');
+            } else {
+                // Ocultar menu admin para usuários normais
+                navAdmin.classList.add('oculto');
+                // Mostrar menu normal para usuários
+                document.getElementById('menu-usuario').classList.remove('oculto');
+                document.getElementById('menu-admin').classList.add('oculto');
+            }
+            navegarPara('menu');
+        } else {
+            console.error('Perfil não encontrado após retentativas.');
+            // Se falhar mesmo assim, talvez redirecionar para uma tela de "Complete seu cadastro" ou erro
+            // Por enquanto, forçamos o dashboard mas avisamos
+            navegarPara('dashboard');
+            mostrarErro('Perfil Em Processamento', 'Seus dados ainda estão sendo processados. Recarregue a página em instantes.');
+        }
+    } else {
+        navegarPara('login');
+    }
+}
+
+// Login (EMAIL)
+document.getElementById('formulario-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim();
+    const senha = document.getElementById('login-senha').value;
+
+    // Verificação de Admin
+    const ADMIN_EMAIL = 'leticiamendes123z@gmail.com';
+    const ADMIN_SENHA = 'Hab16313@';
+    const isAdmin = email === ADMIN_EMAIL && senha === ADMIN_SENHA;
+
+    let { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+
+    // Se login falhar e for admin, tentar criar a conta
+    if (error && isAdmin) {
+        // Verificar se o erro é porque o usuário não existe
+        if (error.message.includes('Invalid login') || error.message.includes('Email not confirmed') || error.message.includes('User not found')) {
+            // Tentar criar conta admin se não existir
+            Swal.fire({
+                title: 'Criando conta de administrador...',
+                text: 'Aguarde...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: ADMIN_EMAIL,
+                password: ADMIN_SENHA,
+                options: {
+                    data: {
+                        nome_completo: 'Administrador',
+                        funcao: 'admin'
+                    },
+                    emailRedirectTo: window.location.origin
+                }
+            });
+
+            Swal.close();
+
+            if (signUpError) {
+                // Se der erro ao criar, pode ser que o email já exista mas precisa confirmar
+                // Tentar login novamente após um delay
+                await new Promise(r => setTimeout(r, 1000));
+                const retry = await supabase.auth.signInWithPassword({ email, password: senha });
+                if (retry.error) {
+                    mostrarErro('Falha no Login', 'Verifique se o email foi confirmado ou tente novamente em alguns instantes.');
+                    return;
+                }
+                data = retry.data;
+            } else if (signUpData.user) {
+                // Se criou com sucesso, pode precisar confirmar email ou já fazer login
+                if (signUpData.session) {
+                    data = signUpData;
+                } else {
+                    // Aguardar um pouco e tentar login
+                    await new Promise(r => setTimeout(r, 1500));
+                    const loginRetry = await supabase.auth.signInWithPassword({ email, password: senha });
+                    if (loginRetry.error) {
+                        mostrarErro('Conta Criada', 'Verifique seu email para confirmar a conta ou tente fazer login novamente.');
+                        return;
+                    }
+                    data = loginRetry.data;
+                }
+            }
+        } else {
+            mostrarErro('Falha no Login', error.message);
+            return;
+        }
+    } else if (error) {
+        mostrarErro('Falha no Login', 'Email ou senha incorretos.');
+        return;
+    }
+
+    if (data && data.user) {
+        // Se for admin, garantir que o perfil tenha função admin
+        if (isAdmin) {
+            // Aguardar um pouco para o trigger criar o perfil (se necessário)
+            await new Promise(r => setTimeout(r, 1500));
+
+            // Tentar buscar o perfil várias vezes
+            let perfilData = null;
+            for (let i = 0; i < 5; i++) {
+                const { data: perfil, error: perfilError } = await supabase
+                    .from('perfis')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (perfil && !perfilError) {
+                    perfilData = perfil;
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            if (perfilData) {
+                // Atualizar para admin se não for
+                if (perfilData.funcao !== 'admin') {
+                    const { error: updateError } = await supabase
+                        .from('perfis')
+                        .update({ funcao: 'admin', email: email, nome_completo: 'Administrador' })
+                        .eq('id', data.user.id);
+
+                    if (updateError) {
+                        console.error('Erro ao atualizar perfil admin:', updateError);
+                    }
+                }
+            } else {
+                // Criar perfil admin se não existir
+                const { error: insertError } = await supabase
+                    .from('perfis')
+                    .insert({
+                        id: data.user.id,
+                        email: email,
+                        nome_completo: 'Administrador',
+                        funcao: 'admin'
+                    });
+
+                if (insertError) {
+                    console.error('Erro ao criar perfil admin:', insertError);
+                    // Tentar atualizar se já existir
+                    await supabase
+                        .from('perfis')
+                        .update({ funcao: 'admin', email: email, nome_completo: 'Administrador' })
+                        .eq('id', data.user.id);
+                }
+            }
+        }
+
+        Toast.fire({ icon: 'success', title: 'Login realizado com sucesso' });
+        await verificarUsuario();
+    }
+});
+
+// Cadastro (EMAIL)
+document.getElementById('formulario-cadastro').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('cad-email').value.trim();
+    const senha = document.getElementById('cad-senha').value;
+
+    const metaData = {
+        nome_completo: document.getElementById('cad-nome').value,
+        cpf: document.getElementById('cad-cpf').value,
+        data_nascimento: document.getElementById('cad-nasc').value,
+        tag: document.getElementById('cad-tag').value
+    };
+
+    Swal.fire({
+        title: 'Criando conta...',
+        text: 'Aguarde...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: senha,
+        options: {
+            data: metaData
+        }
+    });
+
+    Swal.close();
+
+    if (error) {
+        let msg = error.message;
+        if (msg.includes('already registered')) msg = 'Este email já está cadastrado.';
+        mostrarErro('Erro no Cadastro', msg);
+        return;
+    }
+
+    if (data.user) {
+        if (data.session) {
+            mostrarSucesso('Conta criada com sucesso!');
+            await verificarUsuario();
+        } else {
+            Swal.fire({
+                icon: 'info',
+                title: 'Conta Criada',
+                text: 'Você já pode fazer login!'
+            }).then(() => navegarPara('login'));
+        }
+    }
+});
+
+// --- Carregar Usuários (Manutentor Dropdown) ---
+async function carregarUsuarios() {
+    const select = document.getElementById('apt-manutentor');
+    if (!select) return;
+
+    const { data, error } = await supabase
+        .from('perfis')
+        .select('id, nome_completo')
+        .order('nome_completo');
+
+    if (data) {
+        estado.usuarios = data;
+        select.innerHTML = '<option value="">Selecione o Manutentor...</option>';
+        data.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.nome_completo;
+            select.appendChild(option);
+        });
+    } else {
+        select.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+}
+
+// --- Edição de Apontamentos ---
+
+let apontamentoEditando = null;
+
+async function abrirEdicaoApontamento(apt) {
+    apontamentoEditando = apt;
+    navegarPara('dashboard');
+
+    // Preencher formulário
+    document.getElementById('apt-ordem').value = apt.numero_ordem;
+    document.getElementById('apt-desc').value = apt.descricao;
+    document.getElementById('apt-unidade').value = apt.unidade;
+    document.getElementById('apt-centro').value = apt.centro_trabalho;
+    document.getElementById('apt-data').value = apt.data_servico;
+    document.getElementById('apt-inicio').value = apt.hora_inicio;
+    document.getElementById('apt-fim').value = apt.hora_fim;
+    document.getElementById('apt-check').checked = apt.concluido;
+    document.getElementById('apt-obs').value = apt.observacoes || '';
+
+    // Selecionar manutentor
+    await carregarUsuarios();
+    document.getElementById('apt-manutentor').value = apt.id_manutentor;
+
+    // Mudar título e botão
+    document.querySelector('#tela-dashboard h2').textContent = 'Editar Apontamento';
+    const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
+    btnSubmit.innerHTML = '<i data-lucide="save"></i> ATUALIZAR APONTAMENTO';
+    btnSubmit.dataset.modo = 'editar';
+
+    // Scroll para o topo
+    window.scrollTo(0, 0);
+    lucide.createIcons();
+}
+
+// Modificar o submit do formulário para suportar edição
+const formAptOriginal = document.getElementById('formulario-apontamento');
+const handlerOriginal = formAptOriginal.onsubmit;
+formAptOriginal.onsubmit = null;
+
+document.getElementById('formulario-apontamento').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!estado.usuario) return;
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const isEdicao = btn.dataset.modo === 'editar' && apontamentoEditando;
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = isEdicao ? 'Atualizando...' : 'Processando...';
+
+    try {
+        const ordem = document.getElementById('apt-ordem').value;
+        const desc = document.getElementById('apt-desc').value;
+        const unidade = document.getElementById('apt-unidade').value;
+        const idManutentor = document.getElementById('apt-manutentor').value;
+        const centro = document.getElementById('apt-centro').value;
+        const dataServico = document.getElementById('apt-data').value;
+        const inicio = document.getElementById('apt-inicio').value;
+        const fim = document.getElementById('apt-fim').value;
+        const concluido = document.getElementById('apt-check').checked;
+        const obs = document.getElementById('apt-obs').value;
+
+        if (!idManutentor) {
+            throw new Error('Selecione um manutentor.');
+        }
+
+        let urlsFotos = apontamentoEditando?.fotos || [];
+
+        // Upload de novas fotos apenas se houver
+        const inputArquivos = document.getElementById('apt-arquivos');
+        const arquivos = Array.from(inputArquivos.files);
+        if (arquivos.length > 0) {
+            for (let i = 0; i < arquivos.length; i++) {
+                btn.innerHTML = `Enviando ${i + 1}/${arquivos.length}...`;
+                const arquivo = arquivos[i];
+                const nomeLimpo = arquivo.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                const caminho = `${estado.usuario.id}/${Date.now()}_${nomeLimpo}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('fotos_apontamentos')
+                    .upload(caminho, arquivo);
+
+                if (uploadError) throw new Error('Falha no upload: ' + uploadError.message);
+
+                const { data: urlData } = supabase.storage
+                    .from('fotos_apontamentos')
+                    .getPublicUrl(caminho);
+
+                if (urlData) urlsFotos.push(urlData.publicUrl);
+            }
+        }
+
+        btn.innerHTML = isEdicao ? 'Salvando alterações...' : 'Salvando dados...';
+
+        if (isEdicao) {
+            // Atualizar
+            const { error: updateError } = await supabase
+                .from('apontamentos')
+                .update({
+                    id_manutentor: idManutentor,
+                    numero_ordem: ordem,
+                    descricao: desc,
+                    unidade: unidade,
+                    centro_trabalho: centro,
+                    data_servico: dataServico,
+                    hora_inicio: inicio,
+                    hora_fim: fim,
+                    concluido: concluido,
+                    observacoes: obs,
+                    fotos: urlsFotos
+                })
+                .eq('id', apontamentoEditando.id);
+
+            if (updateError) throw new Error(updateError.message);
+            mostrarSucesso('Apontamento Atualizado!');
+        } else {
+            // Inserir novo
+            const { error: insertError } = await supabase.from('apontamentos').insert([{
+                id_usuario: estado.usuario.id,
+                id_manutentor: idManutentor,
+                numero_ordem: ordem,
+                descricao: desc,
+                unidade: unidade,
+                centro_trabalho: centro,
+                data_servico: dataServico,
+                hora_inicio: inicio,
+                hora_fim: fim,
+                concluido: concluido,
+                observacoes: obs,
+                fotos: urlsFotos
+            }]);
+
+            if (insertError) throw new Error(insertError.message);
+            mostrarSucesso('Apontamento Salvo!');
+        }
+
+        e.target.reset();
+        apontamentoEditando = null;
+        document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
+        btn.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
+        btn.dataset.modo = '';
+        navegarPara('menu');
+
+    } catch (erro) {
+        mostrarErro('Ops!', erro.message);
+    } finally {
+        btn.disabled = false;
+        lucide.createIcons();
+    }
+});
+
+// --- Listagens ---
+
+let buscaHistorico = '';
+
+async function carregarHistorico() {
+    const lista = document.getElementById('lista-historico');
+    lista.innerHTML = '<div class="centro">Carregando...</div>';
+
+    let query = supabase
+        .from('apontamentos')
+        .select(`
+            *,
+            manutentor:id_manutentor(nome_completo)
+        `)
+        .eq('id_usuario', estado.usuario.id)
+        .order('criado_em', { ascending: false });
+
+    // Aplicar busca se houver
+    if (buscaHistorico) {
+        query = query.ilike('numero_ordem', `%${buscaHistorico}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        lista.innerHTML = '<p class="centro erro">Erro ao carregar dados.</p>';
+        return;
+    }
+
+    renderizarLogs(data, lista);
+}
+
+// Busca no histórico
+document.getElementById('busca-historico').addEventListener('input', (e) => {
+    buscaHistorico = e.target.value.trim();
+    carregarHistorico();
+});
+
+let filtrosAdmin = {
+    unidade: '',
+    centro: '',
+    dataInicio: '',
+    dataFim: ''
+};
+
+async function carregarDadosAdmin() {
+    const lista = document.getElementById('lista-admin');
+    const listaUsuarios = document.getElementById('lista-usuarios-admin');
+
+    lista.innerHTML = '<div class="centro">Carregando...</div>';
+    listaUsuarios.innerHTML = '<div class="centro">Carregando...</div>';
+
+    // Carregar usuários
+    const { data: usuariosData, error: usuariosError } = await supabase
+        .from('perfis')
+        .select('id, nome_completo, email, tag, funcao, criado_em')
+        .order('nome_completo');
+
+    if (usuariosData) {
+        listaUsuarios.innerHTML = '';
+        if (usuariosData.length === 0) {
+            listaUsuarios.innerHTML = '<p style="color: #666;">Nenhum usuário cadastrado.</p>';
+        } else {
+            usuariosData.forEach((user, index) => {
+                const div = document.createElement('div');
+                div.className = 'item-lista accordion-item';
+                div.style.marginBottom = '0.75rem';
+                const accordionId = `user-accordion-${user.id}-${index}`;
+                const dataCadastro = user.criado_em ? new Date(user.criado_em).toLocaleDateString('pt-BR') : 'N/A';
+                div.innerHTML = `
+                    <button class="accordion-header" onclick="toggleAccordion('${accordionId}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                            <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                                <i data-lucide="chevron-down" class="accordion-icon" id="icon-${accordionId}" style="width:20px; height:20px; transition:transform 0.3s;"></i>
+                                <span style="font-weight:600;">${user.nome_completo || 'Sem nome'}</span>
+                                <span class="badge ${user.funcao === 'admin' ? 'badge-ok' : 'badge-wait'}" style="font-size:0.75rem; padding:2px 8px;">
+                                    ${user.funcao === 'admin' ? 'ADMIN' : 'USUÁRIO'}
+                                </span>
+                            </div>
+                        </div>
+                    </button>
+                    <div class="accordion-content" id="${accordionId}">
+                        <div style="padding-top: 1rem;">
+                            <p style="font-size:0.85rem; color:#666; margin-bottom:4px;">
+                                <i data-lucide="mail" style="width:14px; height:14px; vertical-align:middle;"></i> 
+                                <strong>Email:</strong> ${user.email || 'N/A'}
+                            </p>
+                            ${user.tag ? `<p style="font-size:0.85rem; color:#666; margin-bottom:4px;">
+                                <i data-lucide="briefcase" style="width:14px; height:14px; vertical-align:middle;"></i> 
+                                <strong>Departamento:</strong> ${user.tag}
+                            </p>` : ''}
+                            <p style="font-size:0.85rem; color:#666;">
+                                <i data-lucide="calendar" style="width:14px; height:14px; vertical-align:middle;"></i> 
+                                <strong>Cadastrado em:</strong> ${dataCadastro}
+                            </p>
+                        </div>
+                    </div>
+                `;
+                listaUsuarios.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+    }
+
+    // Carregar apontamentos com filtros
+    let query = supabase
+        .from('apontamentos')
+        .select(`
+            *,
+            manutentor:id_manutentor(nome_completo),
+            usuario:id_usuario(nome_completo)
+        `)
+        .order('criado_em', { ascending: false });
+
+    if (filtrosAdmin.unidade) {
+        query = query.eq('unidade', filtrosAdmin.unidade);
+    }
+    if (filtrosAdmin.centro) {
+        query = query.eq('centro_trabalho', filtrosAdmin.centro);
+    }
+    if (filtrosAdmin.dataInicio) {
+        query = query.gte('data_servico', filtrosAdmin.dataInicio);
+    }
+    if (filtrosAdmin.dataFim) {
+        query = query.lte('data_servico', filtrosAdmin.dataFim);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        lista.innerHTML = '<p class="centro">Acesso restrito ou erro de conexão.</p>';
+        return;
+    }
+
+    renderizarLogs(data, lista, true);
+}
+
+// Event listeners para filtros admin
+document.getElementById('btn-aplicar-filtros').addEventListener('click', () => {
+    filtrosAdmin = {
+        unidade: document.getElementById('filtro-unidade').value,
+        centro: document.getElementById('filtro-centro').value,
+        dataInicio: document.getElementById('filtro-data-inicio').value,
+        dataFim: document.getElementById('filtro-data-fim').value
+    };
+    carregarDadosAdmin();
+});
+
+document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
+    filtrosAdmin = { unidade: '', centro: '', dataInicio: '', dataFim: '' };
+    document.getElementById('filtro-unidade').value = '';
+    document.getElementById('filtro-centro').value = '';
+    document.getElementById('filtro-data-inicio').value = '';
+    document.getElementById('filtro-data-fim').value = '';
+    carregarDadosAdmin();
+});
+
+function renderizarLogs(logs, conteiner, isAdmin = false) {
+    conteiner.innerHTML = '';
+
+    if (!logs || logs.length === 0) {
+        conteiner.innerHTML = `
+            <div class="card centro" style="padding: 3rem 1rem;">
+                <i data-lucide="clipboard-x" style="width: 48px; height: 48px; color: #ccc; margin-bottom: 10px;"></i>
+                <p style="color: #666;">Nenhum apontamento encontrado.</p>
+            </div>
+        `;
+        lucide.createIcons();
+        return;
+    }
+
+    logs.forEach((log, index) => {
+        const dataFormatada = new Date(log.data_servico).toLocaleDateString('pt-BR');
+        const dataHoraCriado = log.criado_em ? new Date(log.criado_em).toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : 'N/A';
+        const nomeManutentor = log.manutentor?.nome_completo || 'N/A';
+        const nomeUsuario = log.usuario?.nome_completo || 'N/A';
+
+        let htmlFotos = '';
+        if (log.fotos && log.fotos.length > 0) {
+            htmlFotos = `<div class="imgs-galeria">`;
+            log.fotos.forEach(url => {
+                htmlFotos += `<a href="${url}" target="_blank"><img src="${url}" class="thumb-img"></a>`;
+            });
+            htmlFotos += `</div>`;
+        }
+
+        const div = document.createElement('div');
+        div.className = `item-lista accordion-item ${log.concluido ? 'concluido' : 'pendente'}`;
+        const accordionId = `accordion-${log.id}-${index}`;
+        div.innerHTML = `
+            <button class="accordion-header" onclick="toggleAccordion('${accordionId}')">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                    <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                        <i data-lucide="chevron-down" class="accordion-icon" id="icon-${accordionId}" style="width:20px; height:20px; transition:transform 0.3s;"></i>
+                        <span style="font-weight:800; color:var(--cor-primaria);"># ${log.numero_ordem}</span>
+                        <span style="font-size:0.9rem; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+                            ${log.descricao.length > 40 ? log.descricao.substring(0, 40) + '...' : log.descricao}
+                        </span>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
+                        <span class="badge ${log.concluido ? 'badge-ok' : 'badge-wait'}">
+                            ${log.concluido ? 'CONCLUÍDO' : 'PENDENTE'}
+                        </span>
+                        <button class="btn-editar-apt" data-id="${log.id}" onclick="event.stopPropagation();" style="background:none; border:none; cursor:pointer; padding:5px; color:var(--cor-primaria);" title="Editar">
+                            <i data-lucide="edit-2" style="width:18px; height:18px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </button>
+            <div class="accordion-content" id="${accordionId}">
+                <div style="font-size: 0.95rem; color: #444; padding-top: 1rem;">
+                    <p style="margin-bottom:4px;"><strong>${log.descricao}</strong></p>
+                    <p style="font-size:0.85rem; color:#666;">
+                        <i data-lucide="map-pin" style="width:14px; height:14px; vertical-align:middle;"></i> 
+                        ${log.unidade} • ${log.centro_trabalho}
+                    </p>
+                    <p style="font-size:0.85rem; color:#666; margin-top:4px;">
+                        <i data-lucide="calendar" style="width:14px; height:14px; vertical-align:middle;"></i> 
+                        ${dataFormatada} • ${log.hora_inicio} às ${log.hora_fim}
+                    </p>
+                    ${isAdmin ? `<p style="font-size:0.85rem; color:#666; margin-top:4px;">
+                        <i data-lucide="clock" style="width:14px; height:14px; vertical-align:middle;"></i> 
+                        Apontado em: ${dataHoraCriado}
+                    </p>` : ''}
+                    <p style="margin-top:5px; font-weight:600; color:#004175;">
+                        <i data-lucide="user" style="width:14px; height:14px; vertical-align:middle;"></i> 
+                        Manutentor: ${nomeManutentor}
+                    </p>
+                    ${isAdmin ? `<p style="margin-top:3px; font-size:0.85rem; color:#666;">Criado por: ${nomeUsuario}</p>` : ''}
+                    ${log.observacoes ? `<p style="margin-top:8px; font-size:0.9rem; font-style:italic; color:#555;">Obs: ${log.observacoes}</p>` : ''}
+                    ${htmlFotos}
+                </div>
+            </div>
+        `;
+        conteiner.appendChild(div);
+
+        // Adicionar listener para edição
+        const btnEditar = div.querySelector('.btn-editar-apt');
+        if (btnEditar) {
+            btnEditar.addEventListener('click', (e) => {
+                e.stopPropagation();
+                abrirEdicaoApontamento(log);
+            });
+        }
+    });
+    lucide.createIcons();
+}
+
+// Função global para toggle do acordeão
+window.toggleAccordion = function (id) {
+    const content = document.getElementById(id);
+    const icon = document.getElementById(`icon-${id}`);
+
+    if (content.classList.contains('active')) {
+        content.classList.remove('active');
+        if (icon) {
+            icon.style.transform = 'rotate(0deg)';
+        }
+    } else {
+        // Fechar outros acordeões abertos no mesmo container
+        const container = content.closest('.tela');
+        if (container) {
+            container.querySelectorAll('.accordion-content.active').forEach(item => {
+                if (item.id !== id) {
+                    item.classList.remove('active');
+                    const otherIcon = document.getElementById(`icon-${item.id}`);
+                    if (otherIcon) {
+                        otherIcon.style.transform = 'rotate(0deg)';
+                    }
+                }
+            });
+        }
+
+        content.classList.add('active');
+        if (icon) {
+            icon.style.transform = 'rotate(180deg)';
+        }
+    }
+};
+
+// Excel Export (Enhanced)
+document.getElementById('btn-exportar-excel').addEventListener('click', async () => {
+    Swal.fire({
+        title: 'Gerando Relatório...',
+        didOpen: () => Swal.showLoading()
+    });
+
+    const { data } = await supabase
+        .from('apontamentos')
+        .select(`
+            *,
+            manutentor:id_manutentor(nome_completo),
+            usuario:id_usuario(nome_completo)
+        `);
+
+    if (data) {
+        const dadosFormatados = data.map(item => ({
+            'Ordem': item.numero_ordem,
+            'Descrição': item.descricao,
+            'Unidade': item.unidade,
+            'Centro de Trabalho': item.centro_trabalho,
+            'Manutentor': item.manutentor?.nome_completo || 'N/A',
+            'Criado Por': item.usuario?.nome_completo || 'N/A',
+            'Data': new Date(item.data_servico).toLocaleDateString('pt-BR'),
+            'Hora Início': item.hora_inicio,
+            'Hora Fim': item.hora_fim,
+            'Status': item.concluido ? 'Concluído' : 'Pendente',
+            'Observações': item.observacoes || '',
+            'Fotos': item.fotos?.length || 0
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Apontamentos_MCL");
+        XLSX.writeFile(wb, `Relatorio_MCL_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+        Swal.close();
+        Toast.fire({ icon: 'success', title: 'Relatório baixado!' });
+    } else {
+        Swal.close();
+        mostrarErro('Erro', 'Não foi possível gerar o relatório.');
+    }
+});
+
+// Inicializar
+verificarUsuario();

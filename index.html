@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MCL - Cooperativa Holambra</title>
+    
+    <link rel="icon" type="image/png" href="src/images/favicon.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="src/css/style.css">
+
+    <!-- Commons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div id="app">
+        <!-- Menu Overlay -->
+        <div id="menu-mobile" class="menu-overlay oculto">
+            <div class="menu-conteudo">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 2rem;">
+                    <div style="width:48px; height:48px; background:var(--cor-primaria); border-radius:12px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size: 1.2rem;">H</div>
+                    <div>
+                        <div style="font-weight:800; color:var(--cor-primaria); font-size:1.1rem; line-height:1;">HOLAMBRA</div>
+                        <div style="font-size:0.8rem; color:var(--cor-texto-suave);">Cooperativa Agroindustrial</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-secundario" id="nav-inicio" style="justify-content: flex-start;"><i data-lucide="home"></i> Início</button>
+                <button class="btn btn-secundario" id="nav-historico" style="justify-content: flex-start;"><i data-lucide="file-text"></i> Histórico</button>
+                <button class="btn btn-secundario oculto" id="nav-admin" style="justify-content: flex-start;"><i data-lucide="shield"></i> Admin</button>
+                
+                <div style="margin-top:auto"></div>
+                <button class="btn btn-danger" id="nav-sair"><i data-lucide="log-out"></i> Sair do Sistema</button>
+                <button class="btn btn-outline" id="fechar-menu" style="margin-top: 10px; border:none;">Fechar</button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header id="cabecalho-principal" class="cabecalho-app oculto">
+            <div class="logo-nav">
+                <!-- Se tiver imagem logo-small.png ela aparece, senao texto -->
+                <img src="" onerror="this.style.display='none'" style="height: 32px; margin-right: 10px;">
+                <span>Sistema de Apontamentos</span>
+            </div>
+            <button id="alternar-menu" class="menu-btn">
+                <i data-lucide="menu" style="width: 28px; height: 28px;"></i>
+            </button>
+        </header>
+
+        <main class="conteiner">
+            
+            <!-- TELA LOGIN -->
+            <section id="tela-login" class="tela">
+                <!-- Banner Imagem Real -->
+                <div class="banner-container">
+                    <img src="images/Banner.png" alt="Holambra Cooperativa" class="banner-img" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'text-align:center; color:#004175; font-weight:800; font-size:1.5rem;\'>HOLAMBRA</div>'">
+                </div>
+
+                <div class="card login-card">
+                    <div class="centro" style="margin-bottom: 2rem;">
+                        <h2 style="margin-bottom: 5px;">Bem-vindo</h2>
+                        <div id="status-sistema" style="font-size: 0.8rem; margin-bottom: 15px; color: #666;">Verificando conexão...</div>
+                        <p style="color: var(--cor-texto-suave);">Acesse sua conta para continuar</p>
+                    </div>
+                    
+                    <form id="formulario-login">
+                        <div class="grupo-input">
+                            <label>EMAIL</label>
+                            <input type="email" id="login-email" class="input-campo" placeholder="seu.email@holambra.com.br" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>SENHA DE ACESSO</label>
+                            <div style="position: relative;">
+                                <input type="password" id="login-senha" class="input-campo" placeholder="••••••••" required>
+                                <button type="button" id="toggle-senha" class="btn-toggle-senha" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--cor-texto-suave); padding: 5px;">
+                                    <i data-lucide="eye" id="icon-senha" style="width: 20px; height: 20px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primario">
+                            ACESSAR SISTEMA <i data-lucide="arrow-right" style="width:18px;"></i>
+                        </button>
+                    </form>
+                    
+                    <div class="centro" style="margin-top: 2rem;">
+                        <button id="btn-ir-cadastro" class="btn btn-outline" style="font-size: 0.9rem;">
+                           Não tem conta? Cadastre-se
+                        </button>
+                    </div>
+                </div>
+                
+                <p class="centro" style="font-size: 0.75rem; color: #aaa; margin-top: 20px;">
+                    <br>
+                    © 2026 Cooperativa Holambra Agroindustrial
+                </p>
+            </section>
+
+            <!-- TELA CADASTRO -->
+            <section id="tela-cadastro" class="tela oculto">
+                <h2 style="margin-bottom: 1.5rem; padding-left: 5px;">Novo Colaborador</h2>
+                <div class="card">
+                    <form id="formulario-cadastro">
+                        <div class="grupo-input">
+                            <label>Nome Completo</label>
+                            <input type="text" id="cad-nome" class="input-campo" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>CPF (Apenas números)</label>
+                            <input type="text" id="cad-cpf" class="input-campo" placeholder="000.000.000-00" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Email Corporativo</label>
+                            <input type="email" id="cad-email" class="input-campo" placeholder="seu.email@holambra.com.br" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Senha de Acesso</label>
+                            <input type="password" id="cad-senha" class="input-campo" required>
+                        </div>
+                        <div class="grid-duplo">
+                            <div class="grupo-input">
+                                <label>Nascimento</label>
+                                <input type="date" id="cad-nasc" class="input-campo">
+                            </div>
+                            <div class="grupo-input">
+                                <label>Departamento</label>
+                                <select id="cad-tag" class="select-campo">
+                                    <option value="Elétrica">Elétrica</option>
+                                    <option value="Mecânica">Mecânica</option>
+                                    <option value="Automação">Automação</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primario">CONCLUIR CADASTRO</button>
+                        <button type="button" id="btn-voltar-login" class="btn btn-outline" style="margin-top: 15px;">Cancelar</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TELA MENU PRINCIPAL -->
+            <section id="tela-menu" class="tela oculto">
+                <div class="card" style="text-align: center; margin-bottom: 2rem; padding: 2rem;">
+                    <div class="banner-container-menu">
+                        <img src="images/Banner.png" alt="Holambra Cooperativa" class="banner-img-menu" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'text-align:center; color:#004175; font-weight:800; font-size:1.5rem; margin:1rem 0;\'>HOLAMBRA</div>'">
+                    </div>
+                    <h2 style="margin-bottom: 0.5rem; margin-top: 1rem;">Bem-vindo!</h2>
+                    <p style="color: var(--cor-texto-suave);">Escolha uma opção para continuar</p>
+                </div>
+                
+                <!-- Menu para usuários normais -->
+                <div class="menu-opcoes" id="menu-usuario">
+                    <button class="menu-card" id="btn-menu-apontamentos">
+                        <div class="menu-card-icon">
+                            <i data-lucide="clipboard-list"></i>
+                        </div>
+                        <h3>Meus Apontamentos</h3>
+                        <p>Registrar novo serviço</p>
+                    </button>
+                    
+                    <button class="menu-card" id="btn-menu-historico">
+                        <div class="menu-card-icon">
+                            <i data-lucide="history"></i>
+                        </div>
+                        <h3>Histórico</h3>
+                        <p>Ver meus apontamentos</p>
+                    </button>
+                </div>
+
+                <!-- Menu para admin -->
+                <div class="menu-opcoes oculto" id="menu-admin">
+                    <button class="menu-card" id="btn-menu-admin">
+                        <div class="menu-card-icon">
+                            <i data-lucide="shield"></i>
+                        </div>
+                        <h3>Administração</h3>
+                        <p>Acessar painel administrativo</p>
+                    </button>
+                </div>
+            </section>
+
+            <!-- TELA DASHBOARD -->
+            <section id="tela-dashboard" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
+                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Registrar Serviço</h2>
+                    <button class="btn btn-outline" id="btn-voltar-menu" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem; flex-shrink: 0;">
+                        <i data-lucide="arrow-left"></i> Voltar
+                    </button>
+                </div>
+                <div class="card">
+                    <form id="formulario-apontamento">
+                        <div class="grupo-input">
+                            <label>Ordem de Serviço (OS)</label>
+                            <input type="text" id="apt-ordem" class="input-campo" placeholder="Nº da Ordem" required inputmode="numeric">
+                        </div>
+                        
+                        <div class="grupo-input">
+                            <label>Descrição da Atividade</label>
+                            <textarea id="apt-desc" class="textarea-campo" placeholder="Descreva o que foi realizado..." required></textarea>
+                        </div>
+
+                        <div class="grupo-input">
+                            <label>Unidade/Setor</label>
+                            <select id="apt-unidade" class="select-campo" required>
+                                <option value="">Selecione...</option>
+                                <option>UBA Matriz</option>
+                                <option>UBC Matriz</option>
+                                <option>UBS Matriz</option>
+                                <option>Holambra</option>
+                                <option>Fábrica de Ração</option>
+                                <option>Taquarivaí</option>
+                                <option>Takaoka</option>
+                                <option>Avaré</option>
+                                <option>Itaberá</option>
+                                <option>São Manuel</option>
+                                <option>Taquarituba</option>
+                                <option>Taquari</option>
+                            </select>
+                        </div>
+
+                        <div class="grid-duplo">
+                            <div class="grupo-input">
+                                <label>Manutentor</label>
+                                <select id="apt-manutentor" class="select-campo" required>
+                                    <option value="">Carregando...</option>
+                                </select>
+                            </div>
+                            <div class="grupo-input">
+                                <label>Centro de Trabalho</label>
+                                <select id="apt-centro" class="select-campo">
+                                    <option>Elétrica</option>
+                                    <option>Mecânica</option>
+                                    <option>Automação</option>
+                                    <option>Utilidades</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid-duplo">
+                            <div class="grupo-input">
+                                <label>Data</label>
+                                <input type="date" id="apt-data" class="input-campo" required>
+                            </div>
+                            <div class="grupo-input">
+                                <label>Status</label>
+                                <div style="display: flex; align-items: center; height: 52px; background: #fff; border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 15px;">
+                                    <input type="checkbox" id="apt-check" style="width: 20px; height: 20px; margin-right: 10px; accent-color: var(--cor-primaria);">
+                                    <span style="font-size: 0.9rem; font-weight: 500;">Finalizado</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-duplo">
+                            <div class="grupo-input">
+                                <label>Início</label>
+                                <input type="time" id="apt-inicio" class="input-campo" required>
+                            </div>
+                            <div class="grupo-input">
+                                <label>Fim</label>
+                                <input type="time" id="apt-fim" class="input-campo" required>
+                            </div>
+                        </div>
+
+                        <div class="grupo-input">
+                            <label>Fotos / Evidências</label>
+                            <div style="position: relative;">
+                                <input type="file" id="apt-arquivos" class="input-campo" multiple accept="image/*" style="padding-top: 13px;">
+                                <i data-lucide="image-plus" style="position: absolute; right: 15px; top: 15px; color: var(--cor-primaria);"></i>
+                            </div>
+                        </div>
+
+                        <div class="grupo-input">
+                            <label>Observações Adicionais</label>
+                            <textarea id="apt-obs" class="textarea-campo" style="min-height: 80px;"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primario">
+                            <i data-lucide="check-circle"></i> SALVAR APONTAMENTO
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TELA HISTORICO -->
+            <section id="tela-historico" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
+                    <h2 style="flex: 1; min-width: 200px; margin: 0;">Apontamentos</h2>
+                    <button class="btn btn-primario" id="btn-novo-apt" style="width: auto; padding: 0 1.2rem; height: 40px; font-size: 0.9rem; flex-shrink: 0;">+ Novo</button>
+                </div>
+                
+                <div class="card" style="padding: 1rem; margin-bottom: 2rem;">
+                    <div style="position: relative;">
+                        <input type="text" id="busca-historico" class="input-campo" placeholder="Filtrar por OS..." style="padding-left: 45px;">
+                        <i data-lucide="search" style="position: absolute; left: 15px; top: 15px; color: var(--cor-texto-suave);"></i>
+                    </div>
+                </div>
+
+                <div id="lista-historico">
+                    <!-- Cards via JS -->
+                </div>
+            </section>
+
+            <!-- TELA ADMIN -->
+            <section id="tela-admin" class="tela oculto">
+                <h2 style="margin-bottom: 1.5rem; padding-top: 10px;">Administração</h2>
+                
+                <div class="card">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Relatórios</h3>
+                    <button id="btn-exportar-excel" class="btn btn-secundario">
+                        <i data-lucide="download"></i> Baixar Planilha Excel
+                    </button>
+                </div>
+
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Filtros</h3>
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Unidade</label>
+                            <select id="filtro-unidade" class="select-campo">
+                                <option value="">Todas</option>
+                                <option>UBA Matriz</option>
+                                <option>UBC Matriz</option>
+                                <option>UBS Matriz</option>
+                                <option>Holambra</option>
+                                <option>Fábrica de Ração</option>
+                                <option>Taquarivaí</option>
+                                <option>Takaoka</option>
+                                <option>Avaré</option>
+                                <option>Itaberá</option>
+                                <option>São Manuel</option>
+                                <option>Taquarituba</option>
+                                <option>Taquari</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Centro de Trabalho</label>
+                            <select id="filtro-centro" class="select-campo">
+                                <option value="">Todos</option>
+                                <option>Elétrica</option>
+                                <option>Mecânica</option>
+                                <option>Automação</option>
+                                <option>Utilidades</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Data Início</label>
+                            <input type="date" id="filtro-data-inicio" class="input-campo">
+                        </div>
+                        <div class="grupo-input">
+                            <label>Data Fim</label>
+                            <input type="date" id="filtro-data-fim" class="input-campo">
+                        </div>
+                    </div>
+                    <button id="btn-aplicar-filtros" class="btn btn-primario" style="margin-top: 10px;">
+                        <i data-lucide="filter"></i> Aplicar Filtros
+                    </button>
+                    <button id="btn-limpar-filtros" class="btn btn-outline" style="margin-top: 10px;">
+                        Limpar Filtros
+                    </button>
+                </div>
+
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Usuários Cadastrados</h3>
+                    <div id="lista-usuarios-admin">
+                        <!-- Lista de usuários via JS -->
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">Apontamentos</h3>
+                <div id="lista-admin">
+                    <!-- Cards via JS -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="src/js/main.js"></script>
+    <script>
+        // Init
+        lucide.createIcons();
+    </script>
+</body>
+</html>
