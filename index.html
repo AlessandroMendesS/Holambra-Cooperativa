@@ -38,7 +38,8 @@
                 <button class="btn btn-secundario" id="nav-inicio" style="justify-content: flex-start;"><i data-lucide="home"></i> Início</button>
                 <button class="btn btn-secundario" id="nav-historico" style="justify-content: flex-start;"><i data-lucide="file-text"></i> Histórico</button>
                 <button class="btn btn-secundario oculto" id="nav-admin" style="justify-content: flex-start;"><i data-lucide="shield"></i> Admin</button>
-                <button class="btn btn-secundario oculto" id="nav-hora-extra" style="justify-content: flex-start;"><i data-lucide="timer"></i> Hora Extra - Escala</button>
+                    <button class="btn btn-secundario oculto" id="nav-hora-extra" style="justify-content: flex-start;"><i data-lucide="timer"></i> Hora Extra - Escala</button>
+                <button class="btn btn-secundario" id="nav-veiculos" style="justify-content: flex-start;"><i data-lucide="car"></i> Veículos</button>
                 
                 <div style="margin-top:auto"></div>
                 <button class="btn btn-danger" id="nav-sair"><i data-lucide="log-out"></i> Sair do Sistema</button>
@@ -197,6 +198,14 @@
                         <h3>Férias</h3>
                         <p>Visualizar férias</p>
                     </button>
+                    
+                    <button class="menu-card" id="btn-menu-veiculos">
+                        <div class="menu-card-icon">
+                            <i data-lucide="car"></i>
+                        </div>
+                        <h3>Veículos</h3>
+                        <p>Visualizar frota de veículos</p>
+                    </button>
                 </div>
 
                 <!-- Menu para admin -->
@@ -214,6 +223,13 @@
                         </div>
                         <h3>Hora Extra - Escala</h3>
                         <p>Editar tabela de escala (admin)</p>
+                    </button>
+                    <button class="menu-card" id="btn-menu-veiculos-admin">
+                        <div class="menu-card-icon">
+                            <i data-lucide="car"></i>
+                        </div>
+                        <h3>Veículos</h3>
+                        <p>Gerenciar frota de veículos</p>
                     </button>
                 </div>
             </section>
@@ -436,7 +452,7 @@
                 <div class="tela-he-header">
                     <h2>Hora Extra - Escala</h2>
                     <div class="tela-he-botoes">
-                        <button class="btn btn-primario" id="btn-info-escala" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem; background: linear-gradient(135deg, #004175 0%, #0066b3 100%); box-shadow: 0 4px 14px rgba(0,65,117,0.4);" title="Infos.">
+                        <button class="btn btn-primario" id="btn-info-escala" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem; background: linear-gradient(135deg, #004175 0%, #0066b3 100%); box-shadow: 0 4px 14px rgba(0,65,117,0.4);" title="Informações da escala">
                             <i data-lucide="info"></i> Informações da Escala
                         </button>
                         <button class="btn btn-outline" id="btn-voltar-menu-he" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;">
@@ -465,6 +481,24 @@
                     <div id="lista-hora-extra-empty" class="centro" style="padding: 2rem; color: #666; display: none;">
                         Nenhum registro na escala. <span class="admin-only oculto">Clique em "Adicionar" para inserir.</span>
                     </div>
+                </div>
+            </section>
+
+            <!-- TELA VEÍCULOS -->
+            <section id="tela-veiculos" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
+                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Veículos</h2>
+                    <div style="display: flex; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap;">
+                        <button class="btn btn-outline" id="btn-voltar-menu-veiculos" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;">
+                            <i data-lucide="arrow-left"></i> Voltar
+                        </button>
+                        <button class="btn btn-primario oculto" id="btn-adicionar-veiculo" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;" title="Adicionar veículo (apenas admin)">
+                            <i data-lucide="plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="lista-veiculos" class="grid-veiculos">
+                    <!-- Cards via JS -->
                 </div>
             </section>
 
