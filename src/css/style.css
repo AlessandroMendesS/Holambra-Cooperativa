@@ -996,6 +996,149 @@ input[type="file"] {
     text-decoration: underline;
 }
 
+/* --- Veículos --- */
+.grid-veiculos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.25rem;
+}
+
+.card-veiculo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.veiculo-foto {
+    width: 100%;
+    aspect-ratio: 16/10;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f3f4f6;
+    margin-bottom: 1rem;
+}
+
+.veiculo-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.foto-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+.foto-placeholder i {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+/* Moldura da placa - minimalista, estilo Mercosul BR */
+.placa-moldura {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.5rem;
+    margin-bottom: 1rem;
+    background: #ffffff;
+    border: 3px solid #1f2937;
+    border-radius: 6px;
+    box-shadow: 
+        0 2px 8px rgba(0,0,0,0.06),
+        inset 0 0 0 1px rgba(255,255,255,0.8);
+    font-family: 'Inter', 'SF Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #1f2937;
+    min-width: 150px;
+}
+
+.veiculo-documento {
+    margin-bottom: 0.75rem;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f3f4f6;
+}
+
+.veiculo-documento.img-expansivel {
+    aspect-ratio: 4/3;
+    min-height: 90px;
+}
+
+.veiculo-documento .doc-thumb {
+    width: 100%;
+    height: 100%;
+    min-height: 90px;
+    object-fit: cover;
+    display: block;
+}
+
+.veiculo-documento.img-expansivel:hover {
+    opacity: 0.9;
+}
+
+.veiculo-foto.img-expansivel:hover {
+    opacity: 0.9;
+}
+
+.veiculo-foto.img-expansivel,
+.veiculo-documento.img-expansivel {
+    transition: opacity 0.2s ease;
+}
+
+.veiculo-foto.img-expansivel::after,
+.veiculo-documento.img-expansivel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.1);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    border-radius: 8px;
+}
+
+.veiculo-foto.img-expansivel:hover::after,
+.veiculo-documento.img-expansivel:hover::after {
+    opacity: 1;
+}
+
+.veiculo-foto.img-expansivel,
+.veiculo-documento.img-expansivel {
+    position: relative;
+}
+
+.swal-lightbox {
+    padding: 0 !important;
+    max-width: 95vw !important;
+}
+
+.swal-lightbox img {
+    cursor: zoom-out;
+}
+
+.veiculo-acoes {
+    margin-top: auto;
+}
+
+.btn-excluir-veiculo {
+    color: var(--cor-destaque);
+    padding: 0.4rem;
+}
+
 /* Responsivo mobile - Tela Hora Extra */
 @media (max-width: 480px) {
     .tela-hora-extra-responsiva .tela-he-header {

@@ -17,6 +17,7 @@ const telas = {
     admin: document.getElementById('tela-admin'),
     bancoHoras: document.getElementById('tela-banco-horas'),
     horaExtra: document.getElementById('tela-hora-extra'),
+    veiculos: document.getElementById('tela-veiculos'),
     ferias: document.getElementById('tela-ferias')
 };
 
@@ -75,20 +76,19 @@ function mostrarSucesso(titulo) {
 // --- Navegação ---
 function navegarPara(idTela) {
     window.scrollTo(0, 0);
-    Object.values(telas).forEach(el => el.classList.add('oculto'));
+    Object.values(telas).forEach(el => { if (el) el.classList.add('oculto'); });
 
-    if (telas[idTela]) {
-        telas[idTela].classList.remove('oculto');
+    const telaAlvo = telas[idTela];
+    if (telaAlvo) {
+        telaAlvo.classList.remove('oculto');
         lucide.createIcons();
     }
 
-    if (idTela === 'login' || idTela === 'cadastro') {
-        cabecalho.classList.add('oculto');
-    } else {
-        cabecalho.classList.remove('oculto');
+    if (cabecalho) {
+        if (idTela === 'login' || idTela === 'cadastro') cabecalho.classList.add('oculto');
+        else cabecalho.classList.remove('oculto');
     }
-
-    menuMobile.classList.add('oculto');
+    if (menuMobile) menuMobile.classList.add('oculto');
 
     if (idTela === 'menu') {
         // Atualizar visibilidade dos menus baseado no perfil
@@ -123,6 +123,13 @@ function navegarPara(idTela) {
         carregarUsuarios();
         carregarFerias();
     }
+    if (idTela === 'veiculos') {
+        carregarVeiculos().catch(e => {
+            console.error('Erro ao carregar veículos:', e);
+            const lista = document.getElementById('lista-veiculos');
+            if (lista) lista.innerHTML = `<div class="card centro" style="padding: 2rem; color: #991b1b;">Erro ao carregar. Verifique se executou supabase_setup_veiculos.sql</div>`;
+        });
+    }
 }
 
 // Listeners Menu
@@ -133,6 +140,7 @@ document.getElementById('nav-inicio').addEventListener('click', () => navegarPar
 document.getElementById('nav-historico').addEventListener('click', () => navegarPara('historico'));
 document.getElementById('nav-admin').addEventListener('click', () => navegarPara('admin'));
 document.getElementById('nav-hora-extra')?.addEventListener('click', () => navegarPara('horaExtra'));
+document.getElementById('nav-veiculos')?.addEventListener('click', () => navegarPara('veiculos'));
 document.getElementById('nav-sair').addEventListener('click', async () => {
     await supabase.auth.signOut();
     estado.usuario = null;
@@ -203,10 +211,17 @@ document.getElementById('btn-menu-ferias').addEventListener('click', () => {
     navegarPara('ferias');
     carregarFerias();
 });
+document.getElementById('btn-menu-veiculos')?.addEventListener('click', () => {
+    navegarPara('veiculos');
+});
+document.getElementById('btn-menu-veiculos-admin')?.addEventListener('click', () => {
+    navegarPara('veiculos');
+});
 document.getElementById('btn-voltar-menu').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-bh').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-he').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-ferias').addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-veiculos')?.addEventListener('click', () => navegarPara('menu'));
 
 // --- Autenticação ---
 
@@ -1013,77 +1028,214 @@ document.getElementById('btn-exportar-excel').addEventListener('click', async ()
     }
 });
 
+// --- Veículos ---
+async function carregarVeiculos() {
+    const lista = document.getElementById('lista-veiculos');
+    const btnAdicionar = document.getElementById('btn-adicionar-veiculo');
+    if (!lista) return;
+
+    const isAdmin = estado.perfil?.funcao === 'admin';
+    if (btnAdicionar) btnAdicionar.classList.toggle('oculto', !isAdmin);
+
+    lista.innerHTML = '<div class="centro" style="padding: 2rem;">Carregando...</div>';
+
+    const { data: veiculos, error } = await supabase
+        .from('veiculos')
+        .select('*')
+        .order('placa');
+
+    if (error) {
+        lista.innerHTML = `<div class="card centro" style="padding: 2rem; color: #991b1b;">${error.message?.includes('does not exist') ? 'Tabela veiculos não encontrada. Execute supabase_setup_veiculos.sql' : error.message}</div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    lista.innerHTML = '';
+    if (!veiculos || veiculos.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhum veículo cadastrado.</p></div>';
+        lucide.createIcons();
+        return;
+    }
+
+    veiculos.forEach(v => {
+        const card = document.createElement('div');
+        card.className = 'card card-veiculo';
+        const placaFormatada = formatarPlaca(v.placa);
+        const fotoUrl = v.foto ? v.foto.replace(/"/g, '&quot;') : '';
+        const docUrl = v.documento ? v.documento.replace(/"/g, '&quot;') : '';
+        card.innerHTML = `
+            <div class="veiculo-foto img-expansivel" ${fotoUrl ? `data-img-url="${fotoUrl}"` : ''} title="Clique para ampliar">
+                ${v.foto ? `<img src="${v.foto}" alt="Foto do veículo" onerror="this.parentElement.innerHTML='<div class=\\'foto-placeholder\\'><i data-lucide=\\'car\\'></i> Sem foto</div>'">` : '<div class="foto-placeholder"><i data-lucide="car"></i> Sem foto</div>'}
+            </div>
+            <div class="placa-moldura">${placaFormatada}</div>
+            <div class="veiculo-documento ${docUrl ? 'img-expansivel' : ''}" ${docUrl ? `data-img-url="${docUrl}" title="Clique para ampliar"` : ''}>
+                ${v.documento ? `<img src="${v.documento}" alt="Foto do documento" class="doc-thumb" onerror="this.parentElement.innerHTML='<span style=\\'color:#999;font-size:0.85rem\\'>Sem documento</span>'">` : '<span style="color:#999;font-size:0.85rem;">Sem documento</span>'}
+            </div>
+            ${isAdmin ? `<div class="veiculo-acoes"><button class="btn btn-outline btn-sm btn-excluir-veiculo" data-id="${v.id}" title="Excluir"><i data-lucide="trash-2"></i></button></div>` : ''}
+        `;
+        lista.appendChild(card);
+    });
+
+    lista.querySelectorAll('.img-expansivel[data-img-url]').forEach(el => {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => {
+            const url = el.dataset.imgUrl;
+            if (url) expandirImagem(url);
+        });
+    });
+    lista.querySelectorAll('.btn-excluir-veiculo').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); excluirVeiculo(btn.dataset.id); });
+    });
+    lucide.createIcons();
+}
+
+function formatarPlaca(placa) {
+    if (!placa) return '—';
+    const p = String(placa).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (p.length >= 7) return `${p.slice(0,3)}-${p.slice(3,7)}`;
+    return placa.toUpperCase();
+}
+
+function expandirImagem(url) {
+    Swal.fire({
+        html: `<img src="${url}" alt="Imagem ampliada" style="max-width:100%; max-height:80vh; border-radius:8px;">`,
+        showConfirmButton: false,
+        background: 'rgba(0,0,0,0.9)',
+        customClass: { popup: 'swal-lightbox' },
+        didOpen: () => {
+            document.querySelector('.swal-lightbox').style.cursor = 'zoom-out';
+            document.querySelector('.swal-lightbox').addEventListener('click', () => Swal.close());
+        }
+    });
+}
+
+document.getElementById('btn-adicionar-veiculo')?.addEventListener('click', async () => {
+    if (estado.perfil?.funcao !== 'admin') return;
+
+    const { value: form } = await Swal.fire({
+        title: 'Adicionar veículo',
+        html: `
+            <div style="text-align:left;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Placa</label>
+                <input id="swal-placa" class="swal2-input" placeholder="ABC1D23" style="margin-bottom:1rem; text-transform: uppercase;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Foto do veículo</label>
+                <input id="swal-foto-file" class="swal2-input" type="file" accept="image/*" style="margin-bottom:1rem; padding:8px;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Foto do documento</label>
+                <input id="swal-doc-file" class="swal2-input" type="file" accept="image/*" style="margin-bottom:1rem; padding:8px;">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: async () => {
+            const placa = document.getElementById('swal-placa').value?.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || '';
+            const fotoInput = document.getElementById('swal-foto-file');
+            const docInput = document.getElementById('swal-doc-file');
+            let fotoUrl = null, docUrl = null;
+            const uploadFile = async (file, prefix) => {
+                const ext = file.name.split('.').pop() || 'jpg';
+                const path = `veiculos/${Date.now()}_${prefix}_${placa || 'img'}.${ext}`;
+                const { error } = await supabase.storage.from('fotos_apontamentos').upload(path, file);
+                if (error) throw error;
+                const { data } = supabase.storage.from('fotos_apontamentos').getPublicUrl(path);
+                return data?.publicUrl || null;
+            };
+            try {
+                if (fotoInput?.files?.[0]) fotoUrl = await uploadFile(fotoInput.files[0], 'veiculo');
+                if (docInput?.files?.[0]) docUrl = await uploadFile(docInput.files[0], 'doc');
+            } catch (e) {
+                Swal.showValidationMessage('Erro ao enviar: ' + (e.message || 'tente novamente'));
+                return false;
+            }
+            return { placa, foto: fotoUrl, documento: docUrl };
+        }
+    });
+
+    if (form && form.placa.length >= 7) {
+        try {
+            const { error } = await supabase.from('veiculos').insert([{
+                placa: form.placa,
+                foto: form.foto,
+                documento: form.documento
+            }]);
+            if (error) throw error;
+            mostrarSucesso('Veículo adicionado!');
+            carregarVeiculos();
+        } catch (err) {
+            mostrarErro('Erro', err.message || 'Não foi possível salvar.');
+        }
+    } else if (form && form.placa.length < 7) {
+        mostrarErro('Placa inválida', 'A placa deve ter pelo menos 7 caracteres (formato Mercosul: ABC1D23).');
+    }
+});
+
+async function excluirVeiculo(id) {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const { value: ok } = await Swal.fire({
+        title: 'Excluir veículo?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Excluir'
+    });
+    if (ok) {
+        try {
+            const { error } = await supabase.from('veiculos').delete().eq('id', id);
+            if (error) throw error;
+            mostrarSucesso('Veículo excluído!');
+            carregarVeiculos();
+        } catch (err) {
+            mostrarErro('Erro', err.message || 'Não foi possível excluir.');
+        }
+    }
+}
+
 // --- Funções para Banco de Horas, Hora Extra e Férias ---
 
 async function carregarBancoHoras() {
     const lista = document.getElementById('lista-banco-horas');
     lista.innerHTML = '<div class="centro">Carregando...</div>';
 
-    // Garantir que usuários estejam carregados
-    if (estado.usuarios.length === 0) {
-        await carregarUsuarios();
-    }
-
-    // Buscar todos os usuários
-    const { data: usuarios, error: errorUsuarios } = await supabase
-        .from('perfis')
-        .select('id, nome_completo')
-        .order('nome_completo');
-
-    if (errorUsuarios) {
-        lista.innerHTML = '<p class="centro">Erro ao carregar usuários.</p>';
+    const usuarioLogadoId = estado.usuario?.id;
+    if (!usuarioLogadoId) {
+        lista.innerHTML = '<p class="centro">Faça login para ver seu banco de horas.</p>';
         return;
     }
 
-    // Buscar horas salvas no banco
-    const { data: horasSalvas, error: errorHoras } = await supabase
+    // Buscar horas do usuário logado
+    const { data: horasUsuario, error: errorHoras } = await supabase
         .from('horas_usuarios')
-        .select('*');
+        .select('*')
+        .eq('id_usuario', usuarioLogadoId)
+        .single();
 
-    const horasPorUsuario = {};
+    if (errorHoras && errorHoras.code !== 'PGRST116') {
+        lista.innerHTML = '<p class="centro">Erro ao carregar banco de horas.</p>';
+        return;
+    }
 
-    // Inicializar com dados do banco ou zeros
-    usuarios.forEach(user => {
-        const horasUsuario = horasSalvas?.find(h => h.id_usuario === user.id);
-        horasPorUsuario[user.id] = {
-            id: user.id,
-            nome: user.nome_completo || 'Desconhecido',
+    const nomeUsuario = estado.perfil?.nome_completo || 'Você';
+
+    const usuario = {
+        id: usuarioLogadoId,
+        nome: nomeUsuario,
             horasPositivas: parseFloat(horasUsuario?.horas_positivas || 0),
             horasNegativas: parseFloat(horasUsuario?.horas_negativas || 0),
             horasExtras: parseFloat(horasUsuario?.horas_extras || 0),
             horasExtrasFimSemana: parseFloat(horasUsuario?.horas_extras_fim_semana || 0),
             total: (parseFloat(horasUsuario?.horas_positivas || 0) - parseFloat(horasUsuario?.horas_negativas || 0))
         };
-    });
 
-    // Converter para array e ordenar (usuário logado primeiro)
-    let usuariosArray = Object.values(horasPorUsuario);
-    const usuarioLogadoId = estado.usuario?.id;
+    const isAdmin = estado.perfil?.funcao === 'admin';
 
-    usuariosArray.sort((a, b) => {
-        if (a.id === usuarioLogadoId) return -1;
-        if (b.id === usuarioLogadoId) return 1;
-        return a.nome.localeCompare(b.nome);
-    });
-
-    // Renderizar
     lista.innerHTML = '';
-    if (usuariosArray.length === 0) {
-        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhum dado encontrado.</p></div>';
-        return;
-    }
-
-    usuariosArray.forEach(usuario => {
         const card = document.createElement('div');
         card.className = 'card';
-        const isUsuarioLogado = usuario.id === usuarioLogadoId;
-        card.style.border = isUsuarioLogado ? '2px solid var(--cor-primaria)' : '';
-        card.style.backgroundColor = isUsuarioLogado ? '#f0f7ff' : '';
-        const isAdmin = estado.perfil?.funcao === 'admin';
-
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                <h3 style="margin: 0; color: var(--cor-primaria); font-size: 1.1rem; flex: 1; min-width: 200px;">${usuario.nome}${isUsuarioLogado ? ' <span style="font-size:0.8rem; color:#666;">(Você)</span>' : ''}</h3>
+            <h3 style="margin: 0; color: var(--cor-primaria); font-size: 1.1rem; flex: 1; min-width: 200px;">${usuario.nome} <span style="font-size:0.8rem; color:#666;">(Seu saldo)</span></h3>
                 ${isAdmin ? `<button class="btn btn-secundario" style="width: auto; min-width: 120px; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;" onclick="editarBancoHoras('${usuario.id}')">
                     <i data-lucide="edit-2" style="width:16px; height:16px;"></i> Editar
                 </button>` : ''}
@@ -1114,7 +1266,6 @@ async function carregarBancoHoras() {
             </div>
         `;
         lista.appendChild(card);
-    });
     lucide.createIcons();
 }
 
