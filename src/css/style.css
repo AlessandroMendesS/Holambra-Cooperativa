@@ -861,3 +861,166 @@ input[type="file"] {
     max-width: 100%;
     box-sizing: border-box;
 }
+
+/* Tela Hora Extra - Responsividade completa */
+.tela-hora-extra-responsiva .tela-he-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding-top: 10px;
+    width: 100%;
+}
+
+.tela-hora-extra-responsiva .tela-he-header h2 {
+    margin: 0;
+    padding: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tela-hora-extra-responsiva .tela-he-botoes {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+/* Container mais largo na tela Hora Extra para tabela */
+.conteiner:has(#tela-hora-extra:not(.oculto)) {
+    max-width: 600px;
+}
+
+/* Tabela Escala Hora Extra (estilo da imagem de referência) - Responsiva */
+#tela-hora-extra {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: visible;
+    padding-bottom: 2rem;
+}
+
+.card-tabela-escala {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+}
+
+.card-tabela-escala .tabela-escala {
+    table-layout: auto;
+}
+
+.tabela-escala {
+    width: 100%;
+    min-width: 420px;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.tabela-escala thead tr {
+    background: var(--cor-primaria);
+    color: white;
+}
+
+.tabela-escala th {
+    padding: 14px 12px;
+    text-align: left;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.tabela-escala th .sort-icon {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    margin-left: 4px;
+    opacity: 0.8;
+}
+
+.tabela-escala tbody tr:nth-child(even) {
+    background: #dcfce7;
+}
+
+.tabela-escala tbody tr:nth-child(odd) {
+    background: #ffffff;
+}
+
+.tabela-escala tbody tr:hover {
+    background: #e0f2fe;
+}
+
+.tabela-escala td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.tabela-escala td:nth-child(2) {
+    max-width: 200px;
+}
+
+.tabela-escala td.col-folga {
+    color: var(--cor-destaque);
+    font-weight: 600;
+}
+
+.tabela-escala .th-acoes,
+.tabela-escala .td-acoes {
+    text-align: center;
+    width: 90px;
+}
+
+.tabela-escala .btn-editar-linha,
+.tabela-escala .btn-excluir-linha {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: var(--cor-primaria);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+}
+
+.tabela-escala .btn-excluir-linha {
+    color: var(--cor-destaque);
+}
+
+.tabela-escala .btn-editar-linha:hover,
+.tabela-escala .btn-excluir-linha:hover {
+    text-decoration: underline;
+}
+
+/* Responsivo mobile - Tela Hora Extra */
+@media (max-width: 480px) {
+    .tela-hora-extra-responsiva .tela-he-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .tela-hora-extra-responsiva .tela-he-botoes {
+        justify-content: flex-start;
+    }
+    
+    .tela-hora-extra-responsiva .tela-he-botoes .btn {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.85rem;
+        padding: 0 0.75rem;
+    }
+    
+    .tabela-escala {
+        font-size: 0.85rem;
+        min-width: 380px;
+    }
+    
+    .tabela-escala th,
+    .tabela-escala td {
+        padding: 10px 8px;
+    }
+}

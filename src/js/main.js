@@ -93,12 +93,15 @@ function navegarPara(idTela) {
     if (idTela === 'menu') {
         // Atualizar visibilidade dos menus baseado no perfil
         const navAdmin = document.getElementById('nav-admin');
+        const navHoraExtra = document.getElementById('nav-hora-extra');
         if (estado.perfil && estado.perfil.funcao === 'admin') {
-            navAdmin.classList.remove('oculto');
+            if (navAdmin) navAdmin.classList.remove('oculto');
+            if (navHoraExtra) navHoraExtra.classList.remove('oculto');
             document.getElementById('menu-usuario').classList.add('oculto');
             document.getElementById('menu-admin').classList.remove('oculto');
         } else {
-            navAdmin.classList.add('oculto');
+            if (navAdmin) navAdmin.classList.add('oculto');
+            if (navHoraExtra) navHoraExtra.classList.add('oculto');
             document.getElementById('menu-usuario').classList.remove('oculto');
             document.getElementById('menu-admin').classList.add('oculto');
         }
@@ -129,12 +132,14 @@ document.getElementById('fechar-menu').addEventListener('click', () => menuMobil
 document.getElementById('nav-inicio').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('nav-historico').addEventListener('click', () => navegarPara('historico'));
 document.getElementById('nav-admin').addEventListener('click', () => navegarPara('admin'));
+document.getElementById('nav-hora-extra')?.addEventListener('click', () => navegarPara('horaExtra'));
 document.getElementById('nav-sair').addEventListener('click', async () => {
     await supabase.auth.signOut();
     estado.usuario = null;
     estado.perfil = null;
     // Ocultar menu admin ao sair
-    document.getElementById('nav-admin').classList.add('oculto');
+    document.getElementById('nav-admin')?.classList.add('oculto');
+    document.getElementById('nav-hora-extra')?.classList.add('oculto');
     document.getElementById('menu-usuario').classList.remove('oculto');
     document.getElementById('menu-admin').classList.add('oculto');
     navegarPara('login');
@@ -180,12 +185,17 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
     navegarPara('dashboard');
 });
 document.getElementById('btn-menu-historico').addEventListener('click', () => navegarPara('historico'));
+document.getElementById('btn-voltar-historico').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-menu-admin').addEventListener('click', () => navegarPara('admin'));
 document.getElementById('btn-menu-banco-horas').addEventListener('click', () => {
     navegarPara('bancoHoras');
     carregarBancoHoras();
 });
 document.getElementById('btn-menu-hora-extra').addEventListener('click', () => {
+    navegarPara('horaExtra');
+    carregarHoraExtra();
+});
+document.getElementById('btn-menu-hora-extra-admin')?.addEventListener('click', () => {
     navegarPara('horaExtra');
     carregarHoraExtra();
 });
@@ -228,14 +238,17 @@ async function verificarUsuario() {
         if (perfilEncontrado) {
             estado.perfil = perfilEncontrado;
             const navAdmin = document.getElementById('nav-admin');
+            const navHoraExtra = document.getElementById('nav-hora-extra');
             if (estado.perfil.funcao === 'admin') {
-                navAdmin.classList.remove('oculto');
+                if (navAdmin) navAdmin.classList.remove('oculto');
+                if (navHoraExtra) navHoraExtra.classList.remove('oculto');
                 // Mostrar apenas menu admin na tela inicial
                 document.getElementById('menu-usuario').classList.add('oculto');
                 document.getElementById('menu-admin').classList.remove('oculto');
             } else {
                 // Ocultar menu admin para usuários normais
-                navAdmin.classList.add('oculto');
+                if (navAdmin) navAdmin.classList.add('oculto');
+                if (navHoraExtra) navHoraExtra.classList.add('oculto');
                 // Mostrar menu normal para usuários
                 document.getElementById('menu-usuario').classList.remove('oculto');
                 document.getElementById('menu-admin').classList.add('oculto');
@@ -739,12 +752,9 @@ async function carregarDadosAdmin() {
                                 <i data-lucide="calendar" style="width:14px; height:14px; vertical-align:middle;"></i> 
                                 <strong>Cadastrado em:</strong> ${dataCadastro}
                             </p>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; margin-top: 1rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem;">
                                 <button class="btn btn-secundario" style="font-size: 0.85rem; padding: 0.5rem; height: auto;" onclick="editarBancoHoras('${user.id}')">
                                     <i data-lucide="clock" style="width:14px; height:14px;"></i> Banco de Horas
-                                </button>
-                                <button class="btn btn-secundario" style="font-size: 0.85rem; padding: 0.5rem; height: auto;" onclick="editarHoraExtra('${user.id}')">
-                                    <i data-lucide="timer" style="width:14px; height:14px;"></i> Hora Extra
                                 </button>
                                 <button class="btn btn-secundario" style="font-size: 0.85rem; padding: 0.5rem; height: auto;" onclick="editarFerias('${user.id}')">
                                     <i data-lucide="calendar" style="width:14px; height:14px;"></i> Férias
@@ -1108,118 +1118,262 @@ async function carregarBancoHoras() {
     lucide.createIcons();
 }
 
+const DIAS_SEMANA = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
+
+function formatarDiaComSemana(dataStr) {
+    if (!dataStr) return '';
+    const d = new Date(dataStr + 'T12:00:00');
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const diaSemana = DIAS_SEMANA[d.getDay()];
+    return `${dia}/${mes} - ${diaSemana}`;
+}
+
+let escalaOrdenacao = { col: 'dia', asc: true };
+
 async function carregarHoraExtra() {
-    const lista = document.getElementById('lista-hora-extra');
-    lista.innerHTML = '<div class="centro">Carregando...</div>';
+    const tbody = document.getElementById('tbody-hora-extra');
+    const emptyDiv = document.getElementById('lista-hora-extra-empty');
+    const btnAdicionar = document.getElementById('btn-adicionar-escala');
+    const thAcoes = document.querySelector('.tabela-escala .th-acoes');
 
-    // Garantir que usuários estejam carregados
-    if (estado.usuarios.length === 0) {
-        await carregarUsuarios();
-    }
+    const isAdmin = estado.perfil?.funcao === 'admin';
+    if (btnAdicionar) btnAdicionar.classList.toggle('oculto', !isAdmin);
+    if (thAcoes) thAcoes.classList.toggle('oculto', !isAdmin);
+    document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('oculto', !isAdmin));
 
-    // Buscar todos os usuários
-    const { data: usuarios, error: errorUsuarios } = await supabase
-        .from('perfis')
-        .select('id, nome_completo')
-        .order('nome_completo');
+    tbody.innerHTML = '<tr><td colspan="5" class="centro" style="padding: 2rem;">Carregando...</td></tr>';
+    emptyDiv.style.display = 'none';
 
-    if (errorUsuarios) {
-        lista.innerHTML = '<p class="centro">Erro ao carregar usuários.</p>';
+    const { data: linhas, error } = await supabase
+        .from('escala_hora_extra')
+        .select('*')
+        .order('dia', { ascending: true });
+
+    if (error) {
+        const tabelaErr = document.querySelector('.tabela-escala');
+        if (tabelaErr) tabelaErr.style.display = 'table';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="centro" style="padding: 2rem; color: #991b1b;">${error.message.includes('does not exist') ? 'Tabela escala_hora_extra não encontrada. Execute o SQL em supabase_setup_escala.sql' : error.message}</td></tr>`;
+        if (emptyDiv) emptyDiv.style.display = 'none';
+        lucide.createIcons();
         return;
     }
 
-    // Buscar horas salvas no banco
-    const { data: horasSalvas, error: errorHoras } = await supabase
-        .from('horas_usuarios')
-        .select('*');
-
-    const horasExtrasPorUsuario = {};
-
-    // Inicializar com dados do banco ou zeros
-    usuarios.forEach(user => {
-        const horasUsuario = horasSalvas?.find(h => h.id_usuario === user.id);
-        const horasExtras = parseFloat(horasUsuario?.horas_extras || 0);
-        const horasExtrasFS = parseFloat(horasUsuario?.horas_extras_fim_semana || 0);
-
-        // Só mostrar usuários com hora extra
-        if (horasExtras > 0 || horasExtrasFS > 0) {
-            horasExtrasPorUsuario[user.id] = {
-                id: user.id,
-                nome: user.nome_completo || 'Desconhecido',
-                horasExtras: horasExtras,
-                horasExtrasFimSemana: horasExtrasFS,
-                registros: []
-            };
+    let itens = linhas || [];
+    itens.sort((a, b) => {
+        let va = a[escalaOrdenacao.col], vb = b[escalaOrdenacao.col];
+        if (escalaOrdenacao.col === 'dia' || escalaOrdenacao.col === 'folga') {
+            va = va || '';
+            vb = vb || '';
         }
+        const cmp = String(va).localeCompare(String(vb), undefined, { numeric: true });
+        return escalaOrdenacao.asc ? cmp : -cmp;
     });
 
-    // Filtrar apenas usuários com hora extra
-    let usuariosArray = Object.values(horasExtrasPorUsuario).filter(u => u.horasExtras > 0);
-    const usuarioLogadoId = estado.usuario?.id;
+    tbody.innerHTML = '';
 
-    usuariosArray.sort((a, b) => {
-        if (a.id === usuarioLogadoId) return -1;
-        if (b.id === usuarioLogadoId) return 1;
-        return b.horasExtras - a.horasExtras;
-    });
-
-    // Renderizar
-    lista.innerHTML = '';
-    if (usuariosArray.length === 0) {
-        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhuma hora extra registrada.</p></div>';
+    const tabelaEl = document.querySelector('.tabela-escala');
+    if (itens.length === 0) {
+        if (isAdmin) {
+            // Admin: manter tabela visível com estrutura vazia para poder adicionar
+            if (tabelaEl) tabelaEl.style.display = 'table';
+            if (emptyDiv) emptyDiv.style.display = 'none';
+            tbody.innerHTML = `<tr><td colspan="5" class="centro" style="padding: 2rem; color: #666;">Nenhum registro na escala. Clique em "Adicionar" para inserir.</td></tr>`;
+        } else {
+            if (tabelaEl) tabelaEl.style.display = 'none';
+            if (emptyDiv) emptyDiv.style.display = 'block';
+        }
+        lucide.createIcons();
         return;
     }
 
-    usuariosArray.forEach(usuario => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        const isUsuarioLogado = usuario.id === usuarioLogadoId;
-        card.style.border = isUsuarioLogado ? '2px solid var(--cor-primaria)' : '';
-        card.style.backgroundColor = isUsuarioLogado ? '#f0f7ff' : '';
-
-        const registrosHTML = usuario.registros.slice(0, 5).map(reg => {
-            const dataFormatada = new Date(reg.data).toLocaleDateString('pt-BR');
-            return `
-                <div style="padding: 0.5rem; background: #f9fafb; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span><strong>${dataFormatada}</strong> ${reg.isFimSemana ? '<span style="color: #dc2626;">(Fim de Semana)</span>' : ''}</span>
-                        <span style="font-weight: 600; color: var(--cor-primaria);">+${reg.horas.toFixed(2)}h</span>
-                    </div>
-                    <div style="color: #666; font-size: 0.8rem; margin-top: 3px;">${reg.descricao}</div>
-                </div>
-            `;
-        }).join('');
-
-        const isAdmin = estado.perfil?.funcao === 'admin';
-        card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                <h3 style="margin: 0; color: var(--cor-primaria); font-size: 1.1rem; flex: 1; min-width: 200px;">${usuario.nome}${isUsuarioLogado ? ' <span style="font-size:0.8rem; color:#666;">(Você)</span>' : ''}</h3>
-                ${isAdmin ? `<button class="btn btn-secundario" style="width: auto; min-width: 120px; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;" onclick="editarHoraExtra('${usuario.id}')">
-                    <i data-lucide="edit-2" style="width:16px; height:16px;"></i> Editar
-                </button>` : ''}
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                <div style="padding: 1rem; background: #fef3c7; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: #92400e; margin-bottom: 5px;">Total Hora Extra</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #92400e;">${usuario.horasExtras.toFixed(2)}h</div>
-                </div>
-                <div style="padding: 1rem; background: #fce7f3; border-radius: 8px;">
-                    <div style="font-size: 0.85rem; color: #9f1239; margin-bottom: 5px;">Fim de Semana</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #9f1239;">${usuario.horasExtrasFimSemana.toFixed(2)}h</div>
-                </div>
-            </div>
-            ${usuario.registros.length > 0 ? `
-                <div style="margin-top: 1rem;">
-                    <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem; color: #555;">Últimos Registros:</div>
-                    ${registrosHTML}
-                    ${usuario.registros.length > 5 ? `<div style="text-align: center; color: #666; font-size: 0.85rem; margin-top: 0.5rem;">+${usuario.registros.length - 5} registro(s)</div>` : ''}
-                </div>
-            ` : ''}
+    if (tabelaEl) tabelaEl.style.display = 'table';
+    itens.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        const acoesHtml = isAdmin ? `
+            <td class="td-acoes">
+                <button class="btn-editar-linha" data-id="${item.id}" title="Editar"><i data-lucide="edit-2" style="width:14px;height:14px;"></i></button>
+                <button class="btn-excluir-linha" data-id="${item.id}" title="Excluir"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+            </td>
+        ` : '';
+        tr.innerHTML = `
+            <td>${item.horario || '07:00/17:00'}</td>
+            <td>${item.colaborador || ''}</td>
+            <td>${formatarDiaComSemana(item.dia)}</td>
+            <td class="col-folga">${formatarDiaComSemana(item.folga)}</td>
+            ${acoesHtml}
         `;
-        lista.appendChild(card);
+        tbody.appendChild(tr);
     });
+
+    tbody.querySelectorAll('.btn-editar-linha').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editarLinhaEscala(btn.dataset.id);
+        });
+    });
+    tbody.querySelectorAll('.btn-excluir-linha').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            excluirLinhaEscala(btn.dataset.id);
+        });
+    });
+
     lucide.createIcons();
 }
+
+document.getElementById('btn-adicionar-escala')?.addEventListener('click', () => adicionarLinhaEscala());
+
+// Botão "Informações da Escala" - texto completo das orientações
+const TEXTO_INFO_ESCALA = `Boa tarde pessoal, como alinhamos segue a escala de hora extra para os final de semana. Também já está alinhada a questão das refeições. Enfatizo que sobre o restante da escala de elétrica será alinhado.
+
+🕒 Horário:
+Das 07h00 às 17h00 (sábado e domingo).
+
+🏭 Atuação:
+Atendimentos corretivos mecânicos e elétricos na unidade Takaoka, UBC, Avaré.
+
+🍽 Refeições:
+Café da manhã e almoço confirmados para ambos os dias.
+
+⚠ Pontos Importantes:
+
+- O foco é atendimento corretivo.
+
+- Caso solicitem melhorias ou qualquer atividade fora do escopo corretivo, me acionem antes para validação.
+
+- Não realizar atendimentos de urgência sem abertura prévia de OS. Mesmo sendo urgente, precisa estar formalizado antes da execução.`;
+
+document.getElementById('btn-info-escala')?.addEventListener('click', () => {
+    Swal.fire({
+        title: 'Informações da Escala de Hora Extra',
+        html: `<div style="text-align: left; font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; max-height: 70vh; overflow-y: auto;">${TEXTO_INFO_ESCALA.replace(/\n/g, '<br>')}</div>`,
+        width: '90%',
+        maxWidth: 520,
+        confirmButtonText: 'Fechar',
+        confirmButtonColor: '#004175',
+        customClass: { popup: 'swal-info-escala' }
+    });
+    lucide.createIcons();
+});
+
+async function adicionarLinhaEscala(colaboradorPreenchido = '') {
+    if (estado.perfil?.funcao !== 'admin') return;
+
+    const { value: form } = await Swal.fire({
+        title: 'Adicionar registro na escala',
+        html: `
+            <div style="text-align:left;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Horário</label>
+                <input id="swal-horario" class="swal2-input" value="07:00/17:00" placeholder="07:00/17:00" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Colaborador(es)</label>
+                <input id="swal-colaborador" class="swal2-input" value="${(colaboradorPreenchido || '').replace(/"/g, '&quot;')}" placeholder="NOME E NOME" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Dia</label>
+                <input id="swal-dia" class="swal2-input" type="date" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Folga</label>
+                <input id="swal-folga" class="swal2-input" type="date">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: () => ({
+            horario: document.getElementById('swal-horario').value || '07:00/17:00',
+            colaborador: document.getElementById('swal-colaborador').value || '',
+            dia: document.getElementById('swal-dia').value || '',
+            folga: document.getElementById('swal-folga').value || ''
+        })
+    });
+
+    if (form && form.dia && form.folga && form.colaborador) {
+        try {
+            const { error } = await supabase.from('escala_hora_extra').insert([form]);
+            if (error) throw error;
+            mostrarSucesso('Registro adicionado!');
+            carregarHoraExtra();
+        } catch (err) {
+            mostrarErro('Erro', err.message || 'Não foi possível salvar.');
+        }
+    }
+}
+
+async function editarLinhaEscala(id) {
+    if (estado.perfil?.funcao !== 'admin') return;
+
+    const { data: item } = await supabase.from('escala_hora_extra').select('*').eq('id', id).single();
+    if (!item) return;
+
+    const { value: form } = await Swal.fire({
+        title: 'Editar registro',
+        html: `
+            <div style="text-align:left;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Horário</label>
+                <input id="swal-horario" class="swal2-input" value="${item.horario || '07:00/17:00'}" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Colaborador(es)</label>
+                <input id="swal-colaborador" class="swal2-input" value="${item.colaborador || ''}" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Dia</label>
+                <input id="swal-dia" class="swal2-input" type="date" value="${item.dia || ''}" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Folga</label>
+                <input id="swal-folga" class="swal2-input" type="date" value="${item.folga || ''}">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: () => ({
+            horario: document.getElementById('swal-horario').value || '07:00/17:00',
+            colaborador: document.getElementById('swal-colaborador').value || '',
+            dia: document.getElementById('swal-dia').value || '',
+            folga: document.getElementById('swal-folga').value || ''
+        })
+    });
+
+    if (form && form.dia && form.folga && form.colaborador) {
+        try {
+            const { error } = await supabase.from('escala_hora_extra').update(form).eq('id', id);
+            if (error) throw error;
+            mostrarSucesso('Registro atualizado!');
+            carregarHoraExtra();
+        } catch (err) {
+            mostrarErro('Erro', err.message || 'Não foi possível salvar.');
+        }
+    }
+}
+
+async function excluirLinhaEscala(id) {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const { value: ok } = await Swal.fire({
+        title: 'Excluir registro?',
+        text: 'Esta ação não pode ser desfeita.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Excluir'
+    });
+    if (ok) {
+        try {
+            const { error } = await supabase.from('escala_hora_extra').delete().eq('id', id);
+            if (error) throw error;
+            mostrarSucesso('Registro excluído!');
+            carregarHoraExtra();
+        } catch (err) {
+            mostrarErro('Erro', err.message || 'Não foi possível excluir.');
+        }
+    }
+}
+
+// Ordenação da tabela de escala (clicar no header)
+document.querySelectorAll('.tabela-escala th[data-col]')?.forEach(th => {
+    th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        escalaOrdenacao.asc = escalaOrdenacao.col === col ? !escalaOrdenacao.asc : true;
+        escalaOrdenacao.col = col;
+        carregarHoraExtra();
+    });
+});
 
 async function carregarFerias() {
     const lista = document.getElementById('lista-ferias');
