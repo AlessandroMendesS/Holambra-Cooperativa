@@ -1139,6 +1139,64 @@ input[type="file"] {
     padding: 0.4rem;
 }
 
+/* Lavagem (veículos) */
+.veiculo-lavagem {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+.lavagem-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.lavagem-item span {
+    color: #666;
+    font-size: 0.8rem;
+}
+.lavagem-item strong {
+    color: var(--cor-primaria);
+}
+
+/* Programação */
+.card-programacao {
+    margin-bottom: 1rem;
+}
+.prog-linha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+}
+.prog-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.prog-item span {
+    color: #666;
+    font-size: 0.8rem;
+}
+.prog-item strong {
+    color: var(--cor-primaria);
+}
+.prog-problema {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.5;
+}
+.btn-excluir-prog {
+    padding: 0.35rem;
+    color: var(--cor-destaque);
+}
+
 /* Responsivo mobile - Tela Hora Extra */
 @media (max-width: 480px) {
     .tela-hora-extra-responsiva .tela-he-header {

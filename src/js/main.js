@@ -18,6 +18,8 @@ const telas = {
     bancoHoras: document.getElementById('tela-banco-horas'),
     horaExtra: document.getElementById('tela-hora-extra'),
     veiculos: document.getElementById('tela-veiculos'),
+    programar: document.getElementById('tela-programar'),
+    programacao: document.getElementById('tela-programacao'),
     ferias: document.getElementById('tela-ferias')
 };
 
@@ -130,6 +132,8 @@ function navegarPara(idTela) {
             if (lista) lista.innerHTML = `<div class="card centro" style="padding: 2rem; color: #991b1b;">Erro ao carregar. Verifique se executou supabase_setup_veiculos.sql</div>`;
         });
     }
+    if (idTela === 'programar') carregarProgramacoesAdmin();
+    if (idTela === 'programacao') carregarProgramacaoDiaria();
 }
 
 // Listeners Menu
@@ -141,6 +145,8 @@ document.getElementById('nav-historico').addEventListener('click', () => navegar
 document.getElementById('nav-admin').addEventListener('click', () => navegarPara('admin'));
 document.getElementById('nav-hora-extra')?.addEventListener('click', () => navegarPara('horaExtra'));
 document.getElementById('nav-veiculos')?.addEventListener('click', () => navegarPara('veiculos'));
+document.getElementById('nav-programacao')?.addEventListener('click', () => navegarPara('programacao'));
+document.getElementById('nav-programar')?.addEventListener('click', () => navegarPara('programar'));
 document.getElementById('nav-sair').addEventListener('click', async () => {
     await supabase.auth.signOut();
     estado.usuario = null;
@@ -148,6 +154,7 @@ document.getElementById('nav-sair').addEventListener('click', async () => {
     // Ocultar menu admin ao sair
     document.getElementById('nav-admin')?.classList.add('oculto');
     document.getElementById('nav-hora-extra')?.classList.add('oculto');
+    document.getElementById('nav-programar')?.classList.add('oculto');
     document.getElementById('menu-usuario').classList.remove('oculto');
     document.getElementById('menu-admin').classList.add('oculto');
     navegarPara('login');
@@ -217,11 +224,15 @@ document.getElementById('btn-menu-veiculos')?.addEventListener('click', () => {
 document.getElementById('btn-menu-veiculos-admin')?.addEventListener('click', () => {
     navegarPara('veiculos');
 });
+document.getElementById('btn-menu-programacao')?.addEventListener('click', () => navegarPara('programacao'));
+document.getElementById('btn-menu-programar-admin')?.addEventListener('click', () => navegarPara('programar'));
 document.getElementById('btn-voltar-menu').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-bh').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-he').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-ferias').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-veiculos')?.addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-programar')?.addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-programacao')?.addEventListener('click', () => navegarPara('menu'));
 
 // --- Autenticação ---
 
@@ -254,9 +265,11 @@ async function verificarUsuario() {
             estado.perfil = perfilEncontrado;
             const navAdmin = document.getElementById('nav-admin');
             const navHoraExtra = document.getElementById('nav-hora-extra');
+            const navProgramar = document.getElementById('nav-programar');
             if (estado.perfil.funcao === 'admin') {
                 if (navAdmin) navAdmin.classList.remove('oculto');
                 if (navHoraExtra) navHoraExtra.classList.remove('oculto');
+                if (navProgramar) navProgramar.classList.remove('oculto');
                 // Mostrar apenas menu admin na tela inicial
                 document.getElementById('menu-usuario').classList.add('oculto');
                 document.getElementById('menu-admin').classList.remove('oculto');
@@ -264,6 +277,7 @@ async function verificarUsuario() {
                 // Ocultar menu admin para usuários normais
                 if (navAdmin) navAdmin.classList.add('oculto');
                 if (navHoraExtra) navHoraExtra.classList.add('oculto');
+                if (navProgramar) navProgramar.classList.add('oculto');
                 // Mostrar menu normal para usuários
                 document.getElementById('menu-usuario').classList.remove('oculto');
                 document.getElementById('menu-admin').classList.add('oculto');
@@ -1028,6 +1042,209 @@ document.getElementById('btn-exportar-excel').addEventListener('click', async ()
     }
 });
 
+// --- Setores (para Programação) ---
+const SETORES = [
+    '11101 MT CENTRAL', '11102 MT F.DESENV.', '11103 MT RATES', '11104 MT RESIDEN', '11105 MT ADM.PESSOAL',
+    '11106 MT ADM.GERAL', '11107 MT TAREFEIROS', '11108 MT CONTABILIDADE', '11109 MT INFORMÁTICA', '11110 MT SERV.GERAIS',
+    '11111 MT REFEITÓRIO', '11112 MT PIS/COFINS', '11113 MT MED S. TRAB', '11114 MT SER ELET', '11115 MT DH',
+    '11201 MT RECURSOS', '11202 MT CRÉD/REPASS', '11301 MT INSUMOS', '11302 MT TSI', '11303 MT AG PRECISÃO',
+    '11304 MT INSUMOS II', '11305 MT INSUMOS LOG', '11401 MT ENGENHARIA', '11402 MT EQUIPE ADM', '11501 MT MARKETING',
+    '11601 MT ADM LOG', '11602 MT TRANSPORT', '11603 MT ASSIST. TEC.', '11604 MT P. HOUSE', '11605 MT ENERGIA',
+    '11606 MT IND SUCOS', '11607 MT TRIBUTÁRIO', '11608 MT AUDITORIA GRC', '12101 MT AG ADM', '12102 MT AG MANUT',
+    '12103 MT ALMOX CORPR', '12104 MT AG LOG', '12201 MT AG COM', '12202 MT AG COM COOP', '12203 MT AG COM TERC',
+    '12204 MT AG ADQ COOP', '12205 MT AG ADQ TERC', '12301 MT AG UBC', '12302 MT AG UBS', '12401 MT AG ARM. ALG',
+    '12402 MT AG UBA I', '12403 MT AG UBA II', '13101 MT DIPER ADM', '13201 MT DIPER COMFR', '13202 MT DIPER LOGFR',
+    '13301 MT DIPER COMFL', '13302 MT DIPER LOGFL', '14101 MT CITR ADM', '14201 MT CITR COOP', '14202 MT CITR TERC',
+    '14203 MT CITR LOG', '21101 TAQ ADM', '21201 TAQ PROD COOP', '21202 TAQ PROD TERC', '21203 TAQ ADQ COOP',
+    '21204 TAQ ADQ TERC', '21205 TAQ UBC', '21301 TAQ INSUMOS', '21304 TAQ INSUMOS II', '21305 TAQ INSUMOS LOG',
+    '31101 TAK ADM', '31102 TAK PROD COOP', '31103 TAK PROD TERC', '31104 TAK ADQ COOP', '31105 TAK ADQ TERC',
+    '31106 TAK UBC', '31107 TAK UBS', '31108 TAK CITRUS', '31109 TAK LOG', '41101 AV ADM', '41201 AV PROD COOP',
+    '41202 AV PROD TERC', '41203 AV ADQ COOP', '41204 AV ADQ TERC', '41205 AV UBC', '41301 AV INSUMOS',
+    '41304 AV INSUMOS II', '41305 AV INSUMOS LOG', '51101 TQRI ADM', '51201 TQRI PROD COOP', '51202 TQRI PROD TERC',
+    '51203 TQRI ADQ COOP', '51301 TQRI UBC', '51302 TQRI LOG', '61301 ITABE INSUMOS', '61305 ITABE INSU LOG',
+    '71101 S.MANU ADM', '71201 S.M PROD COOP', '71202 S.M PROD TERC', '71205 S.MANU UBC', '71301 S.MANU INSUMOS',
+    '71302 S.MANU RAÇÃO', '71303 S.M REVENDA RAÇÃO', '71305 S.MANU LOG', '81101 TQRITUBA ADM', '81201 TQBA PROD COOP',
+    '81202 TQBA PROD TERC', '81205 TQBA UBC', '81301 TQBA INSUMOS', '81305 TQBA SUP LOG', '91101 ITA II ADM',
+    '91102 TRANSPORTE CBT', '91201 ITA II COM CP', '91202 ITA II COM TER', '91205 ITA II UBC', '91301 ITA II SUP',
+    '91304 ITA INSUMOS II', '91305 ITA II SUP LOG', '101301 ITAPE SUP', '101304 ITAPE SUP II', '101305 ITAPE SUP LOG'
+];
+
+// --- Programações ---
+async function carregarProgramacoesAdmin() {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const lista = document.getElementById('lista-programacoes-admin');
+    if (!lista) return;
+    lista.innerHTML = '<div class="centro" style="padding: 2rem;">Carregando...</div>';
+
+    await carregarUsuarios();
+    const { data: prog, error } = await supabase
+        .from('programacoes')
+        .select('*')
+        .order('criado_em', { ascending: false });
+
+    if (error) {
+        lista.innerHTML = `<div class="card centro" style="padding: 2rem; color: #991b1b;">${error.message?.includes('does not exist') ? 'Tabela programacoes não encontrada. Execute supabase_setup_programacoes.sql' : error.message}</div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    lista.innerHTML = '';
+    if (!prog || prog.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhuma programação. Clique em + para criar.</p></div>';
+        lucide.createIcons();
+        return;
+    }
+
+    prog.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'card card-programacao';
+        const nomeColab = estado.usuarios?.find(u => u.id === p.id_colaborador)?.nome_completo || '—';
+        const dataFmt = p.data_programada ? new Date(p.data_programada + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <span style="font-weight:700; color:var(--cor-primaria); font-size:1.1rem;">OS #${p.os_numero}</span>
+                    <span style="font-size:0.85rem; color:#666; margin-left:0.5rem;">${dataFmt}</span>
+                </div>
+                <button class="btn btn-outline btn-sm btn-excluir-prog" data-id="${p.id}" title="Excluir"><i data-lucide="trash-2"></i></button>
+            </div>
+            <div class="prog-linha">
+                <div class="prog-item"><span>Colaborador</span><strong>${nomeColab}</strong></div>
+                <div class="prog-item"><span>Setor/Unidade</span><strong>${p.setor_unidade || '—'}</strong></div>
+            </div>
+            <div class="prog-problema">${(p.problema || '—').replace(/</g, '&lt;')}</div>
+        `;
+        lista.appendChild(card);
+    });
+    lista.querySelectorAll('.btn-excluir-prog').forEach(btn => {
+        btn.addEventListener('click', () => excluirProgramacao(btn.dataset.id));
+    });
+    lucide.createIcons();
+}
+
+async function carregarProgramacaoDiaria() {
+    const lista = document.getElementById('lista-programacao-usuario');
+    if (!lista) return;
+    lista.innerHTML = '<div class="centro" style="padding: 2rem;">Carregando...</div>';
+
+    const { data: prog, error } = await supabase
+        .from('programacoes')
+        .select('*')
+        .eq('id_colaborador', estado.usuario?.id)
+        .order('data_programada', { ascending: false });
+
+    if (error) {
+        lista.innerHTML = `<div class="card centro" style="padding: 2rem; color: #991b1b;">${error.message?.includes('does not exist') ? 'Execute supabase_setup_programacoes.sql' : error.message}</div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    lista.innerHTML = '';
+    if (!prog || prog.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhuma programação para você hoje.</p></div>';
+        lucide.createIcons();
+        return;
+    }
+
+    prog.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'card card-programacao';
+        const dataFmt = p.data_programada ? new Date(p.data_programada + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <span style="font-weight:700; color:var(--cor-primaria); font-size:1.1rem;">OS #${p.os_numero}</span>
+                <span style="font-size:0.85rem; color:#666;">${dataFmt}</span>
+            </div>
+            <div class="prog-linha">
+                <div class="prog-item"><span>Setor/Unidade</span><strong>${p.setor_unidade || '—'}</strong></div>
+            </div>
+            <div class="prog-problema">${(p.problema || '—').replace(/</g, '&lt;')}</div>
+        `;
+        lista.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+document.getElementById('btn-nova-programacao')?.addEventListener('click', async () => {
+    if (estado.perfil?.funcao !== 'admin') return;
+    await carregarUsuarios();
+
+    const optsColab = estado.usuarios
+        .filter(u => u.funcao !== 'admin')
+        .map(u => `<option value="${u.id}">${u.nome_completo || '—'}</option>`)
+        .join('');
+    const optsSetor = SETORES.map(s => `<option value="${s}">${s}</option>`).join('');
+    const hoje = new Date().toISOString().slice(0, 10);
+
+    const { value: form } = await Swal.fire({
+        title: 'Nova programação',
+        html: `
+            <div style="text-align:left;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Data programada</label>
+                <input type="date" id="swal-data" class="swal2-input" value="${hoje}" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">OS nº</label>
+                <input id="swal-os" class="swal2-input" placeholder="Ex: 12345" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Colaborador</label>
+                <select id="swal-colab" class="swal2-input" style="margin-bottom:1rem;">${optsColab || '<option value="">Nenhum colaborador</option>'}</select>
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Setor/Unidade</label>
+                <select id="swal-setor" class="swal2-input" style="margin-bottom:1rem;">${optsSetor}</select>
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Problema</label>
+                <textarea id="swal-problema" class="swal2-textarea" rows="3" placeholder="Descreva o problema..."></textarea>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: () => ({
+            data_programada: document.getElementById('swal-data').value || hoje,
+            os_numero: document.getElementById('swal-os').value?.trim() || '',
+            id_colaborador: document.getElementById('swal-colab').value || '',
+            setor_unidade: document.getElementById('swal-setor').value || '',
+            problema: document.getElementById('swal-problema').value?.trim() || ''
+        })
+    });
+
+    if (form && form.os_numero && form.id_colaborador && form.setor_unidade && form.problema) {
+        try {
+            const { error } = await supabase.from('programacoes').insert([{
+                data_programada: form.data_programada,
+                os_numero: form.os_numero,
+                id_colaborador: form.id_colaborador,
+                setor_unidade: form.setor_unidade,
+                problema: form.problema
+            }]);
+            if (error) throw error;
+            mostrarSucesso('Programação criada!');
+            carregarProgramacoesAdmin();
+        } catch (e) {
+            mostrarErro('Erro', e.message || 'Não foi possível salvar.');
+        }
+    }
+});
+
+async function excluirProgramacao(id) {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const { value: ok } = await Swal.fire({
+        title: 'Excluir programação?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Excluir'
+    });
+    if (ok) {
+        try {
+            const { error } = await supabase.from('programacoes').delete().eq('id', id);
+            if (error) throw error;
+            mostrarSucesso('Programação excluída!');
+            carregarProgramacoesAdmin();
+        } catch (e) {
+            mostrarErro('Erro', e.message || 'Não foi possível excluir.');
+        }
+    }
+}
+
 // --- Veículos ---
 async function carregarVeiculos() {
     const lista = document.getElementById('lista-veiculos');
@@ -1057,6 +1274,13 @@ async function carregarVeiculos() {
         return;
     }
 
+    const formatarDataBR = (iso) => {
+        if (!iso) return '—';
+        const d = new Date(iso + 'T12:00:00');
+        if (Number.isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('pt-BR');
+    };
+
     veiculos.forEach(v => {
         const card = document.createElement('div');
         card.className = 'card card-veiculo';
@@ -1068,10 +1292,17 @@ async function carregarVeiculos() {
                 ${v.foto ? `<img src="${v.foto}" alt="Foto do veículo" onerror="this.parentElement.innerHTML='<div class=\\'foto-placeholder\\'><i data-lucide=\\'car\\'></i> Sem foto</div>'">` : '<div class="foto-placeholder"><i data-lucide="car"></i> Sem foto</div>'}
             </div>
             <div class="placa-moldura">${placaFormatada}</div>
+            <div class="veiculo-lavagem">
+                <div class="lavagem-item"><span>Última lavagem</span><strong>${formatarDataBR(v.ultima_lavagem)}</strong></div>
+                <div class="lavagem-item"><span>Próxima lavagem</span><strong>${formatarDataBR(v.proxima_lavagem)}</strong></div>
+            </div>
             <div class="veiculo-documento ${docUrl ? 'img-expansivel' : ''}" ${docUrl ? `data-img-url="${docUrl}" title="Clique para ampliar"` : ''}>
                 ${v.documento ? `<img src="${v.documento}" alt="Foto do documento" class="doc-thumb" onerror="this.parentElement.innerHTML='<span style=\\'color:#999;font-size:0.85rem\\'>Sem documento</span>'">` : '<span style="color:#999;font-size:0.85rem;">Sem documento</span>'}
             </div>
-            ${isAdmin ? `<div class="veiculo-acoes"><button class="btn btn-outline btn-sm btn-excluir-veiculo" data-id="${v.id}" title="Excluir"><i data-lucide="trash-2"></i></button></div>` : ''}
+            ${isAdmin ? `<div class="veiculo-acoes">
+                <button class="btn btn-outline btn-sm btn-editar-veiculo" data-id="${v.id}" title="Editar"><i data-lucide="edit-2"></i></button>
+                <button class="btn btn-outline btn-sm btn-excluir-veiculo" data-id="${v.id}" title="Excluir"><i data-lucide="trash-2"></i></button>
+            </div>` : ''}
         `;
         lista.appendChild(card);
     });
@@ -1085,6 +1316,9 @@ async function carregarVeiculos() {
     });
     lista.querySelectorAll('.btn-excluir-veiculo').forEach(btn => {
         btn.addEventListener('click', (e) => { e.stopPropagation(); excluirVeiculo(btn.dataset.id); });
+    });
+    lista.querySelectorAll('.btn-editar-veiculo').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); editarVeiculo(btn.dataset.id); });
     });
     lucide.createIcons();
 }
@@ -1122,6 +1356,16 @@ document.getElementById('btn-adicionar-veiculo')?.addEventListener('click', asyn
                 <input id="swal-foto-file" class="swal2-input" type="file" accept="image/*" style="margin-bottom:1rem; padding:8px;">
                 <label style="display:block;margin-bottom:4px;font-weight:600;">Foto do documento</label>
                 <input id="swal-doc-file" class="swal2-input" type="file" accept="image/*" style="margin-bottom:1rem; padding:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+                    <div>
+                        <label style="display:block;margin-bottom:4px;font-weight:600;">Última lavagem</label>
+                        <input id="swal-ultima" class="swal2-input" type="date" style="margin:0;">
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:4px;font-weight:600;">Próxima lavagem</label>
+                        <input id="swal-proxima" class="swal2-input" type="date" style="margin:0;">
+                    </div>
+                </div>
             </div>
         `,
         showCancelButton: true,
@@ -1132,6 +1376,26 @@ document.getElementById('btn-adicionar-veiculo')?.addEventListener('click', asyn
             const placa = document.getElementById('swal-placa').value?.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || '';
             const fotoInput = document.getElementById('swal-foto-file');
             const docInput = document.getElementById('swal-doc-file');
+            const ultima = document.getElementById('swal-ultima').value || '';
+            const proxima = document.getElementById('swal-proxima').value || '';
+
+            if (!placa || placa.length < 7) {
+                Swal.showValidationMessage('Informe uma placa válida (ex: ABC1D23).');
+                return false;
+            }
+            if (!fotoInput?.files?.[0]) {
+                Swal.showValidationMessage('Envie a foto do veículo.');
+                return false;
+            }
+            if (!docInput?.files?.[0]) {
+                Swal.showValidationMessage('Envie a foto do documento.');
+                return false;
+            }
+            if (!ultima || !proxima) {
+                Swal.showValidationMessage('Preencha as datas de última e próxima lavagem.');
+                return false;
+            }
+
             let fotoUrl = null, docUrl = null;
             const uploadFile = async (file, prefix) => {
                 const ext = file.name.split('.').pop() || 'jpg';
@@ -1148,7 +1412,7 @@ document.getElementById('btn-adicionar-veiculo')?.addEventListener('click', asyn
                 Swal.showValidationMessage('Erro ao enviar: ' + (e.message || 'tente novamente'));
                 return false;
             }
-            return { placa, foto: fotoUrl, documento: docUrl };
+            return { placa, foto: fotoUrl, documento: docUrl, ultima_lavagem: ultima, proxima_lavagem: proxima };
         }
     });
 
@@ -1157,7 +1421,9 @@ document.getElementById('btn-adicionar-veiculo')?.addEventListener('click', asyn
             const { error } = await supabase.from('veiculos').insert([{
                 placa: form.placa,
                 foto: form.foto,
-                documento: form.documento
+                documento: form.documento,
+                ultima_lavagem: form.ultima_lavagem,
+                proxima_lavagem: form.proxima_lavagem
             }]);
             if (error) throw error;
             mostrarSucesso('Veículo adicionado!');
@@ -1165,10 +1431,102 @@ document.getElementById('btn-adicionar-veiculo')?.addEventListener('click', asyn
         } catch (err) {
             mostrarErro('Erro', err.message || 'Não foi possível salvar.');
         }
-    } else if (form && form.placa.length < 7) {
-        mostrarErro('Placa inválida', 'A placa deve ter pelo menos 7 caracteres (formato Mercosul: ABC1D23).');
     }
 });
+
+async function editarVeiculo(id) {
+    if (estado.perfil?.funcao !== 'admin') return;
+
+    const { data: veiculo, error } = await supabase.from('veiculos').select('*').eq('id', id).single();
+    if (error || !veiculo) {
+        mostrarErro('Erro', 'Não foi possível carregar o veículo.');
+        return;
+    }
+
+    const { value: form } = await Swal.fire({
+        title: 'Editar veículo',
+        html: `
+            <div style="text-align:left;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Placa</label>
+                <input id="swal-placa" class="swal2-input" value="${(veiculo.placa || '').replace(/"/g, '&quot;')}" style="margin-bottom:1rem; text-transform: uppercase;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Trocar foto do veículo (opcional)</label>
+                <input id="swal-foto-file" class="swal2-input" type="file" accept="image/*" style="margin-bottom:1rem; padding:8px;">
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Trocar foto do documento (opcional)</label>
+                <input id="swal-doc-file" class="swal2-input" type="file" accept="image/*" style="margin-bottom:1rem; padding:8px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+                    <div>
+                        <label style="display:block;margin-bottom:4px;font-weight:600;">Última lavagem</label>
+                        <input id="swal-ultima" class="swal2-input" type="date" value="${veiculo.ultima_lavagem || ''}" style="margin:0;">
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:4px;font-weight:600;">Próxima lavagem</label>
+                        <input id="swal-proxima" class="swal2-input" type="date" value="${veiculo.proxima_lavagem || ''}" style="margin:0;">
+                    </div>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#004175',
+        preConfirm: async () => {
+            const placa = document.getElementById('swal-placa').value?.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || '';
+            const fotoInput = document.getElementById('swal-foto-file');
+            const docInput = document.getElementById('swal-doc-file');
+            const ultima = document.getElementById('swal-ultima').value || '';
+            const proxima = document.getElementById('swal-proxima').value || '';
+
+            if (!placa || placa.length < 7) {
+                Swal.showValidationMessage('Informe uma placa válida (ex: ABC1D23).');
+                return false;
+            }
+            if (!ultima || !proxima) {
+                Swal.showValidationMessage('Preencha as datas de última e próxima lavagem.');
+                return false;
+            }
+
+            let fotoUrl = veiculo.foto || null;
+            let docUrl = veiculo.documento || null;
+            const uploadFile = async (file, prefix) => {
+                const ext = file.name.split('.').pop() || 'jpg';
+                const path = `veiculos/${Date.now()}_${prefix}_${placa || 'img'}.${ext}`;
+                const { error } = await supabase.storage.from('fotos_apontamentos').upload(path, file);
+                if (error) throw error;
+                const { data } = supabase.storage.from('fotos_apontamentos').getPublicUrl(path);
+                return data?.publicUrl || null;
+            };
+            try {
+                if (fotoInput?.files?.[0]) fotoUrl = await uploadFile(fotoInput.files[0], 'veiculo');
+                if (docInput?.files?.[0]) docUrl = await uploadFile(docInput.files[0], 'doc');
+            } catch (e) {
+                Swal.showValidationMessage('Erro ao enviar: ' + (e.message || 'tente novamente'));
+                return false;
+            }
+
+            return { placa, foto: fotoUrl, documento: docUrl, ultima_lavagem: ultima, proxima_lavagem: proxima };
+        }
+    });
+
+    if (form) {
+        try {
+            const { error: upErr } = await supabase
+                .from('veiculos')
+                .update({
+                    placa: form.placa,
+                    foto: form.foto,
+                    documento: form.documento,
+                    ultima_lavagem: form.ultima_lavagem,
+                    proxima_lavagem: form.proxima_lavagem
+                })
+                .eq('id', id);
+            if (upErr) throw upErr;
+            mostrarSucesso('Veículo atualizado!');
+            carregarVeiculos();
+        } catch (e) {
+            mostrarErro('Erro', e.message || 'Não foi possível atualizar.');
+        }
+    }
+}
 
 async function excluirVeiculo(id) {
     if (estado.perfil?.funcao !== 'admin') return;

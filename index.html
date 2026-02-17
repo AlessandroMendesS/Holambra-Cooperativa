@@ -40,6 +40,8 @@
                 <button class="btn btn-secundario oculto" id="nav-admin" style="justify-content: flex-start;"><i data-lucide="shield"></i> Admin</button>
                     <button class="btn btn-secundario oculto" id="nav-hora-extra" style="justify-content: flex-start;"><i data-lucide="timer"></i> Hora Extra - Escala</button>
                 <button class="btn btn-secundario" id="nav-veiculos" style="justify-content: flex-start;"><i data-lucide="car"></i> Veículos</button>
+                <button class="btn btn-secundario" id="nav-programacao" style="justify-content: flex-start;"><i data-lucide="clipboard-check"></i> Programação Diária</button>
+                <button class="btn btn-secundario oculto" id="nav-programar" style="justify-content: flex-start;"><i data-lucide="calendar-plus"></i> Programar</button>
                 
                 <div style="margin-top:auto"></div>
                 <button class="btn btn-danger" id="nav-sair"><i data-lucide="log-out"></i> Sair do Sistema</button>
@@ -206,6 +208,14 @@
                         <h3>Veículos</h3>
                         <p>Visualizar frota de veículos</p>
                     </button>
+
+                    <button class="menu-card" id="btn-menu-programacao">
+                        <div class="menu-card-icon">
+                            <i data-lucide="clipboard-check"></i>
+                        </div>
+                        <h3>Programação Diária</h3>
+                        <p>Ver OS programadas para você</p>
+                    </button>
                 </div>
 
                 <!-- Menu para admin -->
@@ -230,6 +240,14 @@
                         </div>
                         <h3>Veículos</h3>
                         <p>Gerenciar frota de veículos</p>
+                    </button>
+
+                    <button class="menu-card" id="btn-menu-programar-admin">
+                        <div class="menu-card-icon">
+                            <i data-lucide="calendar-plus"></i>
+                        </div>
+                        <h3>Programar</h3>
+                        <p>Criar programação para colaboradores</p>
                     </button>
                 </div>
             </section>
@@ -498,6 +516,37 @@
                     </div>
                 </div>
                 <div id="lista-veiculos" class="grid-veiculos">
+                    <!-- Cards via JS -->
+                </div>
+            </section>
+
+            <!-- TELA PROGRAMAR (ADMIN) -->
+            <section id="tela-programar" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
+                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Programar</h2>
+                    <div style="display: flex; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap;">
+                        <button class="btn btn-outline" id="btn-voltar-menu-programar" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;">
+                            <i data-lucide="arrow-left"></i> Voltar
+                        </button>
+                        <button class="btn btn-primario" id="btn-nova-programacao" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;" title="Nova programação (admin)">
+                            <i data-lucide="plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="lista-programacoes-admin">
+                    <!-- Cards via JS -->
+                </div>
+            </section>
+
+            <!-- TELA PROGRAMAÇÃO DIÁRIA (USUÁRIO) -->
+            <section id="tela-programacao" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
+                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Programação Diária</h2>
+                    <button class="btn btn-outline" id="btn-voltar-menu-programacao" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem; flex-shrink: 0;">
+                        <i data-lucide="arrow-left"></i> Voltar
+                    </button>
+                </div>
+                <div id="lista-programacao-usuario">
                     <!-- Cards via JS -->
                 </div>
             </section>
