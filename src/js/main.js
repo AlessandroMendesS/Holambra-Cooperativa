@@ -5,7 +5,8 @@ import { supabase } from './supabase.js';
 const estado = {
     usuario: null,
     perfil: null,
-    usuarios: []
+    usuarios: [],
+    programacoesUsuario: [] // OS programadas para o usuário (para preencher apontamento)
 };
 
 const telas = {
@@ -134,6 +135,7 @@ function navegarPara(idTela) {
     }
     if (idTela === 'programar') carregarProgramacoesAdmin();
     if (idTela === 'programacao') carregarProgramacaoDiaria();
+    if (idTela === 'dashboard') carregarProgramacoesParaApontamento();
 }
 
 // Listeners Menu
@@ -186,6 +188,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
         btnSubmit.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
         btnSubmit.dataset.modo = '';
     }
+    mostrarOcultarAptOrdemManual();
     navegarPara('dashboard');
 });
 document.getElementById('btn-menu-apontamentos').addEventListener('click', () => {
@@ -197,6 +200,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
         btnSubmit.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
         btnSubmit.dataset.modo = '';
     }
+    mostrarOcultarAptOrdemManual();
     navegarPara('dashboard');
 });
 document.getElementById('btn-menu-historico').addEventListener('click', () => navegarPara('historico'));
@@ -512,6 +516,95 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
     }
 });
 
+// --- Programações para Apontamento (select de OS) ---
+async function carregarProgramacoesParaApontamento() {
+    const selectOS = document.getElementById('apt-ordem-select');
+    const selectUnidade = document.getElementById('apt-unidade');
+    if (!selectOS || !selectUnidade) return;
+
+    let og = selectUnidade.querySelector('optgroup[label="Setores programados"]');
+    if (!og) {
+        og = document.createElement('optgroup');
+        og.label = 'Setores programados';
+        selectUnidade.appendChild(og);
+    }
+    og.innerHTML = '';
+
+    const { data: prog, error } = await supabase
+        .from('programacoes')
+        .select('*')
+        .eq('id_colaborador', estado.usuario?.id)
+        .order('data_programada', { ascending: false });
+
+    estado.programacoesUsuario = prog || [];
+    const setoresUnicos = [...new Set((prog || []).map(p => p.setor_unidade).filter(Boolean))];
+
+    // Popular select de OS
+    selectOS.innerHTML = '<option value="">Selecione uma OS programada...</option>';
+    estado.programacoesUsuario.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.os_numero;
+        opt.textContent = `OS #${p.os_numero} - ${p.setor_unidade || ''}`;
+        opt.dataset.problema = p.problema || '';
+        opt.dataset.setor = p.setor_unidade || '';
+        selectOS.appendChild(opt);
+    });
+    const optOutra = document.createElement('option');
+    optOutra.value = '__outra__';
+    optOutra.textContent = 'Digitar outra OS';
+    selectOS.appendChild(optOutra);
+
+    // Adicionar setores das programações ao select unidade
+    setoresUnicos.forEach(s => {
+        if (!selectUnidade.querySelector(`option[value="${s}"]`)) {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            if (og) og.appendChild(opt);
+        }
+    });
+
+    mostrarOcultarAptOrdemManual();
+}
+
+function mostrarOcultarAptOrdemManual() {
+    const selectOS = document.getElementById('apt-ordem-select');
+    const manualInput = document.getElementById('apt-ordem-manual');
+    if (!selectOS || !manualInput) return;
+    const isOutra = selectOS.value === '__outra__';
+    manualInput.classList.toggle('oculto', !isOutra);
+    manualInput.required = isOutra;
+    selectOS.required = !isOutra;
+    if (!isOutra) manualInput.value = '';
+}
+
+function obterOrdemApt() {
+    const selectOS = document.getElementById('apt-ordem-select');
+    const manualInput = document.getElementById('apt-ordem-manual');
+    if (!selectOS || !manualInput) return '';
+    if (selectOS.value === '__outra__') return manualInput.value?.trim() || '';
+    return selectOS.value || '';
+}
+
+document.getElementById('apt-ordem-select')?.addEventListener('change', function () {
+    const val = this.value;
+    const manualInput = document.getElementById('apt-ordem-manual');
+    const aptDesc = document.getElementById('apt-desc');
+    const aptUnidade = document.getElementById('apt-unidade');
+
+    mostrarOcultarAptOrdemManual();
+
+    if (val === '__outra__' || val === '') {
+        if (aptDesc) aptDesc.value = '';
+        if (aptUnidade) aptUnidade.value = '';
+        if (manualInput) manualInput.focus();
+    } else {
+        const opt = this.selectedOptions[0];
+        if (opt && aptDesc) aptDesc.value = opt.dataset.problema || '';
+        if (opt && aptUnidade) aptUnidade.value = opt.dataset.setor || '';
+    }
+});
+
 // --- Carregar Usuários (Manutentor Dropdown) ---
 async function carregarUsuarios() {
     const select = document.getElementById('apt-manutentor');
@@ -543,9 +636,18 @@ let apontamentoEditando = null;
 async function abrirEdicaoApontamento(apt) {
     apontamentoEditando = apt;
     navegarPara('dashboard');
+    await carregarProgramacoesParaApontamento();
 
-    // Preencher formulário
-    document.getElementById('apt-ordem').value = apt.numero_ordem;
+    const selectOS = document.getElementById('apt-ordem-select');
+    const manualInput = document.getElementById('apt-ordem-manual');
+    const temNaProg = estado.programacoesUsuario?.some(p => p.os_numero === apt.numero_ordem);
+    if (temNaProg && selectOS) {
+        selectOS.value = apt.numero_ordem;
+    } else {
+        if (selectOS) selectOS.value = '__outra__';
+        if (manualInput) manualInput.value = apt.numero_ordem;
+    }
+    mostrarOcultarAptOrdemManual();
     document.getElementById('apt-desc').value = apt.descricao;
     document.getElementById('apt-unidade').value = apt.unidade;
     document.getElementById('apt-centro').value = apt.centro_trabalho;
@@ -586,7 +688,10 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
     btn.innerHTML = isEdicao ? 'Atualizando...' : 'Processando...';
 
     try {
-        const ordem = document.getElementById('apt-ordem').value;
+        const ordem = obterOrdemApt();
+        if (!ordem) {
+            throw new Error('Selecione uma OS programada ou digite o número manualmente.');
+        }
         const desc = document.getElementById('apt-desc').value;
         const unidade = document.getElementById('apt-unidade').value;
         const idManutentor = document.getElementById('apt-manutentor').value;
@@ -1148,19 +1253,36 @@ async function carregarProgramacaoDiaria() {
 
     prog.forEach(p => {
         const card = document.createElement('div');
-        card.className = 'card card-programacao';
-        const dataFmt = p.data_programada ? new Date(p.data_programada + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+        card.className = 'card card-programacao card-programacao-diaria';
+        const dataFmt = p.data_programada ? new Date(p.data_programada + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }) : '—';
         card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <span style="font-weight:700; color:var(--cor-primaria); font-size:1.1rem;">OS #${p.os_numero}</span>
-                <span style="font-size:0.85rem; color:#666;">${dataFmt}</span>
+            <div class="prog-header">
+                <div class="prog-os-badge">OS #${p.os_numero}</div>
+                <span class="prog-data">${dataFmt}</span>
             </div>
             <div class="prog-linha">
                 <div class="prog-item"><span>Setor/Unidade</span><strong>${p.setor_unidade || '—'}</strong></div>
             </div>
             <div class="prog-problema">${(p.problema || '—').replace(/</g, '&lt;')}</div>
+            <button type="button" class="btn btn-primario btn-sm prog-btn-apontar" data-os="${p.os_numero}" title="Apontar esta OS">
+                <i data-lucide="edit-3"></i> Apontar
+            </button>
         `;
         lista.appendChild(card);
+    });
+    lista.querySelectorAll('.prog-btn-apontar').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const os = btn.dataset.os;
+            navegarPara('dashboard');
+            carregarProgramacoesParaApontamento().then(() => {
+                const select = document.getElementById('apt-ordem-select');
+                if (select && os) {
+                    select.value = os;
+                    select.dispatchEvent(new Event('change'));
+                }
+                mostrarOcultarAptOrdemManual();
+            });
+        });
     });
     lucide.createIcons();
 }

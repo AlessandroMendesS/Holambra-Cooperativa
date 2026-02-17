@@ -161,6 +161,13 @@
                 
                 <!-- Menu para usuários normais -->
                 <div class="menu-opcoes" id="menu-usuario">
+                    <button class="menu-card menu-card-programacao" id="btn-menu-programacao">
+                        <div class="menu-card-icon">
+                            <i data-lucide="clipboard-check"></i>
+                        </div>
+                        <h3>Programação Diária</h3>
+                        <p>Ver OS programadas para você</p>
+                    </button>
                     <button class="menu-card" id="btn-menu-apontamentos">
                         <div class="menu-card-icon">
                             <i data-lucide="clipboard-list"></i>
@@ -207,14 +214,6 @@
                         </div>
                         <h3>Veículos</h3>
                         <p>Visualizar frota de veículos</p>
-                    </button>
-
-                    <button class="menu-card" id="btn-menu-programacao">
-                        <div class="menu-card-icon">
-                            <i data-lucide="clipboard-check"></i>
-                        </div>
-                        <h3>Programação Diária</h3>
-                        <p>Ver OS programadas para você</p>
                     </button>
                 </div>
 
@@ -264,7 +263,11 @@
                     <form id="formulario-apontamento">
                         <div class="grupo-input">
                             <label>Ordem de Serviço (OS)</label>
-                            <input type="text" id="apt-ordem" class="input-campo" placeholder="Nº da Ordem" required inputmode="numeric">
+                            <select id="apt-ordem-select" class="select-campo select-os-programada" required>
+                                <option value="">Selecione uma OS programada...</option>
+                                <!-- Opções de OS programadas carregadas via JS -->
+                            </select>
+                            <input type="text" id="apt-ordem-manual" class="input-campo oculto" placeholder="Nº da Ordem (digite manualmente)" inputmode="numeric" style="margin-top: 0.5rem;">
                         </div>
                         
                         <div class="grupo-input">
@@ -276,18 +279,21 @@
                             <label>Unidade/Setor</label>
                             <select id="apt-unidade" class="select-campo" required>
                                 <option value="">Selecione...</option>
-                                <option>UBA Matriz</option>
-                                <option>UBC Matriz</option>
-                                <option>UBS Matriz</option>
-                                <option>Holambra</option>
-                                <option>Fábrica de Ração</option>
-                                <option>Taquarivaí</option>
-                                <option>Takaoka</option>
-                                <option>Avaré</option>
-                                <option>Itaberá</option>
-                                <option>São Manuel</option>
-                                <option>Taquarituba</option>
-                                <option>Taquari</option>
+                                <optgroup label="Geral">
+                                    <option>UBA Matriz</option>
+                                    <option>UBC Matriz</option>
+                                    <option>UBS Matriz</option>
+                                    <option>Holambra</option>
+                                    <option>Fábrica de Ração</option>
+                                    <option>Taquarivaí</option>
+                                    <option>Takaoka</option>
+                                    <option>Avaré</option>
+                                    <option>Itaberá</option>
+                                    <option>São Manuel</option>
+                                    <option>Taquarituba</option>
+                                    <option>Taquari</option>
+                                </optgroup>
+                                <!-- Setores das programações carregados via JS -->
                             </select>
                         </div>
 
@@ -521,27 +527,33 @@
             </section>
 
             <!-- TELA PROGRAMAR (ADMIN) -->
-            <section id="tela-programar" class="tela oculto">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
-                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Programar</h2>
-                    <div style="display: flex; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap;">
+            <section id="tela-programar" class="tela oculto tela-programar-admin">
+                <div class="card prog-admin-header">
+                    <div class="prog-admin-titulo">
+                        <h2 style="margin: 0;">Programar OS</h2>
+                        <p style="margin: 0.35rem 0 0; font-size: 0.9rem; color: var(--cor-texto-suave);">Criar programação para colaboradores</p>
+                    </div>
+                    <div class="prog-admin-botoes">
                         <button class="btn btn-outline" id="btn-voltar-menu-programar" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;">
                             <i data-lucide="arrow-left"></i> Voltar
                         </button>
-                        <button class="btn btn-primario" id="btn-nova-programacao" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;" title="Nova programação (admin)">
-                            <i data-lucide="plus"></i>
+                        <button class="btn btn-primario" id="btn-nova-programacao" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;" title="Nova programação">
+                            <i data-lucide="plus"></i> Nova
                         </button>
                     </div>
                 </div>
-                <div id="lista-programacoes-admin">
+                <div id="lista-programacoes-admin" class="lista-programacoes-compacta">
                     <!-- Cards via JS -->
                 </div>
             </section>
 
             <!-- TELA PROGRAMAÇÃO DIÁRIA (USUÁRIO) -->
-            <section id="tela-programacao" class="tela oculto">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
-                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Programação Diária</h2>
+            <section id="tela-programacao" class="tela oculto tela-programacao-diaria">
+                <div class="prog-diaria-header">
+                    <div class="prog-diaria-titulo">
+                        <h2 class="titulo-verde" style="margin: 0;">Programação Diária</h2>
+                        <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: #4b5563;">Suas OS programadas para hoje</p>
+                    </div>
                     <button class="btn btn-outline" id="btn-voltar-menu-programacao" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem; flex-shrink: 0;">
                         <i data-lucide="arrow-left"></i> Voltar
                     </button>
