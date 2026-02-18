@@ -35,6 +35,13 @@
                     </div>
                 </div>
 
+                <div class="menu-usuario-logado" style="display: flex; align-items: center; gap: 8px; padding: 12px; background: #f0f7ff; border-radius: var(--raio); margin-bottom: 1rem;">
+                    <span id="menu-nome-usuario" style="font-weight: 600; color: var(--cor-primaria); font-size: 0.95rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                    <button type="button" id="btn-meus-dados" class="menu-btn" title="Ver meus dados de cadastro" style="padding: 6px;">
+                        <i data-lucide="user" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>
+
                 <button class="btn btn-secundario" id="nav-inicio" style="justify-content: flex-start;"><i data-lucide="home"></i> Início</button>
                 <button class="btn btn-secundario" id="nav-historico" style="justify-content: flex-start;"><i data-lucide="file-text"></i> Histórico</button>
                 <button class="btn btn-secundario oculto" id="nav-admin" style="justify-content: flex-start;"><i data-lucide="shield"></i> Admin</button>
@@ -56,9 +63,12 @@
                 <img src="" onerror="this.style.display='none'" style="height: 32px; margin-right: 10px;">
                 <span>Gestão e Controle de Manutenção</span>
             </div>
-            <button id="alternar-menu" class="menu-btn">
-                <i data-lucide="menu" style="width: 28px; height: 28px;"></i>
-            </button>
+            <div class="header-usuario" style="display: flex; align-items: center; gap: 10px;">
+                <span id="header-nome-usuario" style="font-size: 0.9rem; font-weight: 600; color: var(--cor-primaria); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                <button id="alternar-menu" class="menu-btn">
+                    <i data-lucide="menu" style="width: 28px; height: 28px;"></i>
+                </button>
+            </div>
         </header>
 
         <main class="conteiner">

@@ -89,7 +89,10 @@ function navegarPara(idTela) {
 
     if (cabecalho) {
         if (idTela === 'login' || idTela === 'cadastro') cabecalho.classList.add('oculto');
-        else cabecalho.classList.remove('oculto');
+        else {
+            cabecalho.classList.remove('oculto');
+            atualizarNomeUsuario();
+        }
     }
     if (menuMobile) menuMobile.classList.add('oculto');
 
@@ -183,8 +186,100 @@ function atualizarVisibilidadeCamposAdmin(initialConforme = null) {
     setConforme(initialConforme !== undefined && initialConforme !== null ? initialConforme : null);
 }
 
+// Atualizar nome do usuário no header e menu lateral
+function atualizarNomeUsuario() {
+    const nome = estado.perfil?.nome_completo || estado.usuario?.email || 'Usuário';
+    const headerNome = document.getElementById('header-nome-usuario');
+    const menuNome = document.getElementById('menu-nome-usuario');
+    if (headerNome) headerNome.textContent = nome;
+    if (menuNome) menuNome.textContent = nome;
+}
+
+// Botão "Meus dados" - mostra dados de cadastro e edição
+document.getElementById('btn-meus-dados')?.addEventListener('click', async () => {
+    const p = estado.perfil;
+    if (!p) return;
+    const nasc = p.data_nascimento || p.nascimento ? new Date(p.data_nascimento + 'T12:00:00').toISOString().slice(0, 10) : '';
+
+    const result = await Swal.fire({
+        title: 'Meus Dados de Cadastro',
+        html: `
+            <div style="text-align: left; font-size: 0.95rem;">
+                <p style="margin: 8px 0;"><strong>Nome:</strong> ${(p.nome_completo || '—').replace(/</g, '&lt;')}</p>
+                <p style="margin: 8px 0;"><strong>Email:</strong> ${(p.email || '—').replace(/</g, '&lt;')}</p>
+                <p style="margin: 8px 0;"><strong>CPF:</strong> ${p.cpf ? p.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '—'}</p>
+                <p style="margin: 8px 0;"><strong>Departamento:</strong> ${(p.tag || '—').replace(/</g, '&lt;')}</p>
+                <p style="margin: 8px 0;"><strong>Data de nascimento:</strong> ${nasc ? new Date(nasc + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</p>
+                <p style="margin: 8px 0;"><strong>Função:</strong> ${p.funcao === 'admin' ? 'Administrador' : 'Usuário'}</p>
+            </div>
+        `,
+        showDenyButton: true,
+        confirmButtonText: 'Fechar',
+        denyButtonText: 'Editar',
+        confirmButtonColor: '#004175',
+        denyButtonColor: '#666'
+    });
+
+    if (result.isDenied) {
+        // Clicou em Editar
+        const { value: form } = await Swal.fire({
+            title: 'Editar Meus Dados',
+            html: `
+                <div style="text-align:left;">
+                    <label style="display:block;margin-bottom:4px;font-weight:600;">Nome Completo</label>
+                    <input type="text" id="edit-nome" class="swal2-input" value="${(p.nome_completo || '').replace(/"/g, '&quot;')}" style="margin-bottom:1rem;">
+                    <label style="display:block;margin-bottom:4px;font-weight:600;">CPF (apenas números)</label>
+                    <input type="text" id="edit-cpf" class="swal2-input" value="${(p.cpf || '').replace(/"/g, '&quot;')}" placeholder="00000000000" style="margin-bottom:1rem;">
+                    <label style="display:block;margin-bottom:4px;font-weight:600;">Email</label>
+                    <input type="email" id="edit-email" class="swal2-input" value="${(p.email || '').replace(/"/g, '&quot;')}" style="margin-bottom:1rem;">
+                    <label style="display:block;margin-bottom:4px;font-weight:600;">Departamento</label>
+                    <select id="edit-tag" class="swal2-input" style="margin-bottom:1rem;">
+                        <option value="Elétrica" ${p.tag === 'Elétrica' ? 'selected' : ''}>Elétrica</option>
+                        <option value="Mecânica" ${p.tag === 'Mecânica' ? 'selected' : ''}>Mecânica</option>
+                        <option value="Automação" ${p.tag === 'Automação' ? 'selected' : ''}>Automação</option>
+                    </select>
+                    <label style="display:block;margin-bottom:4px;font-weight:600;">Data de Nascimento</label>
+                    <input type="date" id="edit-nasc" class="swal2-input" value="${nasc}" style="margin-bottom:1rem;">
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#004175',
+            preConfirm: () => ({
+                nome_completo: document.getElementById('edit-nome').value?.trim() || '',
+                cpf: document.getElementById('edit-cpf').value?.replace(/\D/g, '') || '',
+                email: document.getElementById('edit-email').value?.trim() || '',
+                tag: document.getElementById('edit-tag').value || '',
+                data_nascimento: document.getElementById('edit-nasc').value || null
+            })
+        });
+
+        if (form && form.nome_completo) {
+            try {
+                const { error } = await supabase.from('perfis').update({
+                    nome_completo: form.nome_completo,
+                    cpf: form.cpf || null,
+                    email: form.email || null,
+                    tag: form.tag || null,
+                    data_nascimento: form.data_nascimento || null
+                }).eq('id', estado.usuario.id);
+                if (error) throw error;
+                estado.perfil = { ...estado.perfil, ...form };
+                atualizarNomeUsuario();
+                Toast.fire({ icon: 'success', title: 'Dados atualizados!' });
+            } catch (e) {
+                mostrarErro('Erro', e.message || 'Não foi possível salvar.');
+            }
+        }
+    }
+});
+
 // Listeners Menu
-document.getElementById('alternar-menu').addEventListener('click', () => menuMobile.classList.remove('oculto'));
+document.getElementById('alternar-menu').addEventListener('click', () => {
+    menuMobile.classList.remove('oculto');
+    lucide.createIcons();
+});
 document.getElementById('fechar-menu').addEventListener('click', () => menuMobile.classList.add('oculto'));
 
 document.getElementById('nav-inicio').addEventListener('click', () => navegarPara('menu'));
@@ -333,6 +428,7 @@ async function verificarUsuario() {
                 document.getElementById('menu-usuario').classList.remove('oculto');
                 document.getElementById('menu-admin').classList.add('oculto');
             }
+            atualizarNomeUsuario();
             navegarPara('menu');
         } else {
             console.error('Perfil não encontrado após retentativas.');
