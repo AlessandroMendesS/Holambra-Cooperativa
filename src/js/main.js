@@ -111,6 +111,7 @@ function navegarPara(idTela) {
     }
     if (idTela === 'dashboard') {
         carregarUsuarios();
+        atualizarVisibilidadeCamposAdmin();
     }
     if (idTela === 'historico') carregarHistorico();
     if (idTela === 'admin') carregarDadosAdmin();
@@ -136,6 +137,41 @@ function navegarPara(idTela) {
     if (idTela === 'programar') carregarProgramacoesAdmin();
     if (idTela === 'programacao') carregarProgramacaoDiaria();
     if (idTela === 'dashboard') carregarProgramacoesParaApontamento();
+}
+
+// Função para mostrar/ocultar campos de conforme planejado (visível para todos os usuários)
+function atualizarVisibilidadeCamposAdmin() {
+    const grupoConforme = document.getElementById('grupo-conforme-planejado');
+    const grupoJustificativa = document.getElementById('grupo-justificativa');
+    const checkboxConforme = document.getElementById('apt-conforme-planejado');
+    const campoJustificativa = document.getElementById('apt-justificativa');
+
+    // Campos visíveis para todos os usuários
+    if (grupoConforme) {
+        grupoConforme.classList.remove('oculto');
+        grupoConforme.style.display = 'block';
+    }
+
+    // Atualizar visibilidade da justificativa baseado no checkbox
+    if (checkboxConforme && grupoJustificativa && campoJustificativa) {
+        const atualizarJustificativa = () => {
+            const mostrarJustificativa = !checkboxConforme.checked;
+            grupoJustificativa.classList.toggle('oculto', !mostrarJustificativa);
+            grupoJustificativa.style.display = mostrarJustificativa ? 'block' : 'none';
+            campoJustificativa.required = mostrarJustificativa;
+            if (!mostrarJustificativa) {
+                campoJustificativa.value = '';
+            }
+        };
+
+        // Remover listeners anteriores e adicionar novo
+        const novoCheckbox = checkboxConforme.cloneNode(true);
+        checkboxConforme.parentNode.replaceChild(novoCheckbox, checkboxConforme);
+        novoCheckbox.addEventListener('change', atualizarJustificativa);
+
+        // Atualizar estado inicial
+        atualizarJustificativa();
+    }
 }
 
 // Listeners Menu
@@ -189,6 +225,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
         btnSubmit.dataset.modo = '';
     }
     mostrarOcultarAptOrdemManual();
+    atualizarVisibilidadeCamposAdmin();
     navegarPara('dashboard');
 });
 document.getElementById('btn-menu-apontamentos').addEventListener('click', () => {
@@ -201,6 +238,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
         btnSubmit.dataset.modo = '';
     }
     mostrarOcultarAptOrdemManual();
+    atualizarVisibilidadeCamposAdmin();
     navegarPara('dashboard');
 });
 document.getElementById('btn-menu-historico').addEventListener('click', () => navegarPara('historico'));
@@ -637,6 +675,7 @@ async function abrirEdicaoApontamento(apt) {
     apontamentoEditando = apt;
     navegarPara('dashboard');
     await carregarProgramacoesParaApontamento();
+    atualizarVisibilidadeCamposAdmin();
 
     const selectOS = document.getElementById('apt-ordem-select');
     const manualInput = document.getElementById('apt-ordem-manual');
@@ -656,6 +695,25 @@ async function abrirEdicaoApontamento(apt) {
     document.getElementById('apt-fim').value = apt.hora_fim;
     document.getElementById('apt-check').checked = apt.concluido;
     document.getElementById('apt-obs').value = apt.observacoes || '';
+
+    // Campos de conforme planejado (para todos os usuários)
+    const checkboxConforme = document.getElementById('apt-conforme-planejado');
+    const campoJustificativa = document.getElementById('apt-justificativa');
+    const grupoJustificativa = document.getElementById('grupo-justificativa');
+
+    if (checkboxConforme) {
+        checkboxConforme.checked = apt.conforme_planejado === true;
+        // Atualizar visibilidade da justificativa manualmente
+        const mostrarJustificativa = !checkboxConforme.checked;
+        if (grupoJustificativa) {
+            grupoJustificativa.classList.toggle('oculto', !mostrarJustificativa);
+            grupoJustificativa.style.display = mostrarJustificativa ? 'block' : 'none';
+        }
+        if (campoJustificativa) {
+            campoJustificativa.required = mostrarJustificativa;
+            campoJustificativa.value = apt.justificativa || '';
+        }
+    }
 
     // Selecionar manutentor
     await carregarUsuarios();
@@ -702,8 +760,17 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         const concluido = document.getElementById('apt-check').checked;
         const obs = document.getElementById('apt-obs').value;
 
+        // Campos de conforme planejado (para todos os usuários)
+        const conformePlanejado = document.getElementById('apt-conforme-planejado').checked;
+        const justificativa = !conformePlanejado ? document.getElementById('apt-justificativa').value?.trim() : null;
+
         if (!idManutentor) {
             throw new Error('Selecione um manutentor.');
+        }
+
+        // Validação: se não foi conforme planejado, justificativa é obrigatória
+        if (conformePlanejado === false && !justificativa) {
+            throw new Error('Por favor, informe a justificativa quando não foi conforme planejado.');
         }
 
         let urlsFotos = apontamentoEditando?.fotos || [];
@@ -736,28 +803,32 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
 
         if (isEdicao) {
             // Atualizar
+            const dadosUpdate = {
+                id_manutentor: idManutentor,
+                numero_ordem: ordem,
+                descricao: desc,
+                unidade: unidade,
+                centro_trabalho: centro,
+                data_servico: dataServico,
+                hora_inicio: inicio,
+                hora_fim: fim,
+                concluido: concluido,
+                observacoes: obs,
+                fotos: urlsFotos,
+                conforme_planejado: conformePlanejado,
+                justificativa: justificativa || null
+            };
+
             const { error: updateError } = await supabase
                 .from('apontamentos')
-                .update({
-                    id_manutentor: idManutentor,
-                    numero_ordem: ordem,
-                    descricao: desc,
-                    unidade: unidade,
-                    centro_trabalho: centro,
-                    data_servico: dataServico,
-                    hora_inicio: inicio,
-                    hora_fim: fim,
-                    concluido: concluido,
-                    observacoes: obs,
-                    fotos: urlsFotos
-                })
+                .update(dadosUpdate)
                 .eq('id', apontamentoEditando.id);
 
             if (updateError) throw new Error(updateError.message);
             mostrarSucesso('Apontamento Atualizado!');
         } else {
             // Inserir novo
-            const { error: insertError } = await supabase.from('apontamentos').insert([{
+            const dadosInsert = {
                 id_usuario: estado.usuario.id,
                 id_manutentor: idManutentor,
                 numero_ordem: ordem,
@@ -769,8 +840,12 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
                 hora_fim: fim,
                 concluido: concluido,
                 observacoes: obs,
-                fotos: urlsFotos
-            }]);
+                fotos: urlsFotos,
+                conforme_planejado: conformePlanejado,
+                justificativa: justificativa || null
+            };
+
+            const { error: insertError } = await supabase.from('apontamentos').insert([dadosInsert]);
 
             if (insertError) throw new Error(insertError.message);
             mostrarSucesso('Apontamento Salvo!');
@@ -1041,6 +1116,21 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
                     </p>
                     ${isAdmin ? `<p style="margin-top:3px; font-size:0.85rem; color:#666;">Criado por: ${nomeUsuario}</p>` : ''}
                     ${log.observacoes ? `<p style="margin-top:8px; font-size:0.9rem; font-style:italic; color:#555;">Obs: ${log.observacoes}</p>` : ''}
+                    ${isAdmin && log.conforme_planejado === true ? `<div style="margin-top:12px; padding:10px; background:#d1fae5; border-left:4px solid #10b981; border-radius:6px;">
+                        <p style="margin:0; font-weight:600; color:#065f46; font-size:0.9rem;">
+                            <i data-lucide="check-circle" style="width:16px; height:16px; vertical-align:middle;"></i> 
+                            Foi conforme planejado: <span style="color:#059669;">Sim</span>
+                        </p>
+                    </div>` : ''}
+                    ${isAdmin && log.conforme_planejado === false ? `<div style="margin-top:12px; padding:10px; background:#fee2e2; border-left:4px solid #ef4444; border-radius:6px;">
+                        <p style="margin:0 0 6px 0; font-weight:600; color:#991b1b; font-size:0.9rem;">
+                            <i data-lucide="x-circle" style="width:16px; height:16px; vertical-align:middle;"></i> 
+                            Foi conforme planejado: <span style="color:#dc2626;">Não</span>
+                        </p>
+                        ${log.justificativa ? `<p style="margin:0; font-size:0.85rem; color:#7f1d1d; padding-left:20px;">
+                            <strong>Justificativa:</strong> ${(log.justificativa || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                        </p>` : ''}
+                    </div>` : ''}
                     ${htmlFotos}
                 </div>
             </div>
@@ -1120,18 +1210,20 @@ document.getElementById('btn-exportar-excel').addEventListener('click', async ()
 
     if (data) {
         const dadosFormatados = data.map(item => ({
-            'Ordem': item.numero_ordem,
-            'Descrição': item.descricao,
-            'Unidade': item.unidade,
-            'Centro de Trabalho': item.centro_trabalho,
+            'Ordem': item.numero_ordem || '',
+            'Descrição': item.descricao || '',
+            'Unidade': item.unidade || '',
+            'Centro de Trabalho': item.centro_trabalho || '',
             'Manutentor': item.manutentor?.nome_completo || 'N/A',
             'Criado Por': item.usuario?.nome_completo || 'N/A',
-            'Data': new Date(item.data_servico).toLocaleDateString('pt-BR'),
-            'Hora Início': item.hora_inicio,
-            'Hora Fim': item.hora_fim,
+            'Data': item.data_servico ? new Date(item.data_servico).toLocaleDateString('pt-BR') : '',
+            'Hora Início': item.hora_inicio || '',
+            'Hora Fim': item.hora_fim || '',
             'Status': item.concluido ? 'Concluído' : 'Pendente',
             'Observações': item.observacoes || '',
-            'Fotos': item.fotos?.length || 0
+            'Fotos': item.fotos?.length || 0,
+            'Conforme Planejado': item.conforme_planejado === true ? 'Sim' : item.conforme_planejado === false ? 'Não' : 'N/A',
+            'Justificativa': item.justificativa || ''
         }));
 
         const ws = XLSX.utils.json_to_sheet(dadosFormatados);
@@ -1466,7 +1558,7 @@ async function carregarVeiculos() {
 function formatarPlaca(placa) {
     if (!placa) return '—';
     const p = String(placa).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    if (p.length >= 7) return `${p.slice(0,3)}-${p.slice(3,7)}`;
+    if (p.length >= 7) return `${p.slice(0, 3)}-${p.slice(3, 7)}`;
     return placa.toUpperCase();
 }
 
@@ -1719,19 +1811,19 @@ async function carregarBancoHoras() {
     const usuario = {
         id: usuarioLogadoId,
         nome: nomeUsuario,
-            horasPositivas: parseFloat(horasUsuario?.horas_positivas || 0),
-            horasNegativas: parseFloat(horasUsuario?.horas_negativas || 0),
-            horasExtras: parseFloat(horasUsuario?.horas_extras || 0),
-            horasExtrasFimSemana: parseFloat(horasUsuario?.horas_extras_fim_semana || 0),
-            total: (parseFloat(horasUsuario?.horas_positivas || 0) - parseFloat(horasUsuario?.horas_negativas || 0))
-        };
+        horasPositivas: parseFloat(horasUsuario?.horas_positivas || 0),
+        horasNegativas: parseFloat(horasUsuario?.horas_negativas || 0),
+        horasExtras: parseFloat(horasUsuario?.horas_extras || 0),
+        horasExtrasFimSemana: parseFloat(horasUsuario?.horas_extras_fim_semana || 0),
+        total: (parseFloat(horasUsuario?.horas_positivas || 0) - parseFloat(horasUsuario?.horas_negativas || 0))
+    };
 
     const isAdmin = estado.perfil?.funcao === 'admin';
 
     lista.innerHTML = '';
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="margin: 0; color: var(--cor-primaria); font-size: 1.1rem; flex: 1; min-width: 200px;">${usuario.nome} <span style="font-size:0.8rem; color:#666;">(Seu saldo)</span></h3>
                 ${isAdmin ? `<button class="btn btn-secundario" style="width: auto; min-width: 120px; padding: 0.5rem 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;" onclick="editarBancoHoras('${usuario.id}')">
@@ -1763,7 +1855,7 @@ async function carregarBancoHoras() {
                 </div>
             </div>
         `;
-        lista.appendChild(card);
+    lista.appendChild(card);
     lucide.createIcons();
 }
 

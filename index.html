@@ -353,6 +353,20 @@
                             <textarea id="apt-obs" class="textarea-campo" style="min-height: 80px;"></textarea>
                         </div>
 
+                        <!-- Campos de conforme planejado (para todos os usuários) -->
+                        <div class="grupo-input oculto" id="grupo-conforme-planejado" style="display: none;">
+                            <label>Foi conforme planejado?</label>
+                            <div style="display: flex; align-items: center; height: 52px; background: #fff; border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 15px;">
+                                <input type="checkbox" id="apt-conforme-planejado" style="width: 20px; height: 20px; margin-right: 10px; accent-color: var(--cor-primaria);">
+                                <span style="font-size: 0.9rem; font-weight: 500;">Sim, foi conforme planejado</span>
+                            </div>
+                        </div>
+
+                        <div class="grupo-input oculto" id="grupo-justificativa" style="display: none;">
+                            <label>Justificativa (se não foi conforme planejado)</label>
+                            <textarea id="apt-justificativa" class="textarea-campo" style="min-height: 80px;" placeholder="Descreva o motivo pelo qual não foi conforme planejado..."></textarea>
+                        </div>
+
                         <button type="submit" class="btn btn-primario">
                             <i data-lucide="check-circle"></i> SALVAR APONTAMENTO
                         </button>
