@@ -1174,6 +1174,9 @@ const SETORES = [
     '91304 ITA INSUMOS II', '91305 ITA II SUP LOG', '101301 ITAPE SUP', '101304 ITAPE SUP II', '101305 ITAPE SUP LOG'
 ];
 
+// Departamentos / Centros de trabalho para programação de OS
+const DEPARTAMENTOS = ['Elétrica', 'Mecânica', 'Automação'];
+
 // --- Programações ---
 async function carregarProgramacoesAdmin() {
     if (estado.perfil?.funcao !== 'admin') return;
@@ -1296,6 +1299,7 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
         .map(u => `<option value="${u.id}">${u.nome_completo || '—'}</option>`)
         .join('');
     const optsSetor = SETORES.map(s => `<option value="${s}">${s}</option>`).join('');
+    const optsDepartamento = DEPARTAMENTOS.map(d => `<option value="${d}">${d}</option>`).join('');
     const hoje = new Date().toISOString().slice(0, 10);
 
     const { value: form } = await Swal.fire({
@@ -1310,6 +1314,8 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
                 <select id="swal-colab" class="swal2-input" style="margin-bottom:1rem;">${optsColab || '<option value="">Nenhum colaborador</option>'}</select>
                 <label style="display:block;margin-bottom:4px;font-weight:600;">Setor/Unidade</label>
                 <select id="swal-setor" class="swal2-input" style="margin-bottom:1rem;">${optsSetor}</select>
+                <label style="display:block;margin-bottom:4px;font-weight:600;">Departamento (Elétrica / Mecânica / Automação)</label>
+                <select id="swal-departamento" class="swal2-input" style="margin-bottom:1rem;">${optsDepartamento}</select>
                 <label style="display:block;margin-bottom:4px;font-weight:600;">Problema</label>
                 <textarea id="swal-problema" class="swal2-textarea" rows="3" placeholder="Descreva o problema..."></textarea>
             </div>
@@ -1318,13 +1324,25 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
         confirmButtonText: 'Salvar',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#004175',
-        preConfirm: () => ({
-            data_programada: document.getElementById('swal-data').value || hoje,
-            os_numero: document.getElementById('swal-os').value?.trim() || '',
-            id_colaborador: document.getElementById('swal-colab').value || '',
-            setor_unidade: document.getElementById('swal-setor').value || '',
-            problema: document.getElementById('swal-problema').value?.trim() || ''
-        })
+        preConfirm: () => {
+            const data_programada = document.getElementById('swal-data').value || hoje;
+            const os_numero = document.getElementById('swal-os').value?.trim() || '';
+            const id_colaborador = document.getElementById('swal-colab').value || '';
+            const setor = document.getElementById('swal-setor').value || '';
+            const departamento = document.getElementById('swal-departamento').value || '';
+            const problema = document.getElementById('swal-problema').value?.trim() || '';
+
+            // Guarda o departamento junto com o setor, para aparecer na listagem e na programação diária
+            const setor_unidade = departamento ? `${departamento} - ${setor}` : setor;
+
+            return {
+                data_programada,
+                os_numero,
+                id_colaborador,
+                setor_unidade,
+                problema
+            };
+        }
     });
 
     if (form && form.os_numero && form.id_colaborador && form.setor_unidade && form.problema) {
