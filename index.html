@@ -272,7 +272,7 @@
                         
                         <div class="grupo-input">
                             <label>Descrição da Atividade</label>
-                            <textarea id="apt-desc" class="textarea-campo" placeholder="Descreva o que foi realizado..." required></textarea>
+                            <textarea id="apt-desc" class="textarea-campo" placeholder="Opcional se foi conforme planejado (use os botões abaixo)"></textarea>
                         </div>
 
                         <div class="grupo-input">
@@ -353,17 +353,22 @@
                             <textarea id="apt-obs" class="textarea-campo" style="min-height: 80px;"></textarea>
                         </div>
 
-                        <!-- Campos de conforme planejado (para todos os usuários) -->
+                        <!-- Foi conforme planejado? (dois botões) -->
                         <div class="grupo-input oculto" id="grupo-conforme-planejado" style="display: none;">
                             <label>Foi conforme planejado?</label>
-                            <div style="display: flex; align-items: center; height: 52px; background: #fff; border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 15px;">
-                                <input type="checkbox" id="apt-conforme-planejado" style="width: 20px; height: 20px; margin-right: 10px; accent-color: var(--cor-primaria);">
-                                <span style="font-size: 0.9rem; font-weight: 500;">Sim, foi conforme planejado</span>
+                            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <button type="button" id="btn-conforme-sim" class="btn btn-secundario" style="width: auto; padding: 0 1.5rem; flex: 1; min-width: 120px;">
+                                    <i data-lucide="check-circle"></i> Sim
+                                </button>
+                                <button type="button" id="btn-conforme-nao" class="btn btn-outline" style="width: auto; padding: 0 1.5rem; flex: 1; min-width: 120px;">
+                                    <i data-lucide="x-circle"></i> Não
+                                </button>
                             </div>
+                            <input type="hidden" id="apt-conforme-planejado" value="">
                         </div>
 
                         <div class="grupo-input oculto" id="grupo-justificativa" style="display: none;">
-                            <label>Justificativa (se não foi conforme planejado)</label>
+                            <label>Justificativa (obrigatório quando não foi conforme planejado)</label>
                             <textarea id="apt-justificativa" class="textarea-campo" style="min-height: 80px;" placeholder="Descreva o motivo pelo qual não foi conforme planejado..."></textarea>
                         </div>
 

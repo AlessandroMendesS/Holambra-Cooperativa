@@ -139,39 +139,48 @@ function navegarPara(idTela) {
     if (idTela === 'dashboard') carregarProgramacoesParaApontamento();
 }
 
-// Função para mostrar/ocultar campos de conforme planejado (visível para todos os usuários)
-function atualizarVisibilidadeCamposAdmin() {
+// Função para mostrar/ocultar campos de conforme planejado (dois botões Sim/Não). initialConforme: true/false/null (edição)
+function atualizarVisibilidadeCamposAdmin(initialConforme = null) {
     const grupoConforme = document.getElementById('grupo-conforme-planejado');
     const grupoJustificativa = document.getElementById('grupo-justificativa');
-    const checkboxConforme = document.getElementById('apt-conforme-planejado');
+    const hiddenConforme = document.getElementById('apt-conforme-planejado');
     const campoJustificativa = document.getElementById('apt-justificativa');
+    const aptDesc = document.getElementById('apt-desc');
+    const btnSim = document.getElementById('btn-conforme-sim');
+    const btnNao = document.getElementById('btn-conforme-nao');
 
-    // Campos visíveis para todos os usuários
-    if (grupoConforme) {
-        grupoConforme.classList.remove('oculto');
-        grupoConforme.style.display = 'block';
+    if (!grupoConforme) return;
+
+    grupoConforme.classList.remove('oculto');
+    grupoConforme.style.display = 'block';
+
+    function setConforme(val) {
+        if (hiddenConforme) hiddenConforme.value = val === true ? 'sim' : val === false ? 'nao' : '';
+        if (grupoJustificativa && campoJustificativa) {
+            const mostrar = val === false;
+            grupoJustificativa.classList.toggle('oculto', !mostrar);
+            grupoJustificativa.style.display = mostrar ? 'block' : 'none';
+            campoJustificativa.required = mostrar;
+            if (!mostrar) campoJustificativa.value = '';
+        }
+        if (aptDesc) aptDesc.required = val === false;
+        if (btnSim) {
+            btnSim.classList.toggle('btn-primario', val === true);
+            btnSim.classList.toggle('btn-secundario', val !== true);
+        }
+        if (btnNao) {
+            btnNao.classList.toggle('btn-primario', val === false);
+            btnNao.classList.toggle('btn-outline', val !== false);
+        }
+        lucide.createIcons();
     }
 
-    // Atualizar visibilidade da justificativa baseado no checkbox
-    if (checkboxConforme && grupoJustificativa && campoJustificativa) {
-        const atualizarJustificativa = () => {
-            const mostrarJustificativa = !checkboxConforme.checked;
-            grupoJustificativa.classList.toggle('oculto', !mostrarJustificativa);
-            grupoJustificativa.style.display = mostrarJustificativa ? 'block' : 'none';
-            campoJustificativa.required = mostrarJustificativa;
-            if (!mostrarJustificativa) {
-                campoJustificativa.value = '';
-            }
-        };
+    if (btnSim) btnSim.replaceWith(btnSim.cloneNode(true));
+    if (btnNao) btnNao.replaceWith(btnNao.cloneNode(true));
+    document.getElementById('btn-conforme-sim')?.addEventListener('click', () => setConforme(true));
+    document.getElementById('btn-conforme-nao')?.addEventListener('click', () => setConforme(false));
 
-        // Remover listeners anteriores e adicionar novo
-        const novoCheckbox = checkboxConforme.cloneNode(true);
-        checkboxConforme.parentNode.replaceChild(novoCheckbox, checkboxConforme);
-        novoCheckbox.addEventListener('change', atualizarJustificativa);
-
-        // Atualizar estado inicial
-        atualizarJustificativa();
-    }
+    setConforme(initialConforme !== undefined && initialConforme !== null ? initialConforme : null);
 }
 
 // Listeners Menu
@@ -662,6 +671,18 @@ async function carregarUsuarios() {
             option.textContent = user.nome_completo;
             select.appendChild(option);
         });
+        // Preencher manutentor com o usuário logado (cadastro do cliente)
+        if (estado.usuario?.id && data.some(u => u.id === estado.usuario.id)) {
+            select.value = estado.usuario.id;
+        }
+        // Preencher centro de trabalho com o departamento do perfil (tag do cadastro)
+        const aptCentro = document.getElementById('apt-centro');
+        if (aptCentro && estado.perfil?.tag) {
+            const tag = estado.perfil.tag;
+            if ([...aptCentro.options].some(o => o.value === tag)) {
+                aptCentro.value = tag;
+            }
+        }
     } else {
         select.innerHTML = '<option value="">Erro ao carregar</option>';
     }
@@ -696,24 +717,10 @@ async function abrirEdicaoApontamento(apt) {
     document.getElementById('apt-check').checked = apt.concluido;
     document.getElementById('apt-obs').value = apt.observacoes || '';
 
-    // Campos de conforme planejado (para todos os usuários)
-    const checkboxConforme = document.getElementById('apt-conforme-planejado');
+    // Conforme planejado (botões Sim/Não) e justificativa
+    atualizarVisibilidadeCamposAdmin(apt.conforme_planejado);
     const campoJustificativa = document.getElementById('apt-justificativa');
-    const grupoJustificativa = document.getElementById('grupo-justificativa');
-
-    if (checkboxConforme) {
-        checkboxConforme.checked = apt.conforme_planejado === true;
-        // Atualizar visibilidade da justificativa manualmente
-        const mostrarJustificativa = !checkboxConforme.checked;
-        if (grupoJustificativa) {
-            grupoJustificativa.classList.toggle('oculto', !mostrarJustificativa);
-            grupoJustificativa.style.display = mostrarJustificativa ? 'block' : 'none';
-        }
-        if (campoJustificativa) {
-            campoJustificativa.required = mostrarJustificativa;
-            campoJustificativa.value = apt.justificativa || '';
-        }
-    }
+    if (campoJustificativa) campoJustificativa.value = apt.justificativa || '';
 
     // Selecionar manutentor
     await carregarUsuarios();
@@ -750,7 +757,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         if (!ordem) {
             throw new Error('Selecione uma OS programada ou digite o número manualmente.');
         }
-        const desc = document.getElementById('apt-desc').value;
+        let desc = (document.getElementById('apt-desc').value || '').trim();
         const unidade = document.getElementById('apt-unidade').value;
         const idManutentor = document.getElementById('apt-manutentor').value;
         const centro = document.getElementById('apt-centro').value;
@@ -760,18 +767,27 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         const concluido = document.getElementById('apt-check').checked;
         const obs = document.getElementById('apt-obs').value;
 
-        // Campos de conforme planejado (para todos os usuários)
-        const conformePlanejado = document.getElementById('apt-conforme-planejado').checked;
+        // Conforme planejado: valor do hidden (sim/nao) ou botões
+        const conformeVal = document.getElementById('apt-conforme-planejado')?.value || '';
+        const conformePlanejado = conformeVal === 'sim';
+        if (conformeVal !== 'sim' && conformeVal !== 'nao') {
+            throw new Error('Informe se foi conforme planejado (clique em Sim ou Não).');
+        }
         const justificativa = !conformePlanejado ? document.getElementById('apt-justificativa').value?.trim() : null;
 
         if (!idManutentor) {
             throw new Error('Selecione um manutentor.');
         }
 
-        // Validação: se não foi conforme planejado, justificativa é obrigatória
-        if (conformePlanejado === false && !justificativa) {
-            throw new Error('Por favor, informe a justificativa quando não foi conforme planejado.');
+        if (!conformePlanejado && !justificativa) {
+            throw new Error('Quando não foi conforme planejado, a justificativa é obrigatória.');
         }
+
+        // Descrição: obrigatória só quando Não; quando Sim pode ficar em branco
+        if (!conformePlanejado && !desc) {
+            throw new Error('Informe a descrição da atividade.');
+        }
+        if (conformePlanejado && !desc) desc = 'Conforme planejado';
 
         let urlsFotos = apontamentoEditando?.fotos || [];
 
