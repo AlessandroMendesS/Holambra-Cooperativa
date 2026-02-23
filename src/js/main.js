@@ -12,7 +12,11 @@ const estado = {
 const telas = {
     login: document.getElementById('tela-login'),
     cadastro: document.getElementById('tela-cadastro'),
+    cadastroOperacao: document.getElementById('tela-cadastro-operacao'),
     menu: document.getElementById('tela-menu'),
+    menuOperacao: document.getElementById('tela-menu-operacao'),
+    abrirOs: document.getElementById('tela-abrir-os'),
+    minhasSolicitacoes: document.getElementById('tela-minhas-solicitacoes'),
     dashboard: document.getElementById('tela-dashboard'),
     historico: document.getElementById('tela-historico'),
     admin: document.getElementById('tela-admin'),
@@ -23,6 +27,10 @@ const telas = {
     programacao: document.getElementById('tela-programacao'),
     ferias: document.getElementById('tela-ferias')
 };
+
+// Listas pré-definidas para Cadastro e OS de Operação
+const SETORES_OPERACAO = ['Produção', 'Administrativo', 'Logística', 'Qualidade', 'Manutenção', 'TI', 'RH', 'Financeiro', 'Comercial', 'Almoxarifado', 'Outro'];
+const UNIDADES_OPERACAO = ['UBA Matriz', 'UBC Matriz', 'UBS Matriz', 'Holambra', 'Fábrica de Ração', 'Taquarivaí', 'Takaoka', 'Avaré', 'Itaberá', 'São Manuel', 'Taquarituba', 'Taquari'];
 
 const cabecalho = document.getElementById('cabecalho-principal');
 const menuMobile = document.getElementById('menu-mobile');
@@ -88,7 +96,7 @@ function navegarPara(idTela) {
     }
 
     if (cabecalho) {
-        if (idTela === 'login' || idTela === 'cadastro') cabecalho.classList.add('oculto');
+        if (idTela === 'login' || idTela === 'cadastro' || idTela === 'cadastroOperacao') cabecalho.classList.add('oculto');
         else {
             cabecalho.classList.remove('oculto');
             atualizarNomeUsuario();
@@ -96,20 +104,62 @@ function navegarPara(idTela) {
     }
     if (menuMobile) menuMobile.classList.add('oculto');
 
-    if (idTela === 'menu') {
-        // Atualizar visibilidade dos menus baseado no perfil
+    if (idTela === 'menu' || idTela === 'menuOperacao') {
         const navAdmin = document.getElementById('nav-admin');
         const navHoraExtra = document.getElementById('nav-hora-extra');
-        if (estado.perfil && estado.perfil.funcao === 'admin') {
+        const navProgramar = document.getElementById('nav-programar');
+        const navInicio = document.getElementById('nav-inicio');
+        const navHistorico = document.getElementById('nav-historico');
+        const navVeiculos = document.getElementById('nav-veiculos');
+        const navProgramacao = document.getElementById('nav-programacao');
+        const navOperacaoInicio = document.getElementById('nav-operacao-inicio');
+        const navAbrirOs = document.getElementById('nav-abrir-os');
+        const navMinhasSolicitacoes = document.getElementById('nav-minhas-solicitacoes');
+        const menuUsuario = document.getElementById('menu-usuario');
+        const menuAdmin = document.getElementById('menu-admin');
+
+        const isOperacao = estado.perfil?.tipo_perfil === 'operacao';
+        const isAdmin = estado.perfil?.funcao === 'admin';
+
+        if (isAdmin) {
             if (navAdmin) navAdmin.classList.remove('oculto');
             if (navHoraExtra) navHoraExtra.classList.remove('oculto');
-            document.getElementById('menu-usuario').classList.add('oculto');
-            document.getElementById('menu-admin').classList.remove('oculto');
+            if (navProgramar) navProgramar.classList.remove('oculto');
+            if (navInicio) navInicio.classList.remove('oculto');
+            if (navHistorico) navHistorico.classList.remove('oculto');
+            if (navVeiculos) navVeiculos.classList.remove('oculto');
+            if (navProgramacao) navProgramacao.classList.remove('oculto');
+            if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
+            if (navAbrirOs) navAbrirOs.classList.add('oculto');
+            if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
+            if (menuUsuario) menuUsuario.classList.add('oculto');
+            if (menuAdmin) menuAdmin.classList.remove('oculto');
+        } else if (isOperacao) {
+            if (navAdmin) navAdmin.classList.add('oculto');
+            if (navHoraExtra) navHoraExtra.classList.add('oculto');
+            if (navProgramar) navProgramar.classList.add('oculto');
+            if (navInicio) navInicio.classList.add('oculto');
+            if (navHistorico) navHistorico.classList.add('oculto');
+            if (navVeiculos) navVeiculos.classList.add('oculto');
+            if (navProgramacao) navProgramacao.classList.add('oculto');
+            if (navOperacaoInicio) navOperacaoInicio.classList.remove('oculto');
+            if (navAbrirOs) navAbrirOs.classList.remove('oculto');
+            if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.remove('oculto');
+            if (menuUsuario) menuUsuario.classList.add('oculto');
+            if (menuAdmin) menuAdmin.classList.add('oculto');
         } else {
             if (navAdmin) navAdmin.classList.add('oculto');
             if (navHoraExtra) navHoraExtra.classList.add('oculto');
-            document.getElementById('menu-usuario').classList.remove('oculto');
-            document.getElementById('menu-admin').classList.add('oculto');
+            if (navProgramar) navProgramar.classList.add('oculto');
+            if (navInicio) navInicio.classList.remove('oculto');
+            if (navHistorico) navHistorico.classList.remove('oculto');
+            if (navVeiculos) navVeiculos.classList.remove('oculto');
+            if (navProgramacao) navProgramacao.classList.remove('oculto');
+            if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
+            if (navAbrirOs) navAbrirOs.classList.add('oculto');
+            if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
+            if (menuUsuario) menuUsuario.classList.remove('oculto');
+            if (menuAdmin) menuAdmin.classList.add('oculto');
         }
     }
     if (idTela === 'dashboard') {
@@ -117,7 +167,13 @@ function navegarPara(idTela) {
         atualizarVisibilidadeCamposAdmin();
     }
     if (idTela === 'historico') carregarHistorico();
-    if (idTela === 'admin') carregarDadosAdmin();
+    if (idTela === 'admin') {
+        carregarDadosAdmin();
+        preencherFiltrosOrdensPendentes();
+        carregarOrdensPendentes();
+    }
+    if (idTela === 'minhasSolicitacoes') carregarMinhasSolicitacoes();
+    if (idTela === 'abrirOs') preencherSelectsAbrirOS();
     if (idTela === 'bancoHoras') {
         carregarUsuarios();
         carregarBancoHoras();
@@ -302,8 +358,13 @@ document.getElementById('nav-sair').addEventListener('click', async () => {
     navegarPara('login');
 });
 
-document.getElementById('btn-ir-cadastro').addEventListener('click', () => navegarPara('cadastro'));
+document.getElementById('btn-ir-cadastro-manutencao')?.addEventListener('click', () => navegarPara('cadastro'));
+document.getElementById('btn-ir-cadastro-operacao')?.addEventListener('click', () => {
+    preencherSelectsCadastroOperacao();
+    navegarPara('cadastroOperacao');
+});
 document.getElementById('btn-voltar-login').addEventListener('click', () => navegarPara('login'));
+document.getElementById('btn-voltar-login-operacao')?.addEventListener('click', () => navegarPara('login'));
 
 // Toggle mostrar/ocultar senha
 document.getElementById('toggle-senha').addEventListener('click', () => {
@@ -380,6 +441,14 @@ document.getElementById('btn-voltar-menu-veiculos')?.addEventListener('click', (
 document.getElementById('btn-voltar-menu-programar')?.addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-programacao')?.addEventListener('click', () => navegarPara('menu'));
 
+document.getElementById('nav-operacao-inicio')?.addEventListener('click', () => navegarPara('menuOperacao'));
+document.getElementById('nav-abrir-os')?.addEventListener('click', () => { preencherSelectsAbrirOS(); navegarPara('abrirOs'); });
+document.getElementById('nav-minhas-solicitacoes')?.addEventListener('click', () => navegarPara('minhasSolicitacoes'));
+document.getElementById('btn-operacao-abrir-os')?.addEventListener('click', () => { preencherSelectsAbrirOS(); navegarPara('abrirOs'); });
+document.getElementById('btn-operacao-minhas-solicitacoes')?.addEventListener('click', () => navegarPara('minhasSolicitacoes'));
+document.getElementById('btn-voltar-menu-operacao')?.addEventListener('click', () => navegarPara('menuOperacao'));
+document.getElementById('btn-voltar-menu-solicitacoes')?.addEventListener('click', () => navegarPara('menuOperacao'));
+
 // --- Autenticação ---
 
 async function verificarUsuario() {
@@ -429,7 +498,11 @@ async function verificarUsuario() {
                 document.getElementById('menu-admin').classList.add('oculto');
             }
             atualizarNomeUsuario();
-            navegarPara('menu');
+            if ((estado.perfil.tipo_perfil || '') === 'operacao') {
+                navegarPara('menuOperacao');
+            } else {
+                navegarPara('menu');
+            }
         } else {
             console.error('Perfil não encontrado após retentativas.');
             // Se falhar mesmo assim, talvez redirecionar para uma tela de "Complete seu cadastro" ou erro
@@ -607,18 +680,37 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
     }
 });
 
-// Cadastro (EMAIL)
+function preencherSelectsCadastroOperacao() {
+    const setor = document.getElementById('cad-op-setor');
+    if (setor && setor.options.length <= 1) {
+        setor.innerHTML = '<option value="">Selecione...</option>';
+        UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setor.appendChild(o); });
+    }
+}
+
+function preencherSelectsAbrirOS() {
+    const setor = document.getElementById('os-setor');
+    if (!setor) return;
+    setor.innerHTML = '<option value="">Selecione...</option>';
+    UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setor.appendChild(o); });
+    if (estado.perfil?.setor) setor.value = estado.perfil.setor;
+}
+
+// Cadastro Manutenção
 document.getElementById('formulario-cadastro').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById('cad-email').value.trim();
+    let email = document.getElementById('cad-email').value.trim();
     const senha = document.getElementById('cad-senha').value;
+    const cpf = document.getElementById('cad-cpf').value.replace(/\D/g, '');
+    if (!email) email = `${cpf}@manutencao.holambra`;
 
     const metaData = {
         nome_completo: document.getElementById('cad-nome').value,
         cpf: document.getElementById('cad-cpf').value,
         data_nascimento: document.getElementById('cad-nasc').value,
-        tag: document.getElementById('cad-tag').value
+        tag: document.getElementById('cad-tag').value,
+        tipo_perfil: 'manutencao'
     };
 
     Swal.fire({
@@ -646,18 +738,209 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
     }
 
     if (data.user) {
+        await supabase.from('perfis').update({ tipo_perfil: 'manutencao', email: email }).eq('id', data.user.id);
         if (data.session) {
             mostrarSucesso('Conta criada com sucesso!');
             await verificarUsuario();
         } else {
-            Swal.fire({
-                icon: 'info',
-                title: 'Conta Criada',
-                text: 'Você já pode fazer login!'
-            }).then(() => navegarPara('login'));
+            Swal.fire({ icon: 'info', title: 'Conta Criada', text: 'Você já pode fazer login!' }).then(() => navegarPara('login'));
         }
     }
 });
+
+// Cadastro Operação
+document.getElementById('formulario-cadastro-operacao')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('cad-op-email').value.trim();
+    const senha = document.getElementById('cad-op-senha').value;
+    const nome = document.getElementById('cad-op-nome').value.trim();
+    const telefone = document.getElementById('cad-op-telefone').value.trim();
+    const setorUnidade = document.getElementById('cad-op-setor').value;
+    const funcao_cargo = document.getElementById('cad-op-funcao').value.trim();
+
+    Swal.fire({ title: 'Criando conta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password: senha,
+        options: { data: { nome_completo: nome } }
+    });
+    Swal.close();
+    if (error) {
+        mostrarErro('Erro no Cadastro', error.message.includes('already') ? 'Este e-mail já está cadastrado.' : error.message);
+        return;
+    }
+    if (data.user) {
+        await supabase.from('perfis').update({
+            tipo_perfil: 'operacao',
+            nome_completo: nome,
+            email,
+            telefone: telefone || null,
+            setor: setorUnidade || null,
+            unidade: setorUnidade || null,
+            funcao_cargo: funcao_cargo || null
+        }).eq('id', data.user.id);
+        if (data.session) {
+            mostrarSucesso('Conta criada!');
+            await verificarUsuario();
+        } else {
+            Swal.fire({ icon: 'info', title: 'Conta Criada', text: 'Você já pode fazer login!' }).then(() => navegarPara('login'));
+        }
+    }
+});
+
+// --- Ordens de Serviço (Perfil Operação) ---
+document.getElementById('formulario-abrir-os')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const titulo = document.getElementById('os-titulo').value.trim();
+    const descricao = document.getElementById('os-descricao').value.trim();
+    const setorUnidade = document.getElementById('os-setor').value;
+    if (!titulo || !setorUnidade) { mostrarErro('Campos obrigatórios', 'Preencha título e setor/unidade.'); return; }
+    try {
+        const { error } = await supabase.from('ordens_servico').insert([{
+            id_solicitante: estado.usuario.id,
+            titulo,
+            descricao: descricao || null,
+            setor: setorUnidade,
+            unidade: setorUnidade,
+            status: 'aberta'
+        }]);
+        if (error) throw error;
+        mostrarSucesso('Solicitação enviada!');
+        e.target.reset();
+        navegarPara('menuOperacao');
+    } catch (err) {
+        mostrarErro('Erro', err.message || 'Não foi possível enviar. Execute supabase_setup_ordens_servico.sql');
+    }
+});
+
+async function carregarMinhasSolicitacoes() {
+    const lista = document.getElementById('lista-minhas-solicitacoes');
+    if (!lista) return;
+    lista.innerHTML = '<div class="centro" style="padding:2rem;">Carregando...</div>';
+    const { data, error } = await supabase.from('ordens_servico').select('*').eq('id_solicitante', estado.usuario.id).order('criado_em', { ascending: false });
+    if (error) {
+        lista.innerHTML = '<div class="card centro" style="padding:2rem;color:#991b1b;">' + (error.message.includes('does not exist') ? 'Execute supabase_setup_ordens_servico.sql' : error.message) + '</div>';
+        return;
+    }
+    lista.innerHTML = '';
+    if (!data || data.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding:3rem 1rem;"><p style="color:#666;">Nenhuma solicitação.</p></div>';
+        lucide.createIcons();
+        return;
+    }
+    const statusLabel = { aberta: 'Aberta', programada: 'Programada', em_execucao: 'Em Execução', finalizada: 'Finalizada' };
+    const statusClass = { aberta: 'badge-wait', programada: 'badge-ok', em_execucao: 'badge-ok', finalizada: 'badge-ok' };
+    data.forEach(os => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.padding = '1.25rem';
+        const dataAbertura = os.criado_em ? new Date(os.criado_em).toLocaleDateString('pt-BR') : '—';
+        card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
+                <strong style="color:var(--cor-primaria);">${(os.titulo || '').replace(/</g, '&lt;')}</strong>
+                <span class="badge ${statusClass[os.status] || 'badge-wait'}">${statusLabel[os.status] || os.status}</span>
+            </div>
+            <p style="font-size:0.9rem;color:#666;margin:8px 0 0;">${(os.descricao || '—').replace(/</g, '&lt;').substring(0, 120)}${(os.descricao || '').length > 120 ? '...' : ''}</p>
+            <p style="font-size:0.8rem;color:#888;margin-top:8px;">${os.setor || os.unidade || '—'} • ${dataAbertura}</p>
+        `;
+        lista.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+// --- Admin: Ordens Pendentes e Encaminhar ---
+async function carregarOrdensPendentes() {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const lista = document.getElementById('lista-ordens-pendentes');
+    const filtroSetorUnidade = document.getElementById('filtro-os-setor-unidade')?.value || '';
+    if (!lista) return;
+    lista.innerHTML = '<div class="centro" style="padding:1.5rem;">Carregando...</div>';
+
+    let query = supabase.from('ordens_servico').select('*').order('criado_em', { ascending: false });
+    if (filtroSetorUnidade) query = query.eq('setor', filtroSetorUnidade);
+    const { data: ordens, error } = await query;
+
+    if (error) {
+        lista.innerHTML = '<div class="centro" style="padding:1rem;color:#991b1b;">' + (error.message.includes('does not exist') ? 'Execute supabase_setup_ordens_servico.sql' : error.message) + '</div>';
+        return;
+    }
+
+    const pendentes = (ordens || []).filter(o => o.status === 'aberta');
+    if (pendentes.length === 0) {
+        lista.innerHTML = '<p style="color:#666;padding:1rem;">Nenhuma OS aberta no momento.</p>';
+        lucide.createIcons();
+        return;
+    }
+
+    await carregarUsuarios();
+    const responsavelSelect = document.getElementById('admin-responsavel-os');
+    if (responsavelSelect) {
+        responsavelSelect.innerHTML = '<option value="">Selecione o responsável...</option>';
+        (estado.usuarios || []).filter(u => u.funcao !== 'admin' && (u.tipo_perfil === 'manutencao' || !u.tipo_perfil)).forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = u.nome_completo || u.id;
+            responsavelSelect.appendChild(opt);
+        });
+    }
+
+    lista.innerHTML = '';
+    pendentes.forEach(os => {
+        const div = document.createElement('div');
+        div.className = 'item-lista';
+        div.style.display = 'flex';
+        div.style.alignItems = 'flex-start';
+        div.style.gap = '12px';
+        const dataAbertura = os.criado_em ? new Date(os.criado_em).toLocaleDateString('pt-BR') : '—';
+        div.innerHTML = `
+            <input type="checkbox" class="os-pendente-cb" data-id="${os.id}" style="margin-top:6px;">
+            <div style="flex:1;">
+                <strong>${(os.titulo || '').replace(/</g, '&lt;')}</strong>
+                <p style="font-size:0.85rem;color:#666;margin:4px 0 0;">${(os.descricao || '').replace(/</g, '&lt;').substring(0, 80)}...</p>
+                <p style="font-size:0.8rem;color:#888;margin-top:4px;">${os.setor || os.unidade} • ${dataAbertura}</p>
+            </div>
+        `;
+        lista.appendChild(div);
+    });
+    lucide.createIcons();
+}
+
+function preencherFiltrosOrdensPendentes() {
+    const sel = document.getElementById('filtro-os-setor-unidade');
+    if (sel && sel.options.length <= 1) {
+        sel.innerHTML = '<option value="">Todos</option>';
+        UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; sel.appendChild(o); });
+    }
+}
+
+document.getElementById('btn-encaminhar-os')?.addEventListener('click', async () => {
+    const responsavel = document.getElementById('admin-responsavel-os')?.value;
+    if (!responsavel) { mostrarErro('Selecione o responsável', 'Escolha um mecânico ou eletricista.'); return; }
+    const ids = [...document.querySelectorAll('.os-pendente-cb:checked')].map(cb => cb.dataset.id);
+    if (ids.length === 0) { mostrarErro('Selecione ao menos uma OS', 'Marque as ordens que deseja encaminhar.'); return; }
+    try {
+        for (const id of ids) {
+            const { data: os } = await supabase.from('ordens_servico').select('titulo, descricao, setor, unidade').eq('id', id).single();
+            await supabase.from('ordens_servico').update({ status: 'programada', id_responsavel: responsavel, atualizado_em: new Date().toISOString() }).eq('id', id);
+            if (os) {
+                const numeroOs = id.slice(0, 8).replace(/-/g, '');
+                await supabase.from('programacoes').insert([{
+                    id_colaborador: responsavel,
+                    os_numero: numeroOs,
+                    setor_unidade: `${os.unidade} - ${os.setor}`,
+                    problema: os.titulo + (os.descricao ? '\n' + os.descricao : ''),
+                    data_programada: new Date().toISOString().slice(0, 10)
+                }]);
+            }
+        }
+        mostrarSucesso('OS encaminhada(s)!');
+        carregarOrdensPendentes();
+    } catch (err) {
+        mostrarErro('Erro', err.message || 'Não foi possível encaminhar.');
+    }
+});
+
+document.getElementById('filtro-os-setor-unidade')?.addEventListener('change', () => carregarOrdensPendentes());
 
 // --- Programações para Apontamento (select de OS) ---
 async function carregarProgramacoesParaApontamento() {
@@ -755,7 +1038,7 @@ async function carregarUsuarios() {
 
     const { data, error } = await supabase
         .from('perfis')
-        .select('id, nome_completo')
+        .select('id, nome_completo, funcao, tipo_perfil')
         .order('nome_completo');
 
     if (data) {

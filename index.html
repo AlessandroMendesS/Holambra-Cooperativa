@@ -43,6 +43,9 @@
                 </div>
 
                 <button class="btn btn-secundario" id="nav-inicio" style="justify-content: flex-start;"><i data-lucide="home"></i> Início</button>
+                <button class="btn btn-secundario oculto" id="nav-operacao-inicio" style="justify-content: flex-start;"><i data-lucide="home"></i> Início</button>
+                <button class="btn btn-secundario oculto" id="nav-abrir-os" style="justify-content: flex-start;"><i data-lucide="plus-circle"></i> Abrir OS</button>
+                <button class="btn btn-secundario oculto" id="nav-minhas-solicitacoes" style="justify-content: flex-start;"><i data-lucide="list"></i> Minhas Solicitações</button>
                 <button class="btn btn-secundario" id="nav-historico" style="justify-content: flex-start;"><i data-lucide="file-text"></i> Histórico</button>
                 <button class="btn btn-secundario oculto" id="nav-admin" style="justify-content: flex-start;"><i data-lucide="shield"></i> Admin</button>
                     <button class="btn btn-secundario oculto" id="nav-hora-extra" style="justify-content: flex-start;"><i data-lucide="timer"></i> Hora Extra - Escala</button>
@@ -106,9 +109,15 @@
                     </form>
                     
                     <div class="centro" style="margin-top: 2rem;">
-                        <button id="btn-ir-cadastro" class="btn btn-outline" style="font-size: 0.9rem;">
-                           Não tem conta? Cadastre-se
-                        </button>
+                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">Não tem conta? Escolha o tipo de cadastro:</p>
+                        <div style="display: flex; flex-direction: column; gap: 10px; max-width: 280px; margin: 0 auto;">
+                            <button type="button" id="btn-ir-cadastro-manutencao" class="btn btn-primario" style="font-size: 0.9rem;">
+                                <i data-lucide="wrench"></i> Cadastro de Manutenção
+                            </button>
+                            <button type="button" id="btn-ir-cadastro-operacao" class="btn btn-outline" style="font-size: 0.9rem;">
+                                <i data-lucide="clipboard-list"></i> Cadastro de Operação
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -118,9 +127,10 @@
                 </p>
             </section>
 
-            <!-- TELA CADASTRO -->
+            <!-- TELA CADASTRO MANUTENÇÃO -->
             <section id="tela-cadastro" class="tela oculto">
-                <h2 style="margin-bottom: 1.5rem; padding-left: 5px;">Novo Colaborador</h2>
+                <h2 style="margin-bottom: 1.5rem; padding-left: 5px;">Cadastro de Manutenção</h2>
+                <p style="color: var(--cor-texto-suave); font-size: 0.9rem; margin-bottom: 1rem;">Para mecânicos e eletricistas.</p>
                 <div class="card">
                     <form id="formulario-cadastro">
                         <div class="grupo-input">
@@ -132,8 +142,8 @@
                             <input type="text" id="cad-cpf" class="input-campo" placeholder="000.000.000-00" required>
                         </div>
                         <div class="grupo-input">
-                            <label>Email Corporativo</label>
-                            <input type="email" id="cad-email" class="input-campo" placeholder="seu.email@holambra.com.br" required>
+                            <label>Email Corporativo <span style="font-weight:400; color:#888;">(opcional)</span></label>
+                            <input type="email" id="cad-email" class="input-campo" placeholder="seu.email@holambra.com.br">
                         </div>
                         <div class="grupo-input">
                             <label>Senha de Acesso</label>
@@ -141,15 +151,14 @@
                         </div>
                         <div class="grid-duplo">
                             <div class="grupo-input">
-                                <label>Nascimento</label>
+                                <label>Data de Nascimento</label>
                                 <input type="date" id="cad-nasc" class="input-campo">
                             </div>
                             <div class="grupo-input">
-                                <label>Departamento</label>
-                                <select id="cad-tag" class="select-campo">
+                                <label>CT (Centro de Trabalho)</label>
+                                <select id="cad-tag" class="select-campo" required>
                                     <option value="Elétrica">Elétrica</option>
                                     <option value="Mecânica">Mecânica</option>
-                                    <option value="Automação">Automação</option>
                                 </select>
                             </div>
                         </div>
@@ -157,6 +166,102 @@
                         <button type="button" id="btn-voltar-login" class="btn btn-outline" style="margin-top: 15px;">Cancelar</button>
                     </form>
                 </div>
+            </section>
+
+            <!-- TELA CADASTRO OPERAÇÃO -->
+            <section id="tela-cadastro-operacao" class="tela oculto">
+                <h2 style="margin-bottom: 1.5rem; padding-left: 5px;">Cadastro de Operação</h2>
+                <p style="color: var(--cor-texto-suave); font-size: 0.9rem; margin-bottom: 1rem;">Para solicitantes que abrem Ordens de Serviço.</p>
+                <div class="card">
+                    <form id="formulario-cadastro-operacao">
+                        <div class="grupo-input">
+                            <label>Nome do Solicitante</label>
+                            <input type="text" id="cad-op-nome" class="input-campo" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>E-mail</label>
+                            <input type="email" id="cad-op-email" class="input-campo" placeholder="seu.email@holambra.com.br" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Telefone de Contato</label>
+                            <input type="tel" id="cad-op-telefone" class="input-campo" placeholder="(00) 00000-0000" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Setor / Unidade</label>
+                            <select id="cad-op-setor" class="select-campo" required>
+                                <option value="">Selecione...</option>
+                                <!-- Preenchido via JS -->
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Função</label>
+                            <input type="text" id="cad-op-funcao" class="input-campo" placeholder="Ex: Analista, Coordenador" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Senha de Acesso</label>
+                            <input type="password" id="cad-op-senha" class="input-campo" required>
+                        </div>
+                        <button type="submit" class="btn btn-primario">CONCLUIR CADASTRO</button>
+                        <button type="button" id="btn-voltar-login-operacao" class="btn btn-outline" style="margin-top: 15px;">Cancelar</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TELA MENU OPERAÇÃO (home para perfil operação) -->
+            <section id="tela-menu-operacao" class="tela oculto">
+                <div class="card" style="text-align: center; margin-bottom: 2rem; padding: 2rem;">
+                    <div class="banner-container-menu">
+                        <img src="images/Banner.png" alt="Holambra" class="banner-img-menu" onerror="this.style.display='none'">
+                    </div>
+                    <h2 style="margin-bottom: 0.5rem; margin-top: 1rem;">Operação</h2>
+                    <p style="color: var(--cor-texto-suave);">Abra e acompanhe suas Ordens de Serviço</p>
+                </div>
+                <div class="menu-opcoes">
+                    <button class="menu-card" id="btn-operacao-abrir-os">
+                        <div class="menu-card-icon"><i data-lucide="plus-circle"></i></div>
+                        <h3>Abrir Nova OS</h3>
+                        <p>Solicitar ordem de serviço</p>
+                    </button>
+                    <button class="menu-card" id="btn-operacao-minhas-solicitacoes">
+                        <div class="menu-card-icon"><i data-lucide="list"></i></div>
+                        <h3>Minhas Solicitações</h3>
+                        <p>Histórico e status (Aberta, Programada, Em Execução, Finalizada)</p>
+                    </button>
+                </div>
+            </section>
+
+            <!-- TELA ABRIR OS (perfil operação) -->
+            <section id="tela-abrir-os" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
+                    <h2 style="margin: 0;">Abrir Ordem de Serviço</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-menu-operacao" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
+                </div>
+                <div class="card">
+                    <form id="formulario-abrir-os">
+                        <div class="grupo-input">
+                            <label>Título / Assunto</label>
+                            <input type="text" id="os-titulo" class="input-campo" placeholder="Ex: Reparo no equipamento X" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Descrição da Solicitação</label>
+                            <textarea id="os-descricao" class="textarea-campo" placeholder="Descreva o que precisa..." required></textarea>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Setor / Unidade</label>
+                            <select id="os-setor" class="select-campo" required></select>
+                        </div>
+                        <button type="submit" class="btn btn-primario"><i data-lucide="send"></i> ENVIAR SOLICITAÇÃO</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- TELA MINHAS SOLICITAÇÕES (perfil operação) -->
+            <section id="tela-minhas-solicitacoes" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
+                    <h2 style="margin: 0;">Minhas Solicitações</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-menu-solicitacoes" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
+                </div>
+                <div id="lista-minhas-solicitacoes"><!-- Cards via JS --></div>
             </section>
 
             <!-- TELA MENU PRINCIPAL -->
@@ -416,6 +521,27 @@
             <!-- TELA ADMIN -->
             <section id="tela-admin" class="tela oculto">
                 <h2 style="margin-bottom: 1.5rem; padding-top: 10px;">Administração</h2>
+
+                <div class="card" style="border-left: 4px solid #f59e0b;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;"><i data-lucide="inbox" style="width:20px;height:20px;vertical-align:middle;"></i> Ordens Pendentes</h3>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">OS abertas pelos setores. Selecione e encaminhe para o responsável.</p>
+                    <div class="grupo-input" style="margin-bottom: 1rem;">
+                        <label>Filtrar Setor / Unidade</label>
+                        <select id="filtro-os-setor-unidade" class="select-campo">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display:block;margin-bottom:6px;font-weight:600;">Responsável (Mecânico ou Eletricista)</label>
+                        <select id="admin-responsavel-os" class="select-campo" style="margin-bottom: 8px;">
+                            <option value="">Selecione o responsável...</option>
+                        </select>
+                        <button type="button" id="btn-encaminhar-os" class="btn btn-primario" style="width: auto; padding: 0 1.2rem;">
+                            <i data-lucide="send"></i> Encaminhar / Programar
+                        </button>
+                    </div>
+                    <div id="lista-ordens-pendentes"><!-- Cards com checkbox via JS --></div>
+                </div>
                 
                 <div class="card">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Relatórios</h3>
