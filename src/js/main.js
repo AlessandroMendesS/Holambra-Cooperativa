@@ -6,7 +6,8 @@ const estado = {
     usuario: null,
     perfil: null,
     usuarios: [],
-    programacoesUsuario: [] // OS programadas para o usuário (para preencher apontamento)
+    programacoesUsuario: [], // OS programadas para o usuário (para preencher apontamento)
+    realtimeChannelOS: null   // canal para atualização em tempo real das OS (Minhas Solicitações)
 };
 
 const telas = {
@@ -25,7 +26,8 @@ const telas = {
     veiculos: document.getElementById('tela-veiculos'),
     programar: document.getElementById('tela-programar'),
     programacao: document.getElementById('tela-programacao'),
-    ferias: document.getElementById('tela-ferias')
+    ferias: document.getElementById('tela-ferias'),
+    gestaoOs: document.getElementById('tela-gestao-os')
 };
 
 // Listas pré-definidas para Cadastro e OS de Operação
@@ -86,6 +88,10 @@ function mostrarSucesso(titulo) {
 
 // --- Navegação ---
 function navegarPara(idTela) {
+    if (idTela !== 'minhasSolicitacoes' && estado.realtimeChannelOS) {
+        supabase.removeChannel(estado.realtimeChannelOS);
+        estado.realtimeChannelOS = null;
+    }
     window.scrollTo(0, 0);
     Object.values(telas).forEach(el => { if (el) el.classList.add('oculto'); });
 
@@ -115,6 +121,7 @@ function navegarPara(idTela) {
         const navOperacaoInicio = document.getElementById('nav-operacao-inicio');
         const navAbrirOs = document.getElementById('nav-abrir-os');
         const navMinhasSolicitacoes = document.getElementById('nav-minhas-solicitacoes');
+        const navOrdensServico = document.getElementById('nav-ordens-servico');
         const menuUsuario = document.getElementById('menu-usuario');
         const menuAdmin = document.getElementById('menu-admin');
 
@@ -129,6 +136,7 @@ function navegarPara(idTela) {
             if (navHistorico) navHistorico.classList.remove('oculto');
             if (navVeiculos) navVeiculos.classList.remove('oculto');
             if (navProgramacao) navProgramacao.classList.remove('oculto');
+            if (navOrdensServico) navOrdensServico.classList.remove('oculto');
             if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
@@ -142,6 +150,7 @@ function navegarPara(idTela) {
             if (navHistorico) navHistorico.classList.add('oculto');
             if (navVeiculos) navVeiculos.classList.add('oculto');
             if (navProgramacao) navProgramacao.classList.add('oculto');
+            if (navOrdensServico) navOrdensServico.classList.add('oculto');
             if (navOperacaoInicio) navOperacaoInicio.classList.remove('oculto');
             if (navAbrirOs) navAbrirOs.classList.remove('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.remove('oculto');
@@ -158,6 +167,7 @@ function navegarPara(idTela) {
             if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
+            if (navOrdensServico) navOrdensServico.classList.add('oculto');
             if (menuUsuario) menuUsuario.classList.remove('oculto');
             if (menuAdmin) menuAdmin.classList.add('oculto');
         }
@@ -169,10 +179,15 @@ function navegarPara(idTela) {
     if (idTela === 'historico') carregarHistorico();
     if (idTela === 'admin') {
         carregarDadosAdmin();
-        preencherFiltrosOrdensPendentes();
-        carregarOrdensPendentes();
     }
-    if (idTela === 'minhasSolicitacoes') carregarMinhasSolicitacoes();
+    if (idTela === 'gestaoOs') {
+        preencherFiltrosGestaoOS();
+        carregarGestaoOS();
+    }
+    if (idTela === 'minhasSolicitacoes') {
+        carregarMinhasSolicitacoes();
+        iniciarRealtimeMinhasSolicitacoes();
+    }
     if (idTela === 'abrirOs') preencherSelectsAbrirOS();
     if (idTela === 'bancoHoras') {
         carregarUsuarios();
@@ -341,6 +356,7 @@ document.getElementById('fechar-menu').addEventListener('click', () => menuMobil
 document.getElementById('nav-inicio').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('nav-historico').addEventListener('click', () => navegarPara('historico'));
 document.getElementById('nav-admin').addEventListener('click', () => navegarPara('admin'));
+document.getElementById('nav-ordens-servico')?.addEventListener('click', () => navegarPara('gestaoOs'));
 document.getElementById('nav-hora-extra')?.addEventListener('click', () => navegarPara('horaExtra'));
 document.getElementById('nav-veiculos')?.addEventListener('click', () => navegarPara('veiculos'));
 document.getElementById('nav-programacao')?.addEventListener('click', () => navegarPara('programacao'));
@@ -351,6 +367,7 @@ document.getElementById('nav-sair').addEventListener('click', async () => {
     estado.perfil = null;
     // Ocultar menu admin ao sair
     document.getElementById('nav-admin')?.classList.add('oculto');
+    document.getElementById('nav-ordens-servico')?.classList.add('oculto');
     document.getElementById('nav-hora-extra')?.classList.add('oculto');
     document.getElementById('nav-programar')?.classList.add('oculto');
     document.getElementById('menu-usuario').classList.remove('oculto');
@@ -409,6 +426,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
 document.getElementById('btn-menu-historico').addEventListener('click', () => navegarPara('historico'));
 document.getElementById('btn-voltar-historico').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-menu-admin').addEventListener('click', () => navegarPara('admin'));
+document.getElementById('btn-menu-ordens-servico')?.addEventListener('click', () => navegarPara('gestaoOs'));
 document.getElementById('btn-menu-banco-horas').addEventListener('click', () => {
     navegarPara('bancoHoras');
     carregarBancoHoras();
@@ -441,6 +459,7 @@ document.getElementById('btn-voltar-menu-veiculos')?.addEventListener('click', (
 document.getElementById('btn-voltar-menu-programar')?.addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-programacao')?.addEventListener('click', () => navegarPara('menu'));
 
+document.getElementById('btn-voltar-gestao-os')?.addEventListener('click', () => navegarPara('admin'));
 document.getElementById('nav-operacao-inicio')?.addEventListener('click', () => navegarPara('menuOperacao'));
 document.getElementById('nav-abrir-os')?.addEventListener('click', () => { preencherSelectsAbrirOS(); navegarPara('abrirOs'); });
 document.getElementById('nav-minhas-solicitacoes')?.addEventListener('click', () => navegarPara('minhasSolicitacoes'));
@@ -688,14 +707,6 @@ function preencherSelectsCadastroOperacao() {
     }
 }
 
-function preencherSelectsAbrirOS() {
-    const setor = document.getElementById('os-setor');
-    if (!setor) return;
-    setor.innerHTML = '<option value="">Selecione...</option>';
-    UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setor.appendChild(o); });
-    if (estado.perfil?.setor) setor.value = estado.perfil.setor;
-}
-
 // Cadastro Manutenção
 document.getElementById('formulario-cadastro').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -789,29 +800,94 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
 });
 
 // --- Ordens de Serviço (Perfil Operação) ---
+function gerarNumeroSolicitacaoAleatorio() {
+    const hex = Array.from(crypto.getRandomValues(new Uint8Array(4)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    return hex;
+}
+
+async function obterProximoNumeroOS() {
+    for (let i = 0; i < 10; i++) {
+        const num = gerarNumeroSolicitacaoAleatorio();
+        const { data } = await supabase.from('ordens_servico').select('id').eq('numero_solicitacao', num).maybeSingle();
+        if (!data) return num;
+    }
+    return gerarNumeroSolicitacaoAleatorio() + Date.now().toString(36).slice(-2);
+}
+
+function preencherSelectsAbrirOS() {
+    const setorSel = document.getElementById('os-setor');
+    if (setorSel && setorSel.options.length <= 1) {
+        setorSel.innerHTML = '<option value="">Selecione o setor/unidade</option>';
+        UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setorSel.appendChild(o); });
+    }
+    if (estado.perfil?.setor) setorSel.value = estado.perfil.setor;
+    obterProximoNumeroOS().then(num => {
+        const campo = document.getElementById('os-numero');
+        if (campo) campo.value = num;
+    });
+}
+
 document.getElementById('formulario-abrir-os')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const titulo = document.getElementById('os-titulo').value.trim();
+    const numeroSolicitacao = document.getElementById('os-numero').value.trim();
     const descricao = document.getElementById('os-descricao').value.trim();
     const setorUnidade = document.getElementById('os-setor').value;
-    if (!titulo || !setorUnidade) { mostrarErro('Campos obrigatórios', 'Preencha título e setor/unidade.'); return; }
+    const centroTrabalho = document.getElementById('os-centro-trabalho').value;
+    const dataNecessidade = document.getElementById('os-data-necessidade').value || null;
+    const destinoServico = document.getElementById('os-destino').value || null;
+    const tipoManutencao = document.getElementById('os-tipo-manutencao').value || null;
+    const prioridade = document.getElementById('os-prioridade').value || null;
+    const anexoInput = document.getElementById('os-anexo');
+    if (!numeroSolicitacao || !setorUnidade) { mostrarErro('Campos obrigatórios', 'Preencha setor/unidade. O número é gerado automaticamente.'); return; }
+    if (!descricao || !descricao.trim()) { mostrarErro('Campos obrigatórios', 'Preencha a descrição do serviço.'); return; }
+    let anexoUrl = null;
+    if (anexoInput?.files?.length) {
+        const file = anexoInput.files[0];
+        const reader = new FileReader();
+        anexoUrl = await new Promise((res) => {
+            reader.onload = () => res(reader.result);
+            reader.readAsDataURL(file);
+        });
+    }
     try {
-        const { error } = await supabase.from('ordens_servico').insert([{
+        const payload = {
+            numero_solicitacao: numeroSolicitacao,
+            titulo: numeroSolicitacao + ' - ' + (descricao.trim().substring(0, 80) || 'Solicitação'),
             id_solicitante: estado.usuario.id,
-            titulo,
-            descricao: descricao || null,
+            descricao: descricao.trim(),
             setor: setorUnidade,
             unidade: setorUnidade,
+            centro_trabalho: centroTrabalho || null,
+            data_necessidade: dataNecessidade || null,
+            destino_servico: destinoServico,
+            tipo_manutencao: tipoManutencao,
+            prioridade: prioridade,
+            anexo: anexoUrl,
             status: 'aberta'
-        }]);
+        };
+        const { error } = await supabase.from('ordens_servico').insert([payload]);
         if (error) throw error;
         mostrarSucesso('Solicitação enviada!');
         e.target.reset();
+        obterProximoNumeroOS().then(num => { const c = document.getElementById('os-numero'); if (c) c.value = num; });
         navegarPara('menuOperacao');
     } catch (err) {
         mostrarErro('Erro', err.message || 'Não foi possível enviar. Execute supabase_setup_ordens_servico.sql');
     }
 });
+
+function iniciarRealtimeMinhasSolicitacoes() {
+    if (!estado.usuario?.id || estado.realtimeChannelOS) return;
+    const channel = supabase
+        .channel('minhas-os-updates')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ordens_servico', filter: 'id_solicitante=eq.' + estado.usuario.id }, () => {
+            carregarMinhasSolicitacoes();
+        })
+        .subscribe();
+    estado.realtimeChannelOS = channel;
+}
 
 async function carregarMinhasSolicitacoes() {
     const lista = document.getElementById('lista-minhas-solicitacoes');
@@ -828,20 +904,21 @@ async function carregarMinhasSolicitacoes() {
         lucide.createIcons();
         return;
     }
-    const statusLabel = { aberta: 'Aberta', programada: 'Programada', em_execucao: 'Em Execução', finalizada: 'Finalizada' };
-    const statusClass = { aberta: 'badge-wait', programada: 'badge-ok', em_execucao: 'badge-ok', finalizada: 'badge-ok' };
+    const statusLabel = { aberta: 'Aberta', programada: 'Programada', em_andamento: 'Em Andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
+    const statusClass = { aberta: 'badge-wait', programada: 'badge-programada', em_andamento: 'badge-andamento', concluida: 'badge-concluida', cancelada: 'badge-cancelada' };
     data.forEach(os => {
         const card = document.createElement('div');
-        card.className = 'card';
-        card.style.padding = '1.25rem';
+        card.className = 'card card-minha-os';
         const dataAbertura = os.criado_em ? new Date(os.criado_em).toLocaleDateString('pt-BR') : '—';
+        const numero = os.numero_solicitacao || os.id?.slice(0, 8) || '—';
+        const descEscapada = (os.descricao || '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         card.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
-                <strong style="color:var(--cor-primaria);">${(os.titulo || '').replace(/</g, '&lt;')}</strong>
+            <div class="minha-os-header">
+                <span class="minha-os-numero">#${String(numero).replace(/</g, '&lt;')}</span>
                 <span class="badge ${statusClass[os.status] || 'badge-wait'}">${statusLabel[os.status] || os.status}</span>
             </div>
-            <p style="font-size:0.9rem;color:#666;margin:8px 0 0;">${(os.descricao || '—').replace(/</g, '&lt;').substring(0, 120)}${(os.descricao || '').length > 120 ? '...' : ''}</p>
-            <p style="font-size:0.8rem;color:#888;margin-top:8px;">${os.setor || os.unidade || '—'} • ${dataAbertura}</p>
+            <div class="minha-os-descricao">${descEscapada}</div>
+            <div class="minha-os-meta">${os.setor || os.unidade || '—'} · ${dataAbertura}</div>
         `;
         lista.appendChild(card);
     });
@@ -941,6 +1018,128 @@ document.getElementById('btn-encaminhar-os')?.addEventListener('click', async ()
 });
 
 document.getElementById('filtro-os-setor-unidade')?.addEventListener('change', () => carregarOrdensPendentes());
+
+// --- Admin: Gestão de Ordens de Serviço (TELA 2) ---
+const STATUS_OS_OPCOES = [
+    { value: 'programada', label: 'Programada', cor: '#eab308' },
+    { value: 'em_andamento', label: 'Em Andamento', cor: '#2563eb' },
+    { value: 'concluida', label: 'Concluída', cor: '#16a34a' },
+    { value: 'cancelada', label: 'Cancelada', cor: '#dc2626' }
+];
+const STATUS_OS_COR = { aberta: '#94a3b8', programada: '#eab308', em_andamento: '#2563eb', concluida: '#16a34a', cancelada: '#dc2626' };
+const STATUS_OS_LABEL = { aberta: 'Aberta', programada: 'Programada', em_andamento: 'Em Andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
+const STATUS_OS_BADGE_CLASS = { aberta: 'badge-wait', programada: 'badge-programada', em_andamento: 'badge-andamento', concluida: 'badge-concluida', cancelada: 'badge-cancelada' };
+
+function preencherFiltrosGestaoOS() {
+    const sel = document.getElementById('gestao-filtro-setor');
+    if (sel && sel.options.length <= 1) {
+        sel.innerHTML = '<option value="">Todos</option>';
+        UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; sel.appendChild(o); });
+    }
+}
+
+async function carregarGestaoOS() {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const lista = document.getElementById('lista-gestao-os');
+    if (!lista) return;
+    lista.innerHTML = '<div class="centro" style="padding:2rem;">Carregando...</div>';
+
+    let query = supabase.from('ordens_servico').select('*').order('criado_em', { ascending: false });
+    const num = document.getElementById('gestao-filtro-numero')?.value?.trim();
+    if (num) query = query.ilike('numero_solicitacao', '%' + num + '%');
+    const setor = document.getElementById('gestao-filtro-setor')?.value;
+    if (setor) query = query.eq('setor', setor);
+    const centro = document.getElementById('gestao-filtro-centro')?.value;
+    if (centro) query = query.eq('centro_trabalho', centro);
+    const prioridade = document.getElementById('gestao-filtro-prioridade')?.value;
+    if (prioridade) query = query.eq('prioridade', prioridade);
+    const dataInicio = document.getElementById('gestao-filtro-data-inicio')?.value;
+    if (dataInicio) query = query.gte('criado_em', dataInicio + 'T00:00:00');
+    const dataFim = document.getElementById('gestao-filtro-data-fim')?.value;
+    if (dataFim) query = query.lte('criado_em', dataFim + 'T23:59:59');
+
+    const { data: ordens, error } = await query;
+
+    if (error) {
+        lista.innerHTML = '<div class="card centro" style="padding:2rem;color:#991b1b;">' + (error.message || 'Erro ao carregar.') + '</div>';
+        lucide.createIcons();
+        return;
+    }
+    if (!ordens || ordens.length === 0) {
+        lista.innerHTML = '<div class="card centro" style="padding:3rem 1rem;"><p style="color:#666;">Nenhuma ordem de serviço encontrada.</p></div>';
+        lucide.createIcons();
+        return;
+    }
+
+    const idsSolicitantes = [...new Set(ordens.map(o => o.id_solicitante).filter(Boolean))];
+    let nomePorSolicitante = {};
+    if (idsSolicitantes.length > 0) {
+        const { data: perfis } = await supabase.from('perfis').select('id, nome_completo').in('id', idsSolicitantes);
+        (perfis || []).forEach(p => { nomePorSolicitante[p.id] = p.nome_completo || '—'; });
+    }
+
+    lista.innerHTML = '';
+    ordens.forEach(os => {
+        const card = document.createElement('div');
+        card.className = 'card card-gestao-os';
+        const statusAtual = os.status || 'aberta';
+        const corBorda = STATUS_OS_COR[statusAtual] || '#94a3b8';
+        const badgeClass = STATUS_OS_BADGE_CLASS[statusAtual] || 'badge-wait';
+        const labelStatus = STATUS_OS_LABEL[statusAtual] || statusAtual;
+        const nomeSolicitante = nomePorSolicitante[os.id_solicitante] || '—';
+        card.style.cssText = `padding: 1.25rem; margin-bottom: 1rem; border-left: 4px solid ${corBorda};`;
+        const dataAbertura = os.criado_em ? new Date(os.criado_em).toLocaleDateString('pt-BR') : '—';
+        const numero = os.numero_solicitacao || os.id?.slice(0, 8) || '—';
+        const opts = STATUS_OS_OPCOES.map(s => `<option value="${s.value}" ${s.value === statusAtual ? 'selected' : ''}>${s.label}</option>`).join('');
+        const descEscapada = (os.descricao || '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+        card.innerHTML = `
+            <div class="gestao-os-topo">
+                <div class="gestao-os-info">
+                    <span class="gestao-os-numero">#${String(numero).replace(/</g, '&lt;')}</span>
+                    <span class="gestao-os-solicitante">Solicitante: ${String(nomeSolicitante).replace(/</g, '&lt;')}</span>
+                    <span class="gestao-os-meta">${(os.setor || os.unidade || '—').replace(/</g, '&lt;')} · ${os.centro_trabalho || '—'} · ${dataAbertura}</span>
+                </div>
+                <div class="gestao-os-status-wrap">
+                    <span class="badge ${badgeClass}">${labelStatus}</span>
+                    <select class="gestao-os-status select-campo" data-id="${os.id}">
+                        <option value="aberta" ${statusAtual === 'aberta' ? 'selected' : ''}>Aberta</option>
+                        ${opts}
+                    </select>
+                </div>
+            </div>
+            <div class="gestao-os-descricao">${descEscapada}</div>
+            <div class="gestao-os-rodape">${os.prioridade || '—'} · ${os.destino_servico || '—'} · ${os.tipo_manutencao || '—'}</div>
+        `;
+        lista.appendChild(card);
+    });
+
+    lista.querySelectorAll('.gestao-os-status').forEach(sel => {
+        sel.addEventListener('change', async (e) => {
+            const id = e.target.dataset.id;
+            const status = e.target.value;
+            try {
+                const { error } = await supabase.from('ordens_servico').update({ status, atualizado_em: new Date().toISOString() }).eq('id', id);
+                if (error) throw error;
+                Toast.fire({ icon: 'success', title: 'Status atualizado! O perfil Operação verá a alteração.' });
+                carregarGestaoOS();
+            } catch (err) {
+                mostrarErro('Erro', err.message || 'Não foi possível atualizar.');
+            }
+        });
+    });
+    lucide.createIcons();
+}
+
+document.getElementById('gestao-btn-filtrar')?.addEventListener('click', () => carregarGestaoOS());
+document.getElementById('gestao-btn-limpar')?.addEventListener('click', () => {
+    document.getElementById('gestao-filtro-numero').value = '';
+    document.getElementById('gestao-filtro-setor').value = '';
+    document.getElementById('gestao-filtro-centro').value = '';
+    document.getElementById('gestao-filtro-prioridade').value = '';
+    document.getElementById('gestao-filtro-data-inicio').value = '';
+    document.getElementById('gestao-filtro-data-fim').value = '';
+    carregarGestaoOS();
+});
 
 // --- Programações para Apontamento (select de OS) ---
 async function carregarProgramacoesParaApontamento() {

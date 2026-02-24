@@ -484,6 +484,127 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
     color: #92400e;
 }
 
+.badge-programada {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.badge-andamento {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-concluida {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-cancelada {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Cards Ordens de Serviço - Admin (Gestão OS) */
+.card-gestao-os {
+    border-radius: 12px;
+    overflow: hidden;
+}
+.gestao-os-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+.gestao-os-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+.gestao-os-numero {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--cor-primaria);
+    letter-spacing: 0.02em;
+}
+.gestao-os-solicitante {
+    font-size: 0.9rem;
+    color: #475569;
+}
+.gestao-os-meta {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+.gestao-os-status-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.gestao-os-status-wrap .gestao-os-status {
+    min-width: 140px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 0.9rem;
+}
+.gestao-os-descricao {
+    font-size: 0.9rem;
+    color: #334155;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 0.5rem;
+}
+.gestao-os-descricao br { display: block; content: ""; margin-top: 0.25em; }
+.gestao-os-rodape {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+}
+
+/* Cards Minhas Solicitações (Operação) */
+.card-minha-os {
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+.minha-os-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.minha-os-numero {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--cor-primaria);
+    letter-spacing: 0.02em;
+}
+.minha-os-descricao {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 100px;
+    overflow-y: auto;
+    margin: 0.5rem 0;
+}
+.minha-os-descricao br { display: block; content: ""; margin-top: 0.25em; }
+.minha-os-meta {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
 /* Grid Duplo */
 .grid-duplo {
     display: grid;

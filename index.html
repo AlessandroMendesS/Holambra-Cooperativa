@@ -48,6 +48,7 @@
                 <button class="btn btn-secundario oculto" id="nav-minhas-solicitacoes" style="justify-content: flex-start;"><i data-lucide="list"></i> Minhas Solicitações</button>
                 <button class="btn btn-secundario" id="nav-historico" style="justify-content: flex-start;"><i data-lucide="file-text"></i> Histórico</button>
                 <button class="btn btn-secundario oculto" id="nav-admin" style="justify-content: flex-start;"><i data-lucide="shield"></i> Admin</button>
+                <button class="btn btn-secundario oculto" id="nav-ordens-servico" style="justify-content: flex-start;"><i data-lucide="clipboard-list"></i> Ordens de Serviço</button>
                     <button class="btn btn-secundario oculto" id="nav-hora-extra" style="justify-content: flex-start;"><i data-lucide="timer"></i> Hora Extra - Escala</button>
                 <button class="btn btn-secundario" id="nav-veiculos" style="justify-content: flex-start;"><i data-lucide="car"></i> Veículos</button>
                 <button class="btn btn-secundario" id="nav-programacao" style="justify-content: flex-start;"><i data-lucide="clipboard-check"></i> Programação Diária</button>
@@ -230,7 +231,7 @@
                 </div>
             </section>
 
-            <!-- TELA ABRIR OS (perfil operação) -->
+            <!-- TELA 1 - ABERTURA DE ORDEM DE SERVIÇO (OS) -->
             <section id="tela-abrir-os" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
                     <h2 style="margin: 0;">Abrir Ordem de Serviço</h2>
@@ -239,16 +240,66 @@
                 <div class="card">
                     <form id="formulario-abrir-os">
                         <div class="grupo-input">
-                            <label>Título / Assunto</label>
-                            <input type="text" id="os-titulo" class="input-campo" placeholder="Ex: Reparo no equipamento X" required>
+                            <label>Número da Solicitação</label>
+                            <input type="text" id="os-numero" class="input-campo" readonly placeholder="Ex: 99c93c8a (gerado ao abrir)" style="background:#f0f4f8;">
                         </div>
                         <div class="grupo-input">
-                            <label>Descrição da Solicitação</label>
-                            <textarea id="os-descricao" class="textarea-campo" placeholder="Descreva o que precisa..." required></textarea>
+                            <label>Descrição do Serviço</label>
+                            <textarea id="os-descricao" class="textarea-campo" placeholder="Detalhe o que precisa ser feito..." required></textarea>
                         </div>
                         <div class="grupo-input">
                             <label>Setor / Unidade</label>
                             <select id="os-setor" class="select-campo" required></select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Centro de Trabalho</label>
+                            <select id="os-centro-trabalho" class="select-campo" required>
+                                <option value="">Selecione...</option>
+                                <option value="Elétrica">Elétrica</option>
+                                <option value="Mecânica">Mecânica</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Data de Necessidade</label>
+                            <input type="date" id="os-data-necessidade" class="input-campo" required>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Destino do Serviço</label>
+                            <select id="os-destino" class="select-campo" required>
+                                <option value="">Selecione...</option>
+                                <option value="Manutenção">Manutenção</option>
+                                <option value="Frota">Frota</option>
+                                <option value="Operação">Operação</option>
+                                <option value="Projeto">Projeto</option>
+                                <option value="Segurança">Segurança</option>
+                                <option value="Automação">Automação</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Tipo de Manutenção</label>
+                            <select id="os-tipo-manutencao" class="select-campo" required>
+                                <option value="">Selecione...</option>
+                                <option value="Corretiva">Corretiva</option>
+                                <option value="Preditiva">Preditiva</option>
+                                <option value="Imperativa">Imperativa</option>
+                                <option value="Melhoria">Melhoria</option>
+                                <option value="Parada Geral">Parada Geral</option>
+                                <option value="Preventiva">Preventiva</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Prioridade</label>
+                            <select id="os-prioridade" class="select-campo" required>
+                                <option value="">Selecione...</option>
+                                <option value="Urgente">Urgente</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Média">Média</option>
+                                <option value="Baixa">Baixa</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Anexo (foto da falha, equipamento ou local)</label>
+                            <input type="file" id="os-anexo" class="input-campo" accept="image/*" style="padding-top: 13px;">
                         </div>
                         <button type="submit" class="btn btn-primario"><i data-lucide="send"></i> ENVIAR SOLICITAÇÃO</button>
                     </form>
@@ -340,6 +391,13 @@
                         </div>
                         <h3>Administração</h3>
                         <p>Acessar painel administrativo</p>
+                    </button>
+                    <button class="menu-card" id="btn-menu-ordens-servico">
+                        <div class="menu-card-icon">
+                            <i data-lucide="clipboard-list"></i>
+                        </div>
+                        <h3>Ordens de Serviço</h3>
+                        <p>Histórico e controle de status das OS</p>
                     </button>
                     <button class="menu-card" id="btn-menu-hora-extra-admin">
                         <div class="menu-card-icon">
@@ -522,27 +580,6 @@
             <section id="tela-admin" class="tela oculto">
                 <h2 style="margin-bottom: 1.5rem; padding-top: 10px;">Administração</h2>
 
-                <div class="card" style="border-left: 4px solid #f59e0b;">
-                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;"><i data-lucide="inbox" style="width:20px;height:20px;vertical-align:middle;"></i> Ordens Pendentes</h3>
-                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">OS abertas pelos setores. Selecione e encaminhe para o responsável.</p>
-                    <div class="grupo-input" style="margin-bottom: 1rem;">
-                        <label>Filtrar Setor / Unidade</label>
-                        <select id="filtro-os-setor-unidade" class="select-campo">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display:block;margin-bottom:6px;font-weight:600;">Responsável (Mecânico ou Eletricista)</label>
-                        <select id="admin-responsavel-os" class="select-campo" style="margin-bottom: 8px;">
-                            <option value="">Selecione o responsável...</option>
-                        </select>
-                        <button type="button" id="btn-encaminhar-os" class="btn btn-primario" style="width: auto; padding: 0 1.2rem;">
-                            <i data-lucide="send"></i> Encaminhar / Programar
-                        </button>
-                    </div>
-                    <div id="lista-ordens-pendentes"><!-- Cards com checkbox via JS --></div>
-                </div>
-                
                 <div class="card">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Relatórios</h3>
                     <button id="btn-exportar-excel" class="btn btn-secundario">
@@ -611,6 +648,63 @@
                 <div id="lista-admin">
                     <!-- Cards via JS -->
                 </div>
+            </section>
+
+            <!-- TELA 2 - GESTÃO DE ORDENS DE SERVIÇO (só admin) -->
+            <section id="tela-gestao-os" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
+                    <h2 style="margin: 0;">Ordens de Serviço</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-gestao-os" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
+                </div>
+                <p style="color: var(--cor-texto-suave); margin-bottom: 1.5rem;">Histórico geral e controle de status. Alterações aparecem em tempo real para o perfil Operação.</p>
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Filtros</h3>
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Número</label>
+                            <input type="text" id="gestao-filtro-numero" class="input-campo" placeholder="Ex: 0000001">
+                        </div>
+                        <div class="grupo-input">
+                            <label>Setor / Unidade</label>
+                            <select id="gestao-filtro-setor" class="select-campo">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Centro de Trabalho</label>
+                            <select id="gestao-filtro-centro" class="select-campo">
+                                <option value="">Todos</option>
+                                <option value="Elétrica">Elétrica</option>
+                                <option value="Mecânica">Mecânica</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Prioridade</label>
+                            <select id="gestao-filtro-prioridade" class="select-campo">
+                                <option value="">Todas</option>
+                                <option value="Urgente">Urgente</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Média">Média</option>
+                                <option value="Baixa">Baixa</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Data Início</label>
+                            <input type="date" id="gestao-filtro-data-inicio" class="input-campo">
+                        </div>
+                        <div class="grupo-input">
+                            <label>Data Fim</label>
+                            <input type="date" id="gestao-filtro-data-fim" class="input-campo">
+                        </div>
+                    </div>
+                    <button type="button" id="gestao-btn-filtrar" class="btn btn-primario" style="margin-top: 10px; width: auto;"><i data-lucide="filter"></i> Aplicar</button>
+                    <button type="button" id="gestao-btn-limpar" class="btn btn-outline" style="margin-top: 10px; width: auto;">Limpar</button>
+                </div>
+                <div id="lista-gestao-os"><!-- Cards com status via JS --></div>
             </section>
 
             <!-- TELA BANCO DE HORAS -->
