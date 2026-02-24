@@ -800,20 +800,21 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
 });
 
 // --- Ordens de Serviço (Perfil Operação) ---
-function gerarNumeroSolicitacaoAleatorio() {
-    const hex = Array.from(crypto.getRandomValues(new Uint8Array(4)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-    return hex;
-}
-
 async function obterProximoNumeroOS() {
-    for (let i = 0; i < 10; i++) {
-        const num = gerarNumeroSolicitacaoAleatorio();
-        const { data } = await supabase.from('ordens_servico').select('id').eq('numero_solicitacao', num).maybeSingle();
-        if (!data) return num;
+    try {
+        const { data, error } = await supabase.from('ordens_servico').select('numero_solicitacao');
+        if (error) return '00001';
+        const numeros = (data || [])
+            .map(o => String(o.numero_solicitacao || '').trim())
+            .filter(s => /^\d{4,7}$/.test(s))
+            .map(s => parseInt(s, 10))
+            .filter(n => !isNaN(n) && n >= 1);
+        const max = numeros.length ? Math.max(...numeros) : 0;
+        const proximo = max + 1;
+        return String(proximo).padStart(5, '0');
+    } catch (_) {
+        return '00001';
     }
-    return gerarNumeroSolicitacaoAleatorio() + Date.now().toString(36).slice(-2);
 }
 
 function preencherSelectsAbrirOS() {
