@@ -23,7 +23,11 @@
     --botao-altura: 56px;
     --raio: 12px; /* Cantos arredondados */
     
-    --fonte: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --fonte: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --fonte-display: 'Fraunces', Georgia, serif;
+    --gradient-hero: linear-gradient(135deg, #e8f4fc 0%, #cfe9ff 45%, #b8d9f5 100%);
+    --mesh-1: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(0, 65, 117, 0.14), transparent 55%);
+    --mesh-2: radial-gradient(ellipse 70% 50% at 90% 80%, rgba(227, 28, 35, 0.08), transparent 50%);
 }
 
 html {
@@ -34,7 +38,8 @@ html {
 
 body {
     font-family: var(--fonte);
-    background: #d0e7ff;
+    background: var(--gradient-hero);
+    background-attachment: fixed;
     color: var(--cor-texto);
     margin: 0;
     padding: 0;
@@ -43,6 +48,15 @@ body {
     width: 100%;
     max-width: 100%;
     position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: var(--mesh-1), var(--mesh-2);
 }
 
 /* Utilitarios */
@@ -60,6 +74,8 @@ body {
     justify-content: center; /* Centraliza verticalmente o login */
     width: 100%;
     overflow-x: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 /* Header (Só aparece logado) */
@@ -182,7 +198,8 @@ body {
 
 /* Tipografia */
 h2 {
-    font-size: 1.5rem;
+    font-family: var(--fonte-display);
+    font-size: 1.55rem;
     font-weight: 700;
     color: var(--cor-primaria);
     margin: 0 0 0.5rem 0;
@@ -935,14 +952,41 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
     box-sizing: border-box;
 }
 
-/* Tela de login mantém fundo branco */
+/* Tela de login — cartão premium sobre mesh */
 #tela-login {
-    background: #ffffff;
+    background: transparent;
     position: relative;
+    overflow: visible;
 }
 
 #tela-login .conteiner {
-    background: #ffffff;
+    background: transparent;
+}
+
+.login-hero-visual {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    max-width: 100vw;
+    height: min(42vw, 220px);
+    background:
+        linear-gradient(180deg, rgba(0, 65, 117, 0.12) 0%, transparent 65%),
+        url('https://images.unsplash.com/photo-1581092160562-40aa08c7880a?auto=format&fit=crop&w=1200&q=70') center/cover no-repeat;
+    border-radius: 0 0 28px 28px;
+    z-index: 0;
+    pointer-events: none;
+}
+
+#tela-login .login-card {
+    position: relative;
+    z-index: 1;
+    margin-top: clamp(3.5rem, 20vw, 8rem);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 20px 50px rgba(0, 65, 117, 0.15), 0 4px 20px rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.94);
 }
 
 /* Garantir que outras telas mostrem o fundo azul clarinho do body */
@@ -1468,4 +1512,242 @@ input[type="file"] {
     .tabela-escala td {
         padding: 10px 8px;
     }
+}
+
+/* --- Admin: abas --- */
+.admin-cabecalho {
+    margin-bottom: 1rem;
+}
+.admin-sub {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--cor-texto-suave);
+}
+.admin-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 14px;
+    border: 1px solid rgba(0, 65, 117, 0.12);
+    box-shadow: var(--sombra-card-suave);
+}
+.admin-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.75rem 0.5rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    font-family: var(--fonte);
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--cor-texto-suave);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.admin-tab i {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+.admin-tab-ativo {
+    background: var(--branco);
+    color: var(--cor-primaria);
+    box-shadow: 0 2px 10px rgba(0, 65, 117, 0.12);
+}
+.admin-tab:hover:not(.admin-tab-ativo) {
+    color: var(--cor-primaria);
+    background: rgba(255, 255, 255, 0.5);
+}
+.admin-painel-bloco {
+    animation: fadeIn 0.35s ease;
+}
+.card-relatorio-os .relatorio-os-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.lista-preview-os {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 0.75rem;
+}
+.preview-os-item {
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-left: 4px solid var(--cor-primaria);
+    font-size: 0.88rem;
+}
+.preview-os-item strong {
+    display: block;
+    color: var(--cor-primaria);
+    margin-bottom: 0.25rem;
+}
+.preview-os-setor {
+    font-size: 0.78rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.preview-os-desc {
+    margin: 0.35rem 0 0;
+    color: #334155;
+    line-height: 1.45;
+}
+.preview-os-vazio,
+.preview-os-mais {
+    font-size: 0.88rem;
+    color: #64748b;
+    text-align: center;
+    padding: 0.5rem;
+}
+.relatorio-os-resumo {
+    font-size: 0.92rem;
+    color: #475569;
+    margin: 0;
+}
+
+/* Cadastro: foto */
+.foto-upload-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+@media (min-width: 480px) {
+    .foto-upload-box {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+}
+.foto-preview-wrap {
+    width: 120px;
+    height: 120px;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #e0f2fe, #f0f9ff);
+    border: 2px dashed rgba(0, 65, 117, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.foto-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.foto-placeholder-txt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    padding: 0.5rem;
+    text-align: center;
+}
+.foto-placeholder-txt i {
+    width: 32px;
+    height: 32px;
+    color: var(--cor-primaria);
+    opacity: 0.6;
+}
+.foto-upload-actions {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.btn-foto-limpar {
+    font-size: 0.8rem;
+    text-transform: none;
+}
+.hint-foto {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0.35rem 0 0;
+}
+
+/* Apontamento: limite 7h05 */
+.limite-dia-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--raio);
+    background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+    border: 1px solid rgba(0, 65, 117, 0.15);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: #1e3a5f;
+    margin-bottom: 1rem;
+}
+.limite-dia-banner i {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--cor-primaria);
+    margin-top: 2px;
+}
+.limite-dia-alerta {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-color: rgba(227, 28, 35, 0.35);
+    color: #7f1d1d;
+}
+.limite-dia-alerta i {
+    color: var(--cor-destaque);
+}
+
+/* Menu admin — card relatório */
+.menu-card-relatorio {
+    background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%);
+    border-top-color: #ea580c;
+}
+.menu-card-relatorio .menu-card-icon {
+    background: linear-gradient(135deg, #ea580c, #c2410c);
+}
+.menu-card-relatorio h3 {
+    color: #9a3412 !important;
+}
+
+/* Lista usuários admin — avatar */
+.avatar-usuario-admin {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e2e8f0;
+    flex-shrink: 0;
+}
+.avatar-usuario-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e2e8f0;
+    color: #64748b;
+}
+.avatar-usuario-placeholder i {
+    width: 20px;
+    height: 20px;
+}
+
+/* Cards principais — refinamento */
+.card {
+    border-top-width: 3px;
+}
+.menu-card h3 {
+    font-family: var(--fonte);
 }

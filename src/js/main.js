@@ -86,8 +86,133 @@ function mostrarSucesso(titulo) {
     });
 }
 
+/** Limite legal diário por funcionário (manutentor) nos apontamentos */
+const LIMITE_DIARIO_MINUTOS = 7 * 60 + 5;
+
+function duracaoMinutosIntervalo(inicio, fim) {
+    if (!inicio || !fim) return 0;
+    const p = (s) => {
+        const [h, m] = String(s).split(':').map(Number);
+        return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+    };
+    let start = p(inicio);
+    let end = p(fim);
+    if (end < start) end += 24 * 60;
+    return end - start;
+}
+
+function formatarMinutosComoH(min) {
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    return `${h}h${String(m).padStart(2, '0')}`;
+}
+
+async function totalMinutosApontadosNoDia(idManutentor, dataServico, excludeAptId) {
+    const { data, error } = await supabase
+        .from('apontamentos')
+        .select('id, hora_inicio, hora_fim')
+        .eq('id_manutentor', idManutentor)
+        .eq('data_servico', dataServico);
+    if (error || !data) return 0;
+    let total = 0;
+    for (const row of data) {
+        if (excludeAptId && row.id === excludeAptId) continue;
+        total += duracaoMinutosIntervalo(row.hora_inicio, row.hora_fim);
+    }
+    return total;
+}
+
+let limiteDiaTimer = null;
+async function atualizarIndicadorLimiteDia() {
+    const el = document.getElementById('apt-limite-dia-texto');
+    const box = document.getElementById('apt-limite-dia');
+    if (!el || !estado.usuario) return;
+    const idManutentor = document.getElementById('apt-manutentor')?.value;
+    const dataServico = document.getElementById('apt-data')?.value;
+    const inicio = document.getElementById('apt-inicio')?.value;
+    const fim = document.getElementById('apt-fim')?.value;
+    if (!idManutentor || !dataServico) {
+        el.textContent = 'Selecione data e manutentor para ver o saldo do dia (limite 7h05).';
+        if (box) box.classList.remove('limite-dia-alerta');
+        lucide.createIcons();
+        return;
+    }
+    el.textContent = 'Calculando…';
+    const excluir = apontamentoEditando?.id || null;
+    const ja = await totalMinutosApontadosNoDia(idManutentor, dataServico, excluir);
+    const este = duracaoMinutosIntervalo(inicio, fim);
+    const depois = ja + este;
+    const restante = Math.max(0, LIMITE_DIARIO_MINUTOS - ja);
+    el.textContent = `Já apontado neste dia: ${formatarMinutosComoH(ja)} · Este intervalo: ${formatarMinutosComoH(este)} · Após salvar: ${formatarMinutosComoH(depois)} (máx. ${formatarMinutosComoH(LIMITE_DIARIO_MINUTOS)})`;
+    if (box) {
+        box.classList.toggle('limite-dia-alerta', depois > LIMITE_DIARIO_MINUTOS);
+    }
+    lucide.createIcons();
+}
+
+function setAdminTab(tab) {
+    const painel = document.getElementById('admin-conteudo-painel');
+    const rel = document.getElementById('admin-conteudo-relatorio-os');
+    const btnP = document.getElementById('admin-tab-painel');
+    const btnR = document.getElementById('admin-tab-relatorio-os');
+    if (!painel || !rel) return;
+    const isRel = tab === 'relatorio';
+    painel.classList.toggle('oculto', isRel);
+    rel.classList.toggle('oculto', !isRel);
+    if (btnP) {
+        btnP.classList.toggle('admin-tab-ativo', !isRel);
+        btnP.setAttribute('aria-selected', !isRel ? 'true' : 'false');
+    }
+    if (btnR) {
+        btnR.classList.toggle('admin-tab-ativo', isRel);
+        btnR.setAttribute('aria-selected', isRel ? 'true' : 'false');
+    }
+    if (isRel) {
+        carregarResumoRelatorioOSAbertas();
+    }
+    lucide.createIcons();
+}
+
+async function carregarResumoRelatorioOSAbertas() {
+    const resumo = document.getElementById('relatorio-os-abertas-resumo');
+    const lista = document.getElementById('lista-preview-os-abertas');
+    if (resumo) resumo.textContent = 'Carregando…';
+    if (lista) lista.innerHTML = '';
+    const { data, error } = await supabase
+        .from('ordens_servico')
+        .select('*')
+        .eq('status', 'aberta')
+        .order('criado_em', { ascending: false });
+    if (error) {
+        if (resumo) resumo.textContent = 'Erro ao carregar. Verifique conexão e políticas do banco.';
+        return;
+    }
+    const arr = data || [];
+    const n = arr.length;
+    if (resumo) {
+        resumo.textContent = n === 0
+            ? 'Nenhuma OS com status «aberta» no momento.'
+            : `${n} ordem(ns) de serviço em aberto.`;
+    }
+    if (!lista) return;
+    if (n === 0) {
+        lista.innerHTML = '<p class="centro preview-os-vazio">Nada para exibir.</p>';
+        return;
+    }
+    lista.innerHTML = arr.slice(0, 12).map((os) => {
+        const num = String(os.numero_solicitacao || os.id || '—').replace(/</g, '&lt;');
+        const desc = String(os.descricao || os.titulo || '—').replace(/</g, '&lt;');
+        const setor = String(os.setor || os.unidade || '—').replace(/</g, '&lt;');
+        const curto = desc.length > 140 ? `${desc.slice(0, 140)}…` : desc;
+        return `<div class="preview-os-item"><strong>#${num}</strong><span class="preview-os-setor">${setor}</span><p class="preview-os-desc">${curto}</p></div>`;
+    }).join('');
+    if (n > 12) {
+        lista.insertAdjacentHTML('beforeend', `<p class="preview-os-mais">+ ${n - 12} outra(s) no arquivo Excel.</p>`);
+    }
+}
+
 // --- Navegação ---
-function navegarPara(idTela) {
+function navegarPara(idTela, opts = {}) {
     if (idTela !== 'minhasSolicitacoes' && estado.realtimeChannelOS) {
         supabase.removeChannel(estado.realtimeChannelOS);
         estado.realtimeChannelOS = null;
@@ -122,6 +247,7 @@ function navegarPara(idTela) {
         const navAbrirOs = document.getElementById('nav-abrir-os');
         const navMinhasSolicitacoes = document.getElementById('nav-minhas-solicitacoes');
         const navOrdensServico = document.getElementById('nav-ordens-servico');
+        const navRelatorioOsAbertas = document.getElementById('nav-relatorio-os-abertas');
         const menuUsuario = document.getElementById('menu-usuario');
         const menuAdmin = document.getElementById('menu-admin');
 
@@ -137,6 +263,7 @@ function navegarPara(idTela) {
             if (navVeiculos) navVeiculos.classList.remove('oculto');
             if (navProgramacao) navProgramacao.classList.remove('oculto');
             if (navOrdensServico) navOrdensServico.classList.remove('oculto');
+            if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.remove('oculto');
             if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
@@ -151,6 +278,7 @@ function navegarPara(idTela) {
             if (navVeiculos) navVeiculos.classList.add('oculto');
             if (navProgramacao) navProgramacao.classList.add('oculto');
             if (navOrdensServico) navOrdensServico.classList.add('oculto');
+            if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.add('oculto');
             if (navOperacaoInicio) navOperacaoInicio.classList.remove('oculto');
             if (navAbrirOs) navAbrirOs.classList.remove('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.remove('oculto');
@@ -168,17 +296,31 @@ function navegarPara(idTela) {
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
             if (navOrdensServico) navOrdensServico.classList.add('oculto');
+            if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.add('oculto');
             if (menuUsuario) menuUsuario.classList.remove('oculto');
             if (menuAdmin) menuAdmin.classList.add('oculto');
         }
     }
+    if (idTela === 'menu') {
+        carregarDashboardInicio();
+    }
+    if (idTela === 'menuOperacao') {
+        carregarDashboardOperacao();
+    }
     if (idTela === 'dashboard') {
         carregarUsuarios();
         atualizarVisibilidadeCamposAdmin();
+        clearTimeout(limiteDiaTimer);
+        limiteDiaTimer = setTimeout(() => atualizarIndicadorLimiteDia(), 300);
     }
     if (idTela === 'historico') carregarHistorico();
     if (idTela === 'admin') {
         carregarDadosAdmin();
+        if (opts.adminTab === 'relatorio') {
+            setAdminTab('relatorio');
+        } else {
+            setAdminTab('painel');
+        }
     }
     if (idTela === 'gestaoOs') {
         preencherFiltrosGestaoOS();
@@ -272,9 +414,13 @@ document.getElementById('btn-meus-dados')?.addEventListener('click', async () =>
     if (!p) return;
     const nasc = p.data_nascimento || p.nascimento ? new Date(p.data_nascimento + 'T12:00:00').toISOString().slice(0, 10) : '';
 
+    const fotoTopo = p.foto_url
+        ? `<div style="text-align:center;margin-bottom:12px;"><img src="${String(p.foto_url).replace(/"/g, '&quot;')}" alt="" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #004175;box-shadow:0 4px 14px rgba(0,65,117,0.2);"></div>`
+        : '';
     const result = await Swal.fire({
         title: 'Meus Dados de Cadastro',
         html: `
+            ${fotoTopo}
             <div style="text-align: left; font-size: 0.95rem;">
                 <p style="margin: 8px 0;"><strong>Nome:</strong> ${(p.nome_completo || '—').replace(/</g, '&lt;')}</p>
                 <p style="margin: 8px 0;"><strong>Email:</strong> ${(p.email || '—').replace(/</g, '&lt;')}</p>
@@ -356,6 +502,13 @@ document.getElementById('fechar-menu').addEventListener('click', () => menuMobil
 document.getElementById('nav-inicio').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('nav-historico').addEventListener('click', () => navegarPara('historico'));
 document.getElementById('nav-admin').addEventListener('click', () => navegarPara('admin'));
+document.getElementById('admin-tab-painel')?.addEventListener('click', () => setAdminTab('painel'));
+document.getElementById('admin-tab-relatorio-os')?.addEventListener('click', () => setAdminTab('relatorio'));
+document.getElementById('btn-menu-relatorio-os-abertas')?.addEventListener('click', () => navegarPara('admin', { adminTab: 'relatorio' }));
+document.getElementById('nav-relatorio-os-abertas')?.addEventListener('click', () => {
+    navegarPara('admin', { adminTab: 'relatorio' });
+    if (menuMobile) menuMobile.classList.add('oculto');
+});
 document.getElementById('nav-ordens-servico')?.addEventListener('click', () => navegarPara('gestaoOs'));
 document.getElementById('nav-hora-extra')?.addEventListener('click', () => navegarPara('horaExtra'));
 document.getElementById('nav-veiculos')?.addEventListener('click', () => navegarPara('veiculos'));
@@ -750,6 +903,21 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
 
     if (data.user) {
         await supabase.from('perfis').update({ tipo_perfil: 'manutencao', email: email }).eq('id', data.user.id);
+        const fotoEl = document.getElementById('cad-foto');
+        if (data.session && fotoEl?.files?.length) {
+            try {
+                const file = fotoEl.files[0];
+                const nomeLimpo = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                const path = `perfis/${data.user.id}/${Date.now()}_${nomeLimpo}`;
+                const { error: uploadError } = await supabase.storage.from('fotos_apontamentos').upload(path, file);
+                if (!uploadError) {
+                    const { data: urlData } = supabase.storage.from('fotos_apontamentos').getPublicUrl(path);
+                    await supabase.from('perfis').update({ foto_url: urlData.publicUrl }).eq('id', data.user.id);
+                }
+            } catch (err) {
+                console.warn('Foto não enviada:', err);
+            }
+        }
         if (data.session) {
             mostrarSucesso('Conta criada com sucesso!');
             await verificarUsuario();
@@ -757,6 +925,42 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
             Swal.fire({ icon: 'info', title: 'Conta Criada', text: 'Você já pode fazer login!' }).then(() => navegarPara('login'));
         }
     }
+});
+
+(function initCadastroFotoPreview() {
+    const input = document.getElementById('cad-foto');
+    const prev = document.getElementById('cad-foto-preview');
+    const ph = document.getElementById('cad-foto-placeholder');
+    const limparBtn = document.getElementById('cad-foto-limpar');
+    input?.addEventListener('change', () => {
+        const f = input.files?.[0];
+        if (!f) return;
+        const url = URL.createObjectURL(f);
+        if (prev) {
+            prev.src = url;
+            prev.classList.remove('oculto');
+        }
+        ph?.classList.add('oculto');
+        limparBtn?.classList.remove('oculto');
+        lucide.createIcons();
+    });
+    limparBtn?.addEventListener('click', () => {
+        input.value = '';
+        if (prev) {
+            prev.src = '';
+            prev.classList.add('oculto');
+        }
+        ph?.classList.remove('oculto');
+        limparBtn.classList.add('oculto');
+        lucide.createIcons();
+    });
+})();
+
+['apt-manutentor', 'apt-data', 'apt-inicio', 'apt-fim'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', () => {
+        clearTimeout(limiteDiaTimer);
+        limiteDiaTimer = setTimeout(() => atualizarIndicadorLimiteDia(), 150);
+    });
 });
 
 // Cadastro Operação
@@ -1265,6 +1469,7 @@ async function carregarUsuarios() {
     } else {
         select.innerHTML = '<option value="">Erro ao carregar</option>';
     }
+    setTimeout(() => atualizarIndicadorLimiteDia(), 120);
 }
 
 // --- Edição de Apontamentos ---
@@ -1313,6 +1518,7 @@ async function abrirEdicaoApontamento(apt) {
 
     // Scroll para o topo
     window.scrollTo(0, 0);
+    setTimeout(() => atualizarIndicadorLimiteDia(), 120);
     lucide.createIcons();
 }
 
@@ -1367,6 +1573,18 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
             throw new Error('Informe a descrição da atividade.');
         }
         if (conformePlanejado && !desc) desc = 'Conforme planejado';
+
+        const duracaoNova = duracaoMinutosIntervalo(inicio, fim);
+        if (duracaoNova <= 0) {
+            throw new Error('O horário de fim deve ser posterior ao início (mesmo dia).');
+        }
+        const jaApontado = await totalMinutosApontadosNoDia(idManutentor, dataServico, isEdicao ? apontamentoEditando.id : null);
+        if (jaApontado + duracaoNova > LIMITE_DIARIO_MINUTOS) {
+            throw new Error(
+                `Limite diário de 7h05 por funcionário nesta data. Já apontado: ${formatarMinutosComoH(jaApontado)}. ` +
+                `Este intervalo: ${formatarMinutosComoH(duracaoNova)}. Máximo: ${formatarMinutosComoH(LIMITE_DIARIO_MINUTOS)}.`
+            );
+        }
 
         let urlsFotos = apontamentoEditando?.fotos || [];
 
@@ -1516,7 +1734,7 @@ async function carregarDadosAdmin() {
     // Carregar usuários
     const { data: usuariosData, error: usuariosError } = await supabase
         .from('perfis')
-        .select('id, nome_completo, email, tag, funcao, criado_em')
+        .select('id, nome_completo, email, tag, funcao, criado_em, foto_url')
         .order('nome_completo');
 
     if (usuariosData) {
@@ -1530,11 +1748,15 @@ async function carregarDadosAdmin() {
                 div.style.marginBottom = '0.75rem';
                 const accordionId = `user-accordion-${user.id}-${index}`;
                 const dataCadastro = user.criado_em ? new Date(user.criado_em).toLocaleDateString('pt-BR') : 'N/A';
+                const avatar = user.foto_url
+                    ? `<img src="${String(user.foto_url).replace(/"/g, '&quot;')}" class="avatar-usuario-admin" width="40" height="40" alt="">`
+                    : `<span class="avatar-usuario-admin avatar-usuario-placeholder"><i data-lucide="user"></i></span>`;
                 div.innerHTML = `
                     <button class="accordion-header" onclick="toggleAccordion('${accordionId}')">
                         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                             <div style="display:flex; align-items:center; gap:10px; flex:1;">
                                 <i data-lucide="chevron-down" class="accordion-icon" id="icon-${accordionId}" style="width:20px; height:20px; transition:transform 0.3s;"></i>
+                                ${avatar}
                                 <span style="font-weight:600;">${user.nome_completo || 'Sem nome'}</span>
                                 <span class="badge ${user.funcao === 'admin' ? 'badge-ok' : 'badge-wait'}" style="font-size:0.75rem; padding:2px 8px;">
                                     ${user.funcao === 'admin' ? 'ADMIN' : 'USUÁRIO'}
@@ -1832,6 +2054,43 @@ document.getElementById('btn-exportar-excel').addEventListener('click', async ()
         Swal.close();
         mostrarErro('Erro', 'Não foi possível gerar o relatório.');
     }
+});
+
+document.getElementById('btn-download-os-abertas')?.addEventListener('click', async () => {
+    Swal.fire({
+        title: 'Gerando planilha…',
+        didOpen: () => Swal.showLoading()
+    });
+    const { data, error } = await supabase
+        .from('ordens_servico')
+        .select('*')
+        .eq('status', 'aberta')
+        .order('criado_em', { ascending: false });
+    Swal.close();
+    if (error) {
+        mostrarErro('Erro', error.message);
+        return;
+    }
+    const arr = data || [];
+    const dadosFormatados = arr.length
+        ? arr.map((os) => ({
+            Número: os.numero_solicitacao || '',
+            Descrição: (os.descricao || os.titulo || '').replace(/\s+/g, ' ').trim(),
+            'Setor / Unidade': os.setor || os.unidade || '',
+            'Centro de Trabalho': os.centro_trabalho || '',
+            Prioridade: os.prioridade || '',
+            Destino: os.destino_servico || '',
+            'Tipo manutenção': os.tipo_manutencao || '',
+            'Data necessidade': os.data_necessidade || '',
+            Status: os.status || '',
+            'Criado em': os.criado_em ? new Date(os.criado_em).toLocaleString('pt-BR') : ''
+        }))
+        : [{ Aviso: 'Nenhuma OS aberta no momento' }];
+    const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'OS_abertas');
+    XLSX.writeFile(wb, `Relatorio_OS_abertas_${new Date().toISOString().split('T')[0]}.xlsx`);
+    Toast.fire({ icon: 'success', title: 'Download concluído!' });
 });
 
 // --- Setores (para Programação) ---
@@ -3072,6 +3331,400 @@ window.editarFerias = async function (userId) {
         }
     }
 };
+
+// --- Dashboard visual (Chart.js global) ---
+const CHART_THEME = {
+    primary: '#004175',
+    primaryMid: '#1e6fa3',
+    primaryLight: '#4a8eb8',
+    grid: 'rgba(15, 23, 42, 0.06)',
+    fill: 'rgba(0, 65, 117, 0.12)'
+};
+
+function destruirChartCanvas(canvasId) {
+    const el = document.getElementById(canvasId);
+    if (!el || typeof Chart === 'undefined') return;
+    try {
+        const c = Chart.getChart(el);
+        if (c) c.destroy();
+    } catch (_) { /* noop */ }
+}
+
+function obterUltimos7DiasLabelsISO() {
+    const labels = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        labels.push(d.toISOString().slice(0, 10));
+    }
+    return labels;
+}
+
+function formatarLabelsPt(labelsISO) {
+    return labelsISO.map((d) => {
+        const dt = new Date(d + 'T12:00:00');
+        return dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+    });
+}
+
+function contarApontamentosPorData(rows, labelsISO) {
+    const map = Object.fromEntries(labelsISO.map((l) => [l, 0]));
+    (rows || []).forEach((r) => {
+        const k = (r.data_servico || '').slice(0, 10);
+        if (k in map) map[k]++;
+    });
+    return labelsISO.map((l) => map[l]);
+}
+
+async function preencherKpiManutencao(uid) {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const { data: prog } = await supabase
+        .from('programacoes')
+        .select('id')
+        .eq('id_colaborador', uid)
+        .eq('data_programada', hoje);
+
+    const now = new Date();
+    const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+
+    const { count: aptMes } = await supabase
+        .from('apontamentos')
+        .select('*', { count: 'exact', head: true })
+        .eq('id_usuario', uid)
+        .gte('data_servico', inicioMes);
+
+    const { count: aptTotal } = await supabase
+        .from('apontamentos')
+        .select('*', { count: 'exact', head: true })
+        .eq('id_usuario', uid);
+
+    const setText = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+    };
+    setText('dash-kpi-prog', String(prog?.length ?? 0));
+    setText('dash-kpi-apt-mes', aptMes != null ? String(aptMes) : '—');
+    setText('dash-kpi-apt-total', aptTotal != null ? String(aptTotal) : '—');
+}
+
+async function preencherKpiAdmin() {
+    const { count: osAbertas } = await supabase
+        .from('ordens_servico')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'aberta');
+
+    const now = new Date();
+    const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+
+    const { count: aptMes } = await supabase
+        .from('apontamentos')
+        .select('*', { count: 'exact', head: true })
+        .gte('data_servico', inicioMes);
+
+    const { count: osTotal } = await supabase
+        .from('ordens_servico')
+        .select('*', { count: 'exact', head: true });
+
+    const { count: users } = await supabase
+        .from('perfis')
+        .select('*', { count: 'exact', head: true });
+
+    const setText = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+    };
+    setText('dash-kpi-os-abertas', osAbertas != null ? String(osAbertas) : '—');
+    setText('dash-kpi-admin-apt', aptMes != null ? String(aptMes) : '—');
+    setText('dash-kpi-os-total', osTotal != null ? String(osTotal) : '—');
+    setText('dash-kpi-usuarios', users != null ? String(users) : '—');
+}
+
+async function renderizarChartsManutencao(uid) {
+    const labelsISO = obterUltimos7DiasLabelsISO();
+    const labelDisplay = formatarLabelsPt(labelsISO);
+    const desde = labelsISO[0];
+
+    const { data: apts } = await supabase
+        .from('apontamentos')
+        .select('data_servico')
+        .eq('id_usuario', uid)
+        .gte('data_servico', desde);
+
+    const counts = contarApontamentosPorData(apts, labelsISO);
+
+    destruirChartCanvas('chart-apontamentos-7d');
+    const ctx1 = document.getElementById('chart-apontamentos-7d');
+    if (ctx1 && typeof Chart !== 'undefined') {
+        new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: labelDisplay,
+                datasets: [
+                    {
+                        label: 'Apontamentos',
+                        data: counts,
+                        borderColor: CHART_THEME.primary,
+                        backgroundColor: CHART_THEME.fill,
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, precision: 0 },
+                        grid: { color: CHART_THEME.grid }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    const now = new Date();
+    const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const { data: mApts } = await supabase
+        .from('apontamentos')
+        .select('concluido')
+        .eq('id_usuario', uid)
+        .gte('data_servico', inicioMes);
+
+    let conc = 0;
+    let pend = 0;
+    (mApts || []).forEach((a) => {
+        if (a.concluido) conc++;
+        else pend++;
+    });
+
+    destruirChartCanvas('chart-status-mes');
+    const ctx2 = document.getElementById('chart-status-mes');
+    if (ctx2 && typeof Chart !== 'undefined') {
+        new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: ['Finalizados', 'Em aberto'],
+                datasets: [
+                    {
+                        data: [conc, pend],
+                        backgroundColor: ['#0d9488', '#bfdbfe'],
+                        hoverOffset: 6,
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                }
+            }
+        });
+    }
+}
+
+async function renderizarChartsAdmin() {
+    const labelsISO = obterUltimos7DiasLabelsISO();
+    const labelDisplay = formatarLabelsPt(labelsISO);
+    const desde = labelsISO[0];
+
+    const { data: apts } = await supabase
+        .from('apontamentos')
+        .select('data_servico')
+        .gte('data_servico', desde);
+
+    const counts = contarApontamentosPorData(apts, labelsISO);
+
+    destruirChartCanvas('chart-admin-apontamentos-7d');
+    const ctx1 = document.getElementById('chart-admin-apontamentos-7d');
+    if (ctx1 && typeof Chart !== 'undefined') {
+        new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labelDisplay,
+                datasets: [
+                    {
+                        label: 'Apontamentos',
+                        data: counts,
+                        backgroundColor: 'rgba(0, 65, 117, 0.88)',
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, precision: 0 },
+                        grid: { color: CHART_THEME.grid }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    const { data: ordens } = await supabase.from('ordens_servico').select('status');
+    const statusMap = {};
+    (ordens || []).forEach((o) => {
+        const s = o.status || '—';
+        statusMap[s] = (statusMap[s] || 0) + 1;
+    });
+    const keys = Object.keys(statusMap);
+    const vals = keys.map((k) => statusMap[k]);
+    const palette = ['#004175', '#1e6fa3', '#4a8eb8', '#7dd3fc', '#bae6fd', '#cbd5e1'];
+
+    destruirChartCanvas('chart-admin-os-status');
+    const ctx2 = document.getElementById('chart-admin-os-status');
+    if (ctx2 && typeof Chart !== 'undefined') {
+        new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: keys.length ? keys : ['Sem dados'],
+                datasets: [
+                    {
+                        data: keys.length ? vals : [1],
+                        backgroundColor: keys.length
+                            ? keys.map((_, i) => palette[i % palette.length])
+                            : ['#e2e8f0'],
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '58%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                }
+            }
+        });
+    }
+}
+
+async function carregarDashboardInicio() {
+    if (!estado.usuario) return;
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js não disponível.');
+        return;
+    }
+
+    const uid = estado.usuario.id;
+    const isAdmin = estado.perfil?.funcao === 'admin';
+    const nome = estado.perfil?.nome_completo || '';
+    const primeiroNome = nome.split(/\s+/).filter(Boolean)[0] || '—';
+
+    const nomeEl = document.getElementById('dash-nome-usuario');
+    const dataEl = document.getElementById('dash-data-extenso');
+    if (nomeEl) nomeEl.textContent = primeiroNome;
+    if (dataEl) {
+        dataEl.textContent = new Date().toLocaleDateString('pt-BR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+
+    document.getElementById('dashboard-kpi-manutencao')?.classList.toggle('oculto', isAdmin);
+    document.getElementById('dashboard-kpi-admin')?.classList.toggle('oculto', !isAdmin);
+    document.getElementById('dashboard-charts-manutencao')?.classList.toggle('oculto', isAdmin);
+    document.getElementById('dashboard-charts-admin')?.classList.toggle('oculto', !isAdmin);
+
+    if (isAdmin) {
+        await preencherKpiAdmin();
+        await renderizarChartsAdmin();
+    } else {
+        await preencherKpiManutencao(uid);
+        await renderizarChartsManutencao(uid);
+    }
+    lucide.createIcons();
+}
+
+async function carregarDashboardOperacao() {
+    if (!estado.usuario || typeof Chart === 'undefined') return;
+
+    const uid = estado.usuario.id;
+    const nome = estado.perfil?.nome_completo || '';
+    const primeiroNome = nome.split(/\s+/).filter(Boolean)[0] || '—';
+    const el = document.getElementById('dash-op-nome');
+    if (el) el.textContent = primeiroNome;
+
+    const { data: todas, error } = await supabase
+        .from('ordens_servico')
+        .select('status')
+        .eq('id_solicitante', uid);
+
+    const setText = (id, v) => {
+        const e = document.getElementById(id);
+        if (e) e.textContent = v;
+    };
+
+    if (error) {
+        setText('dash-op-total', '—');
+        setText('dash-op-abertas', '—');
+        lucide.createIcons();
+        return;
+    }
+
+    const list = todas || [];
+    const abertas = list.filter((o) => o.status === 'aberta').length;
+    setText('dash-op-total', String(list.length));
+    setText('dash-op-abertas', String(abertas));
+
+    const statusCount = {};
+    list.forEach((o) => {
+        const s = o.status || '—';
+        statusCount[s] = (statusCount[s] || 0) + 1;
+    });
+    const keys = Object.keys(statusCount);
+    const vals = keys.map((k) => statusCount[k]);
+    const palette = ['#004175', '#1e6fa3', '#4a8eb8', '#7dd3fc', '#bae6fd'];
+
+    destruirChartCanvas('chart-op-status');
+    const ctx = document.getElementById('chart-op-status');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: keys.length ? keys : ['Sem dados'],
+                datasets: [
+                    {
+                        data: keys.length ? vals : [1],
+                        backgroundColor: keys.length
+                            ? keys.map((_, i) => palette[i % palette.length])
+                            : ['#e2e8f0'],
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                }
+            }
+        });
+    }
+    lucide.createIcons();
+}
 
 // Inicializar
 verificarUsuario();
