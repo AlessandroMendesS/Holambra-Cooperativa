@@ -33,6 +33,88 @@ const telas = {
 // Listas pré-definidas para Cadastro e OS de Operação
 const SETORES_OPERACAO = ['Produção', 'Administrativo', 'Logística', 'Qualidade', 'Manutenção', 'TI', 'RH', 'Financeiro', 'Comercial', 'Almoxarifado', 'Outro'];
 const UNIDADES_OPERACAO = ['UBA Matriz', 'UBC Matriz', 'UBS Matriz', 'Holambra', 'Fábrica de Ração', 'Taquarivaí', 'Takaoka', 'Avaré', 'Itaberá', 'São Manuel', 'Taquarituba', 'Taquari'];
+const EQUIPAMENTOS_POR_UNIDADE = {
+    'AVARÉ': [
+        'ELEVADOR 1', 'ELEVADOR 2', 'ELEVADOR 3', 'ELEVADOR 4', 'ELEVADOR 5', 'ELEVADOR 6', 'ELEVADOR 7', 'ELEVADOR 8', 'ELEVADOR 9', 'ELEVADOR 10', 'ELEVADOR 11', 'ELEVADOR 13', 'ELEVADOR 14',
+        'CORREIA TRANSPORTADORA 1', 'TC. 2 MOEGA', 'TC. 3 MOEGA', 'TC. 4 MOEGA', 'TC. 5', 'TC. 6', 'TC. 7', 'TC. 8', 'TC. 9', 'TC. 10', 'TC. 11', 'TC. 13', 'TC. 14', 'TC. 15', 'TC. 16', 'TC. 17', 'TC. 18', 'TC. 19', 'TC. 20', 'TC. 12',
+        'TRANSP. DE ROSCA IMPUREZA GROSSA 1', 'TRANSP. DE ROSCA IMPUREZA GROSSA 2', 'TRANSP. DE ROSCA IMPUREZA GROSSA 3', 'TRANSP. DE ROSCA IMPUREZA GROSSA 4',
+        'TRANSP. DE ROSCA IMPUREZA FINA 1', 'TRANSP. DE ROSCA IMPUREZA FINA 2', 'TRANSP. DE ROSCA IMPUREZA FINA 3', 'TRANSP. DE ROSCA IMPUREZA FINA 4',
+        'PL 01', 'PL 02', 'SECADOR 1', 'FILTRO DE MANGA 1', 'FILTRO DE MANGA 2', 'FILTRO DE MANGA 3', 'FILTRO DE MANGA 4',
+        'AERAÇÃO SILO 01', 'AERAÇÃO SILO 02', 'AERAÇÃO SILO 03', 'AERAÇÃO SILO 04', 'AERAÇÃO SILO 05', 'AERAÇÃO SILO 06', 'AERAÇÃO SILO 07', 'AERAÇÃO SILO 08',
+        'SILO PULMÃO 01', 'SILO PULMÃO 02'
+    ],
+    'TAK 1': [
+        'ELEVADOR 1', 'ELEVADOR 2', 'ELEVADOR 3', 'ELEVADOR 4', 'ELEVADOR 5', 'ELEVADOR 6', 'ELEVADOR 7', 'ELEVADOR 8', 'ELEVADOR 9 (PULMÃO)', 'ELEVADOR 9 (MOEGA)',
+        'ELEVADOR 10 (PULMÃO)', 'ELEVADOR 10 (MOEGA)', 'ELEVADOR 11 (MOEGA)', 'ELEVADOR 12 (MOEGA)', 'ELEVADOR 13', 'ELEVADOR 14', 'ELEVADOR 15', 'ELEVADOR 16', 'ELEVADOR 17', 'ELEVADOR 18',
+        'CORREIA TRANSPORTADORA 1', 'CORREIA TRANSPORTADORA 2', 'TC. DIREITO', 'TC. 1 SECADOR 3', 'TC. 2 SECADOR 4', 'TC. 3 LADO ESQUERDO', 'TC. 1', 'TC. 2', 'TC. 4 LADO DIREITO',
+        'TC. 6 LADO DIREITO', 'TC. 7 LADO ESQUERDO', 'TC. 8 LADO DIREITO', 'TC. 9 LADO ESQUERDO', 'TC. 9 PULMÃO DIREITO', 'TC. 10 LADO DIREITO', 'TC. 10 LADO ESQUERDO',
+        'TC. 11 MOEGA', 'TC. 11 PULMÃO', 'TC. 12 MOEGA', 'TC. 12 PULMÃO', 'TC. 13 ESQUERDO', 'TC. 14', 'TC. 16 ESQUERDO', 'TC. 17', 'TC. 18', 'TC. 19', 'TC. 20', 'TC. 21', 'TC. 22', 'TC. 23', 'TC. 24', 'TC. 25 INCLINADO',
+        'TRANSPORTADOR DE ROSCA TH D1', 'TRANSPORTADOR DE ROSCA TH D2', 'ROSCA TRANSPORTADORA PRÉ E PÓS',
+        'PL 01', 'PL 02', 'PL 03', 'PL 04', 'SECADOR 3 DISTRIBUIDOR', 'SECADOR 4 DISTRIBUIDOR', 'SECADOR ADS 100'
+    ],
+    'TAK 2': [
+        'ELEVADOR 1', 'ELEVADOR 2', 'ELEVADOR 3', 'ELEVADOR 4', 'ELEVADOR 5', 'ELEVADOR 6', 'ELEVADOR 7', 'ELEVADOR 14', 'ELEVADOR 16', 'ELEVADOR 18',
+        'TC. 1 MOEGA', 'TC. 2 PULMÃO', 'TC. 3', 'TC. 4 TÚNEL PULMÃO', 'TC. 5 P/ ELEVADOR 5', 'TC. 5 P/ ELEVADOR 7', 'TC. 6', 'TC. 7', 'TC. 8', 'TC. 9', 'TC. 10', 'TC. 11',
+        'TC. 12', 'TC. 13', 'TC. 24', 'TC. 25', 'TC. 26', 'TC. 27', 'TC. 30', 'TC. 31', 'TC. 32', 'TC. 33', 'TC. 34', 'TC. 37',
+        'ROSCA VARREDORA SILO 20', 'ROSCA VARREDORA SILO 22', 'PL 05'
+    ],
+    'TAQUARIVAÍ': [
+        'ELEVADOR 4 MOEGA', 'ELEVADOR 7 MOEGA', 'ELEVADOR 2 MOEGA', 'ELEVADOR 5 MOEGA', 'PRÉ-LIMPEZA CASP', 'PRÉ-LIMPEZA ENTRINGER',
+        'ELEVADOR SECADOR CASP', 'ELEVADOR RESÍDUO', 'ELEVADOR SECADOR ENTRINGER', 'ROSCA DE RESÍDUO', 'FITA PRINCIPAL 1', 'FITA PRINCIPAL 2',
+        'FITA INFERIOR SILO 1', 'FITA INFERIOR SILO 2', 'FITA INFERIOR SILO 3', 'FITA INFERIOR SILO 4', 'FITA INFERIOR SILO 5', 'FITA INFERIOR SILO 6',
+        'ELEVADOR 3', 'ELEVADOR 6', 'REDLER 1 ENTRE SILOS', 'REDLER 2 ENTRE SILOS', 'FITA SUPERIOR SILO 3', 'FITA SUPERIOR SILO 4', 'REDLER SUPERIOR SILO 5', 'REDLER SUPERIOR SILO 6'
+    ],
+    'ITABERÁ': [
+        'FITA MOEGA 1 E 2 INFERIOR', 'FITA MOEGA 3 E 4 INFERIOR', 'ELEVADOR 12', 'ELEVADOR 13', 'FITA REVERSÍVEL 1', 'FITA REVERSÍVEL 2',
+        'PRÉ-LIMPEZA 1', 'PRÉ-LIMPEZA 2', 'PRÉ-LIMPEZA 3', 'PRÉ-LIMPEZA 4', 'REDLER 1', 'REDLER 2', 'ELEVADOR 19', 'ELEVADOR 15', 'ELEVADOR 14', 'ELEVADOR 16', 'ELEVADOR 17', 'ELEVADOR 20',
+        'ELEVADOR RESÍDUO 1', 'ELEVADOR RESÍDUO 2', 'ELEVADOR RESÍDUO 3', 'ELEVADOR RESÍDUO 4', 'SILO RESÍDUO ROSCA 1', 'SILO RESÍDUO ROSCA 2', 'ROSCA TL1', 'ROSCA TL3', 'ROSCA RTMG1', 'ROSCA RTL4', 'ROSCA RTL2', 'ROSCA RTMG2',
+        'SILO PULMÃO 1 FITA SUPERIOR', 'SILO PULMÃO 2 FITA SUPERIOR', 'SILO PULMÃO 1 INFERIOR', 'SILO PULMÃO 2 INFERIOR',
+        'REDLER INFERIOR SECADOR 1', 'REDLER INFERIOR SECADOR 2', 'ELEVADOR 10', 'ELEVADOR 11', 'ELEVADOR 21',
+        'FITA SUPERIOR SILO 1', 'FITA INFERIOR SILO 1', 'FITA SUPERIOR SILO 2', 'FITA INFERIOR SILO 2', 'FITA SUPERIOR SILO 3', 'FITA INFERIOR SILO 3', 'FITA SUPERIOR SILO 4', 'FITA INFERIOR SILO 4',
+        'FITA DESCARGA LINHA 1', 'FITA DESCARGA LINHA 2', 'ELEVADOR 37', 'ELEVADOR 38'
+    ],
+    'TAQUARITUBA': [
+        'ELEVADOR MOEGA 1 E 2', 'ELEVADOR SECADOR', 'ELEVADOR DE RESÍDUO 1', 'ELEVADOR DE RESÍDUO 2', 'ELEVADOR CARREGAMENTO',
+        'REDLER INFERIOR SILO PULMÃO', 'PRÉ-LIMPEZA', 'REDLER INFERIOR TC2', 'REDLER INFERIOR SECADOR', 'REDLER SUPERIOR SECADOR', 'REDLER INFERIOR SILO'
+    ],
+    'MATRIZ': [
+        'ELEVADOR 1 (MOEGA 9)', 'ELEVADOR 2 (ENTRINGER)', 'ELEVADOR 2 (MOEGA 6)', 'ELEVADOR 2 (SEC. 315 )', 'ELEVADOR 3 (SEC. ENTRINGER)', 'ELEVADOR 4', 'ELEVADOR 5',
+        'ELEVADOR 18 (KEPLER)', 'ELEVADOR 25', 'ELEVADOR 27', 'ELEVADOR 29', 'ELEVADOR 34', 'ELEVADOR 36',
+        'CORREIA TRANSPORTADORA 1', 'CORREIA TRANSPORTADORA 2', 'CORREIA TRANSPORTADORA 3', 'CORREIA TRANSPORTADORA 4', 'CORREIA TRANSPORTADORA 5', 'CORREIA TRANSPORTADORA 6',
+        'TC. 1 MOEGA', 'TC. 2 MOEGA', 'TC. 3 MOEGA', 'TC. 4 MOEGA', 'TC. 5', 'TC. 6', 'TC. 7', 'TC. 8', 'TC. 9', 'TC. 10', 'TC. 11', 'TC. 12',
+        'TRANSP. DE ROSCA IMPUREZA GROSSA 1', 'TRANSP. DE ROSCA IMPUREZA GROSSA 2', 'TRANSP. DE ROSCA IMPUREZA GROSSA 3', 'TRANSP. DE ROSCA IMPUREZA GROSSA 4',
+        'TRANSP. DE ROSCA IMPUREZA FINA 1', 'TRANSP. DE ROSCA IMPUREZA FINA 2', 'TRANSP. DE ROSCA IMPUREZA FINA 3', 'TRANSP. DE ROSCA IMPUREZA FINA 4',
+        'PL 01', 'PL 02', 'PL 03 - Kepler', 'PL 04 - Buhler', 'SECADOR 1', 'SECADOR 2', 'SECADOR 3', 'SECADOR 4', 'FILTRO DE MANGA 1', 'FILTRO DE MANGA 2', 'FILTRO DE MANGA 3', 'FILTRO DE MANGA 4'
+    ],
+    'SÃO MANUEL': [
+        'ELEVADOR 1', 'ELEVADOR  2', 'ELEVADOR 3', 'ELEVADOR 4', 'ELEVADOR 5',
+        'TRANSP. DE ROSCA  01', 'TRANSP. DE ROSCA  TRUA SC-01', 'TRANSP. DE ROSCA  EL-04 e 05', 'TRANSP. DE ROSCA  SILO 01', 'TRANSP. DE ROSCA  SILO 05', 'TRANSP. DE ROSCA  SILO 06',
+        'PL 01 KEPLER', 'PL 02 ENTRINGER', 'SECADOR CASP', 'TC SUPERIOR SILO 05', 'TC SUPERIOR SILO 06', 'TC 01', 'TC 02', 'TC 03'
+    ],
+    'FABRICA': ['MOINHO PEQUENO', 'MOINHO GRANDE', 'CAIXA DOSADORA (CONJUNTO)']
+};
+let suporteCampoEquipamentoApontamento = null;
+
+function normalizarChaveUnidadeEquipamento(unidadeRaw) {
+    if (!unidadeRaw) return '';
+    let unidade = String(unidadeRaw).trim();
+    if (unidade.includes(' - ')) {
+        const partes = unidade.split(' - ');
+        unidade = partes[partes.length - 1].trim();
+    }
+    const semAcento = unidade.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const upper = semAcento.toUpperCase();
+    if (upper === 'AVARE') return 'AVARÉ';
+    if (upper === 'ITABERA') return 'ITABERÁ';
+    if (upper === 'SAO MANUEL') return 'SÃO MANUEL';
+    if (upper === 'TAQUARIVAI') return 'TAQUARIVAÍ';
+    if (upper === 'FABRICA DE RACAO' || upper === 'FABRICA') return 'FABRICA';
+    if (upper === 'TAKAOKA' || upper === 'TAK 1') return 'TAK 1';
+    if (upper === 'TAK2' || upper === 'TAK 2') return 'TAK 2';
+    if (upper === 'MATRIZ') return 'MATRIZ';
+    if (upper === 'TAQUARITUBA') return 'TAQUARITUBA';
+    return unidade.toUpperCase();
+}
 
 const cabecalho = document.getElementById('cabecalho-principal');
 const menuMobile = document.getElementById('menu-mobile');
@@ -560,6 +642,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
         btnSubmit.dataset.modo = '';
     }
     mostrarOcultarAptOrdemManual();
+    atualizarEquipamentosApontamento('');
     atualizarVisibilidadeCamposAdmin();
     navegarPara('dashboard');
 });
@@ -573,6 +656,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
         btnSubmit.dataset.modo = '';
     }
     mostrarOcultarAptOrdemManual();
+    atualizarEquipamentosApontamento('');
     atualizarVisibilidadeCamposAdmin();
     navegarPara('dashboard');
 });
@@ -1034,6 +1118,43 @@ function preencherSelectsAbrirOS() {
     });
 }
 
+function atualizarEquipamentosApontamento(unidade) {
+    const equipamentoSel = document.getElementById('apt-equipamento');
+    if (!equipamentoSel) return;
+    const chaveUnidade = normalizarChaveUnidadeEquipamento(unidade);
+    const lista = chaveUnidade ? (EQUIPAMENTOS_POR_UNIDADE[chaveUnidade] || []) : [];
+    equipamentoSel.innerHTML = '';
+    if (!unidade) {
+        equipamentoSel.disabled = true;
+        equipamentoSel.innerHTML = '<option value="">Selecione primeiro a unidade</option>';
+        return;
+    }
+    if (lista.length === 0) {
+        equipamentoSel.disabled = true;
+        equipamentoSel.innerHTML = '<option value="">Nenhum equipamento cadastrado para esta unidade</option>';
+        return;
+    }
+    equipamentoSel.disabled = false;
+    equipamentoSel.innerHTML = '<option value="">Selecione o equipamento</option>';
+    lista.forEach((eq) => {
+        const opt = document.createElement('option');
+        opt.value = eq;
+        opt.textContent = eq;
+        equipamentoSel.appendChild(opt);
+    });
+}
+
+async function verificarSuporteCampoEquipamentoApontamento() {
+    if (suporteCampoEquipamentoApontamento !== null) return suporteCampoEquipamentoApontamento;
+    try {
+        const { error } = await supabase.from('apontamentos').select('equipamento').limit(1);
+        suporteCampoEquipamentoApontamento = !error || !String(error.message || '').toLowerCase().includes('column');
+    } catch (_) {
+        suporteCampoEquipamentoApontamento = false;
+    }
+    return suporteCampoEquipamentoApontamento;
+}
+
 document.getElementById('formulario-abrir-os')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const numeroSolicitacao = document.getElementById('os-numero').value.trim();
@@ -1427,12 +1548,18 @@ document.getElementById('apt-ordem-select')?.addEventListener('change', function
     if (val === '__outra__' || val === '') {
         if (aptDesc) aptDesc.value = '';
         if (aptUnidade) aptUnidade.value = '';
+        atualizarEquipamentosApontamento('');
         if (manualInput) manualInput.focus();
     } else {
         const opt = this.selectedOptions[0];
         if (opt && aptDesc) aptDesc.value = opt.dataset.problema || '';
         if (opt && aptUnidade) aptUnidade.value = opt.dataset.setor || '';
+        atualizarEquipamentosApontamento(aptUnidade?.value || '');
     }
+});
+
+document.getElementById('apt-unidade')?.addEventListener('change', (e) => {
+    atualizarEquipamentosApontamento(e.target.value || '');
 });
 
 // --- Carregar Usuários (Manutentor Dropdown) ---
@@ -1494,6 +1621,10 @@ async function abrirEdicaoApontamento(apt) {
     mostrarOcultarAptOrdemManual();
     document.getElementById('apt-desc').value = apt.descricao;
     document.getElementById('apt-unidade').value = apt.unidade;
+    atualizarEquipamentosApontamento(apt.unidade);
+    if (document.getElementById('apt-equipamento')) {
+        document.getElementById('apt-equipamento').value = apt.equipamento || '';
+    }
     document.getElementById('apt-centro').value = apt.centro_trabalho;
     document.getElementById('apt-data').value = apt.data_servico;
     document.getElementById('apt-inicio').value = apt.hora_inicio;
@@ -1544,6 +1675,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         }
         let desc = (document.getElementById('apt-desc').value || '').trim();
         const unidade = document.getElementById('apt-unidade').value;
+        const equipamento = document.getElementById('apt-equipamento')?.value || '';
         const idManutentor = document.getElementById('apt-manutentor').value;
         const centro = document.getElementById('apt-centro').value;
         const dataServico = document.getElementById('apt-data').value;
@@ -1562,6 +1694,9 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
 
         if (!idManutentor) {
             throw new Error('Selecione um manutentor.');
+        }
+        if (!equipamento) {
+            throw new Error('Selecione o equipamento.');
         }
 
         if (!conformePlanejado && !justificativa) {
@@ -1613,6 +1748,10 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         }
 
         btn.innerHTML = isEdicao ? 'Salvando alterações...' : 'Salvando dados...';
+        const suportaEquipamentoApontamento = await verificarSuporteCampoEquipamentoApontamento();
+        const obsFinal = suportaEquipamentoApontamento
+            ? obs
+            : (obs ? `[Equipamento: ${equipamento}] ${obs}` : `[Equipamento: ${equipamento}]`);
 
         if (isEdicao) {
             // Atualizar
@@ -1626,11 +1765,12 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
                 hora_inicio: inicio,
                 hora_fim: fim,
                 concluido: concluido,
-                observacoes: obs,
+                observacoes: obsFinal,
                 fotos: urlsFotos,
                 conforme_planejado: conformePlanejado,
                 justificativa: justificativa || null
             };
+            if (suportaEquipamentoApontamento) dadosUpdate.equipamento = equipamento;
 
             const { error: updateError } = await supabase
                 .from('apontamentos')
@@ -1652,11 +1792,12 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
                 hora_inicio: inicio,
                 hora_fim: fim,
                 concluido: concluido,
-                observacoes: obs,
+                observacoes: obsFinal,
                 fotos: urlsFotos,
                 conforme_planejado: conformePlanejado,
                 justificativa: justificativa || null
             };
+            if (suportaEquipamentoApontamento) dadosInsert.equipamento = equipamento;
 
             const { error: insertError } = await supabase.from('apontamentos').insert([dadosInsert]);
 
@@ -1665,6 +1806,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         }
 
         e.target.reset();
+        atualizarEquipamentosApontamento('');
         apontamentoEditando = null;
         document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
         btn.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
