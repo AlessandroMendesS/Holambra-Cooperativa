@@ -95,13 +95,36 @@ const EQUIPAMENTOS_POR_UNIDADE = {
 };
 let suporteCampoEquipamentoApontamento = null;
 
+function extrairUnidadeDeSetorProgramado(setorRaw) {
+    if (!setorRaw) return '';
+    const valorOriginal = String(setorRaw).trim();
+    const valorUpper = valorOriginal.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    const ultimoTrecho = valorOriginal.includes(' - ')
+        ? valorOriginal.split(' - ').pop().trim()
+        : valorOriginal;
+    const ultimoUpper = ultimoTrecho.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+    // Compatibilidade com programações antigas salvas com código de setor.
+    if (/(^|\s)TAK(\s|$)/.test(ultimoUpper) || /(^|\s)TAK(\s|$)/.test(valorUpper)) return 'Takaoka';
+    if (/(^|\s)AV(\s|$)/.test(ultimoUpper) || /(^|\s)AV(\s|$)/.test(valorUpper)) return 'Avaré';
+    if (/(^|\s)TAQ(\s|$)/.test(ultimoUpper) || /(^|\s)TAQ(\s|$)/.test(valorUpper)) return 'Taquarivaí';
+    if (/(^|\s)TQRI(\s|$)/.test(ultimoUpper) || /(^|\s)TQRI(\s|$)/.test(valorUpper)) return 'Taquari';
+    if (/(^|\s)TQBA(\s|$)/.test(ultimoUpper) || /(^|\s)TQBA(\s|$)/.test(valorUpper)) return 'Taquarituba';
+    if (/(^|\s)ITABE(\s|$)/.test(ultimoUpper) || /(^|\s)ITABE(\s|$)/.test(valorUpper)) return 'Itaberá';
+    if (/(^|\s)S\.?MANU(\s|$)/.test(ultimoUpper) || /(^|\s)S\.?MANU(\s|$)/.test(valorUpper)) return 'São Manuel';
+    if (/(^|\s)UBA(\s|$)/.test(ultimoUpper) || /(^|\s)UBA(\s|$)/.test(valorUpper)) return 'UBA Matriz';
+    if (/(^|\s)UBC(\s|$)/.test(ultimoUpper) || /(^|\s)UBC(\s|$)/.test(valorUpper)) return 'UBC Matriz';
+    if (/(^|\s)UBS(\s|$)/.test(ultimoUpper) || /(^|\s)UBS(\s|$)/.test(valorUpper)) return 'UBS Matriz';
+    if (/(^|\s)HOLAMBRA(\s|$)/.test(ultimoUpper) || /(^|\s)HOLAMBRA(\s|$)/.test(valorUpper)) return 'Holambra';
+    if (/(^|\s)(RACAO|RA[CÇ]AO|FABRICA)(\s|$)/.test(ultimoUpper) || /(^|\s)(RACAO|RA[CÇ]AO|FABRICA)(\s|$)/.test(valorUpper)) return 'Fábrica de Ração';
+
+    return ultimoTrecho;
+}
+
 function normalizarChaveUnidadeEquipamento(unidadeRaw) {
     if (!unidadeRaw) return '';
-    let unidade = String(unidadeRaw).trim();
-    if (unidade.includes(' - ')) {
-        const partes = unidade.split(' - ');
-        unidade = partes[partes.length - 1].trim();
-    }
+    const unidadeExtraida = extrairUnidadeDeSetorProgramado(unidadeRaw);
+    let unidade = String(unidadeExtraida || unidadeRaw).trim();
     const semAcento = unidade.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const upper = semAcento.toUpperCase();
     if (upper === 'AVARE') return 'AVARÉ';
@@ -1488,7 +1511,9 @@ async function carregarProgramacoesParaApontamento() {
         .order('data_programada', { ascending: false });
 
     estado.programacoesUsuario = prog || [];
-    const setoresUnicos = [...new Set((prog || []).map(p => p.setor_unidade).filter(Boolean))];
+    const unidadesProgramadas = [...new Set((prog || [])
+        .map(p => extrairUnidadeDeSetorProgramado(p.setor_unidade))
+        .filter(Boolean))];
 
     // Popular select de OS
     selectOS.innerHTML = '<option value="">Selecione uma OS programada...</option>';
@@ -1497,7 +1522,7 @@ async function carregarProgramacoesParaApontamento() {
         opt.value = p.os_numero;
         opt.textContent = `OS #${p.os_numero} - ${p.setor_unidade || ''}`;
         opt.dataset.problema = p.problema || '';
-        opt.dataset.setor = p.setor_unidade || '';
+        opt.dataset.setor = extrairUnidadeDeSetorProgramado(p.setor_unidade || '');
         selectOS.appendChild(opt);
     });
     const optOutra = document.createElement('option');
@@ -1506,11 +1531,11 @@ async function carregarProgramacoesParaApontamento() {
     selectOS.appendChild(optOutra);
 
     // Adicionar setores das programações ao select unidade
-    setoresUnicos.forEach(s => {
-        if (!selectUnidade.querySelector(`option[value="${s}"]`)) {
+    unidadesProgramadas.forEach(unidade => {
+        if (!selectUnidade.querySelector(`option[value="${unidade}"]`)) {
             const opt = document.createElement('option');
-            opt.value = s;
-            opt.textContent = s;
+            opt.value = unidade;
+            opt.textContent = unidade;
             if (og) og.appendChild(opt);
         }
     });
@@ -2420,7 +2445,7 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
             const departamento = document.getElementById('swal-departamento').value || '';
             const problema = document.getElementById('swal-problema').value?.trim() || '';
 
-            // Guarda o departamento junto com o setor, para aparecer na listagem e na programação diária
+            // Mantém os setores codificados para o admin e converte para unidade no apontamento via normalização.
             const setor_unidade = departamento ? `${departamento} - ${setor}` : setor;
 
             return {
