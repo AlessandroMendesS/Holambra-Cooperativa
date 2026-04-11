@@ -7,20 +7,20 @@
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdn.sheetjs.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
-    <title>Gestão e Controle de Manutenção</title>
+    <title>Sistema de Gestão de Manutenção</title>
     
     <link rel="icon" type="image/png" href="images/favicon.png">
 
-    <!-- Fonts -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&family=Fraunces:opsz,wght@9..144,600;700&display=swap" rel="stylesheet">
     
-    <!-- CSS -->
+    
     <link rel="stylesheet" href="src/css/style.css">
     <link rel="stylesheet" href="src/css/style1.css">
 
-    <!-- Commons -->
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -29,7 +29,7 @@
 <body>
 
     <div id="app" class="app-root" style="width: 100%; max-width: 100vw; overflow-x: hidden; position: relative;">
-        <!-- Menu Overlay -->
+        
         <div id="menu-mobile" class="menu-overlay oculto">
             <div class="menu-conteudo">
                 <div class="menu-brand">
@@ -51,6 +51,7 @@
                 <button class="btn btn-secundario oculto" id="nav-operacao-inicio" style="justify-content: flex-start;"><i data-lucide="home"></i> Início</button>
                 <button class="btn btn-secundario oculto" id="nav-abrir-os" style="justify-content: flex-start;"><i data-lucide="plus-circle"></i> Abrir OS</button>
                 <button class="btn btn-secundario oculto" id="nav-minhas-solicitacoes" style="justify-content: flex-start;"><i data-lucide="list"></i> Minhas Solicitações</button>
+                <button class="btn btn-secundario oculto" id="nav-equipamentos-operacao" style="justify-content: flex-start;"><i data-lucide="wrench"></i> Equipamentos por unidade</button>
                 <button class="btn btn-secundario" id="nav-historico" style="justify-content: flex-start;"><i data-lucide="file-text"></i> Histórico</button>
                 <button class="btn btn-secundario oculto" id="nav-admin" style="justify-content: flex-start;"><i data-lucide="shield"></i> Admin</button>
                 <button class="btn btn-secundario oculto" id="nav-ordens-servico" style="justify-content: flex-start;"><i data-lucide="clipboard-list"></i> Ordens de Serviço</button>
@@ -66,12 +67,11 @@
             </div>
         </div>
 
-        <!-- Header -->
+        
         <header id="cabecalho-principal" class="cabecalho-app oculto">
-            <div class="logo-nav">
-                <!-- Se tiver imagem logo-small.png ela aparece, senao texto -->
-                <img src="" onerror="this.style.display='none'" style="height: 32px; margin-right: 10px;">
-                <span>Gestão e Controle de Manutenção</span>
+            <div class="logo-nav logo-nav-titulo">
+                <img src="" onerror="this.style.display='none'" class="logo-nav-img" alt="">
+                <span class="logo-nav-texto">Sistema de Gestão de Manutenção</span>
             </div>
             <div class="header-usuario" style="display: flex; align-items: center; gap: 10px;">
                 <span id="header-nome-usuario" style="font-size: 0.9rem; font-weight: 600; color: var(--cor-primaria); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
@@ -83,11 +83,11 @@
 
         <main class="conteiner">
             
-            <!-- TELA LOGIN -->
+            
             <section id="tela-login" class="tela">
                 <div class="login-hero-visual" aria-hidden="true"></div>
                 <div class="card login-card">
-                    <!-- Banner Imagem Real -->
+                    
                     <div class="banner-container">
                         <img src="images/Banner.png" alt="Holambra Cooperativa" class="banner-img" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'text-align:center; color:#004175; font-weight:800; font-size:1.5rem;\'>HOLAMBRA</div>'">
                     </div>
@@ -98,9 +98,15 @@
                     </div>
                     
                     <form id="formulario-login">
+                        <input type="hidden" id="login-modo" value="nome">
+                        <div class="grupo-input centro" style="margin-bottom: 1rem;">
+                            <button type="button" id="btn-alternar-login-email" class="btn btn-outline" style="max-width: 100%; text-transform: none; font-size: 0.85rem;">
+                                Entrar com e-mail (operação)
+                            </button>
+                        </div>
                         <div class="grupo-input">
-                            <label>NOME DE USUÁRIO</label>
-                            <input type="text" id="login-email" class="input-campo" placeholder="Seu nome completo" required>
+                            <label id="login-campo-label">NOME DE USUÁRIO (manutenção)</label>
+                            <input type="text" id="login-email" class="input-campo" placeholder="Seu nome completo" required autocomplete="username">
                         </div>
                         <div class="grupo-input">
                             <label>SENHA DE ACESSO</label>
@@ -135,7 +141,7 @@
                 </p>
             </section>
 
-            <!-- TELA CADASTRO MANUTENÇÃO -->
+            
             <section id="tela-cadastro" class="tela oculto">
                 <h2 style="margin-bottom: 1.5rem; padding-left: 5px;">Cadastro de Manutenção</h2>
                 <p style="color: var(--cor-texto-suave); font-size: 0.9rem; margin-bottom: 1rem;">Para mecânicos e eletricistas.</p>
@@ -190,7 +196,7 @@
                 </div>
             </section>
 
-            <!-- TELA CADASTRO OPERAÇÃO -->
+            
             <section id="tela-cadastro-operacao" class="tela oculto">
                 <h2 style="margin-bottom: 1.5rem; padding-left: 5px;">Cadastro de Operação</h2>
                 <p style="color: var(--cor-texto-suave); font-size: 0.9rem; margin-bottom: 1rem;">Para solicitantes que abrem Ordens de Serviço.</p>
@@ -212,7 +218,7 @@
                             <label>Setor / Unidade</label>
                             <select id="cad-op-setor" class="select-campo" required>
                                 <option value="">Selecione...</option>
-                                <!-- Preenchido via JS -->
+                                
                             </select>
                         </div>
                         <div class="grupo-input">
@@ -229,7 +235,7 @@
                 </div>
             </section>
 
-            <!-- TELA MENU OPERAÇÃO (home para perfil operação) -->
+            
             <section id="tela-menu-operacao" class="tela oculto">
                 <div class="dashboard-hero dashboard-hero--compact card-hero">
                     <div class="dashboard-hero-bg" aria-hidden="true"></div>
@@ -251,7 +257,7 @@
                 </div>
                 <div class="chart-card" style="margin-bottom: 1.5rem;">
                     <h4 class="chart-title">Solicitações por status</h4>
-                    <canvas id="chart-op-status" height="180" aria-label="Status das OS"></canvas>
+                    <div class="chart-canvas-wrap"><canvas id="chart-op-status" aria-label="Status das OS"></canvas></div>
                 </div>
                 <h3 class="section-heading">Ações</h3>
                 <div class="menu-opcoes">
@@ -265,10 +271,29 @@
                         <h3>Minhas Solicitações</h3>
                         <p>Histórico e status (Aberta, Programada, Em Execução, Finalizada)</p>
                     </button>
+                    <button class="menu-card" id="btn-operacao-equipamentos">
+                        <div class="menu-card-icon"><i data-lucide="wrench"></i></div>
+                        <h3>Equipamentos por unidade</h3>
+                        <p>Consultar lista de equipamentos da unidade</p>
+                    </button>
                 </div>
             </section>
 
-            <!-- TELA 1 - ABERTURA DE ORDEM DE SERVIÇO (OS) -->
+            <section id="tela-equipamentos-operacao" class="tela oculto">
+                <div class="page-toolbar">
+                    <h2>Equipamentos por unidade</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-equipamentos-operacao" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
+                </div>
+                <div class="card">
+                    <div class="grupo-input">
+                        <label>Unidade</label>
+                        <select id="equip-op-unidade" class="select-campo"></select>
+                    </div>
+                    <div id="equip-op-lista" class="equip-op-lista"></div>
+                </div>
+            </section>
+
+            
             <section id="tela-abrir-os" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
                     <h2 style="margin: 0;">Abrir Ordem de Serviço</h2>
@@ -277,16 +302,22 @@
                 <div class="card">
                     <form id="formulario-abrir-os">
                         <div class="grupo-input">
-                            <label>Número da Solicitação</label>
-                            <input type="text" id="os-numero" class="input-campo" readonly placeholder="Ex: 00001 (gerado ao abrir)" style="background:#f0f4f8;">
+                            <label>Unidade <span style="color:#b91c1c;">*</span></label>
+                            <select id="os-setor" class="select-campo" required></select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Equipamento <span style="color:#b91c1c;">*</span></label>
+                            <select id="os-equipamento" class="select-campo" required disabled>
+                                <option value="">Selecione primeiro a unidade</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Número da OS (gerado automaticamente)</label>
+                            <input type="text" id="os-numero" class="input-campo" readonly placeholder="Ex.: 0001" style="background:#f0f4f8;">
                         </div>
                         <div class="grupo-input">
                             <label>Descrição do Serviço</label>
                             <textarea id="os-descricao" class="textarea-campo" placeholder="Detalhe o que precisa ser feito..." required></textarea>
-                        </div>
-                        <div class="grupo-input">
-                            <label>Setor / Unidade</label>
-                            <select id="os-setor" class="select-campo" required></select>
                         </div>
                         <div class="grupo-input">
                             <label>Centro de Trabalho</label>
@@ -317,11 +348,8 @@
                             <select id="os-tipo-manutencao" class="select-campo" required>
                                 <option value="">Selecione...</option>
                                 <option value="Corretiva">Corretiva</option>
-                                <option value="Preditiva">Preditiva</option>
-                                <option value="Imperativa">Imperativa</option>
+                                <option value="Império">Império</option>
                                 <option value="Melhoria">Melhoria</option>
-                                <option value="Parada Geral">Parada Geral</option>
-                                <option value="Preventiva">Preventiva</option>
                             </select>
                         </div>
                         <div class="grupo-input">
@@ -343,16 +371,16 @@
                 </div>
             </section>
 
-            <!-- TELA MINHAS SOLICITAÇÕES (perfil operação) -->
+            
             <section id="tela-minhas-solicitacoes" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
                     <h2 style="margin: 0;">Minhas Solicitações</h2>
                     <button type="button" class="btn btn-outline" id="btn-voltar-menu-solicitacoes" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
                 </div>
-                <div id="lista-minhas-solicitacoes"><!-- Cards via JS --></div>
+                <div id="lista-minhas-solicitacoes"></div>
             </section>
 
-            <!-- TELA MENU PRINCIPAL -->
+            
             <section id="tela-menu" class="tela oculto">
                 <div class="dashboard-hero card-hero">
                     <div class="dashboard-hero-bg" aria-hidden="true"></div>
@@ -381,8 +409,8 @@
                     </div>
                     <div class="kpi-card">
                         <p class="kpi-label">Limite diário</p>
-                        <p class="kpi-value">7h05</p>
-                        <p class="kpi-hint">Por funcionário / dia</p>
+                        <p class="kpi-value">7h</p>
+                        <p class="kpi-hint">Por funcionário / dia (soma dos intervalos)</p>
                     </div>
                 </div>
 
@@ -433,7 +461,7 @@
 
                 <h3 class="section-heading">Acesso rápido</h3>
                 
-                <!-- Menu para usuários normais -->
+                
                 <div class="menu-opcoes" id="menu-usuario">
                     <button class="menu-card menu-card-programacao" id="btn-menu-programacao">
                         <div class="menu-card-icon">
@@ -491,7 +519,7 @@
                     </button>
                 </div>
 
-                <!-- Menu para admin -->
+                
                 <div class="menu-opcoes oculto" id="menu-admin">
                     <button class="menu-card" id="btn-menu-admin">
                         <div class="menu-card-icon">
@@ -539,7 +567,7 @@
                 </div>
             </section>
 
-            <!-- TELA DASHBOARD -->
+            
             <section id="tela-dashboard" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
                     <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Registrar Serviço</h2>
@@ -553,9 +581,9 @@
                             <label>Ordem de Serviço (OS)</label>
                             <select id="apt-ordem-select" class="select-campo select-os-programada" required>
                                 <option value="">Selecione uma OS programada...</option>
-                                <!-- Opções de OS programadas carregadas via JS -->
+                                
                             </select>
-                            <input type="text" id="apt-ordem-manual" class="input-campo oculto" placeholder="Nº da Ordem (digite manualmente)" inputmode="numeric" style="margin-top: 0.5rem;">
+                            <input type="text" id="apt-ordem-manual" class="input-campo oculto" placeholder="Gerado automaticamente" inputmode="numeric" readonly style="margin-top: 0.5rem; background:#f0f4f8;">
                         </div>
                         
                         <div class="grupo-input">
@@ -581,12 +609,12 @@
                                     <option>Taquarituba</option>
                                     <option>Taquari</option>
                                 </optgroup>
-                                <!-- Setores das programações carregados via JS -->
+                                
                             </select>
                         </div>
                         <div class="grupo-input">
                             <label>Equipamento</label>
-                            <select id="apt-equipamento" class="select-campo" required disabled>
+                            <select id="apt-equipamento" class="select-campo" disabled>
                                 <option value="">Selecione primeiro a unidade</option>
                             </select>
                         </div>
@@ -615,10 +643,11 @@
                                 <input type="date" id="apt-data" class="input-campo" required>
                             </div>
                             <div class="grupo-input">
-                                <label>Status</label>
-                                <div style="display: flex; align-items: center; height: 52px; background: #fff; border: 1px solid var(--borda); border-radius: var(--raio); padding: 0 15px;">
-                                    <input type="checkbox" id="apt-check" style="width: 20px; height: 20px; margin-right: 10px; accent-color: var(--cor-primaria);">
-                                    <span style="font-size: 0.9rem; font-weight: 500;">Finalizado</span>
+                                <label>Finalizado</label>
+                                <input type="hidden" id="apt-finalizado" value="">
+                                <div class="apt-finalizado-botoes" style="display: flex; gap: 0.75rem; flex-wrap: wrap; min-height: 52px; align-items: center;">
+                                    <button type="button" id="btn-apt-final-sim" class="btn btn-secundario" style="width: auto; flex: 1; min-width: 100px; padding: 0 1rem; height: 48px; text-transform: none;">Sim</button>
+                                    <button type="button" id="btn-apt-final-nao" class="btn btn-outline" style="width: auto; flex: 1; min-width: 100px; padding: 0 1rem; height: 48px; text-transform: none;">Não</button>
                                 </div>
                             </div>
                         </div>
@@ -635,7 +664,7 @@
                         </div>
                         <div id="apt-limite-dia" class="limite-dia-banner" role="status">
                             <i data-lucide="timer"></i>
-                            <span id="apt-limite-dia-texto">Limite diário por funcionário: 7h05. Carregando…</span>
+                            <span id="apt-limite-dia-texto">Limite diário: 7 horas (soma dos apontamentos). Carregando…</span>
                         </div>
 
                         <div class="grupo-input">
@@ -651,7 +680,7 @@
                             <textarea id="apt-obs" class="textarea-campo" style="min-height: 80px;"></textarea>
                         </div>
 
-                        <!-- Foi conforme planejado? (dois botões) -->
+                        
                         <div class="grupo-input oculto" id="grupo-conforme-planejado" style="display: none;">
                             <label>Foi conforme planejado?</label>
                             <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
@@ -677,7 +706,7 @@
                 </div>
             </section>
 
-            <!-- TELA HISTORICO -->
+            
             <section id="tela-historico" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
                     <h2 style="flex: 1; min-width: 200px; margin: 0;">Apontamentos</h2>
@@ -697,11 +726,11 @@
                 </div>
 
                 <div id="lista-historico">
-                    <!-- Cards via JS -->
+                    
                 </div>
             </section>
 
-            <!-- TELA ADMIN -->
+            
             <section id="tela-admin" class="tela oculto">
                 <div class="admin-cabecalho">
                     <h2 style="margin-bottom: 0.75rem; padding-top: 10px;">Administração</h2>
@@ -779,13 +808,13 @@
                 <div class="card" style="margin-top: 1.5rem;">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Usuários Cadastrados</h3>
                     <div id="lista-usuarios-admin">
-                        <!-- Lista de usuários via JS -->
+                        
                     </div>
                 </div>
                 
                 <h3 style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.1rem;">Apontamentos</h3>
                 <div id="lista-admin">
-                    <!-- Cards via JS -->
+                    
                 </div>
 
                 </div>
@@ -807,7 +836,7 @@
                 </div>
             </section>
 
-            <!-- TELA 2 - GESTÃO DE ORDENS DE SERVIÇO (só admin) -->
+            
             <section id="tela-gestao-os" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
                     <h2 style="margin: 0;">Ordens de Serviço</h2>
@@ -861,10 +890,10 @@
                     <button type="button" id="gestao-btn-filtrar" class="btn btn-primario" style="margin-top: 10px; width: auto;"><i data-lucide="filter"></i> Aplicar</button>
                     <button type="button" id="gestao-btn-limpar" class="btn btn-outline" style="margin-top: 10px; width: auto;">Limpar</button>
                 </div>
-                <div id="lista-gestao-os"><!-- Cards com status via JS --></div>
+                <div id="lista-gestao-os"></div>
             </section>
 
-            <!-- TELA BANCO DE HORAS -->
+            
             <section id="tela-banco-horas" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
                     <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Banco de Horas</h2>
@@ -873,11 +902,11 @@
                     </button>
                 </div>
                 <div id="lista-banco-horas">
-                    <!-- Cards via JS -->
+                    
                 </div>
             </section>
 
-            <!-- TELA HORA EXTRA -->
+            
             <section id="tela-hora-extra" class="tela oculto tela-hora-extra-responsiva">
                 <div class="tela-he-header">
                     <h2>Hora Extra - Escala</h2>
@@ -905,7 +934,7 @@
                             </tr>
                         </thead>
                         <tbody id="tbody-hora-extra">
-                            <!-- Linhas via JS -->
+                            
                         </tbody>
                     </table>
                     <div id="lista-hora-extra-empty" class="centro" style="padding: 2rem; color: #666; display: none;">
@@ -914,7 +943,7 @@
                 </div>
             </section>
 
-            <!-- TELA VEÍCULOS -->
+            
             <section id="tela-veiculos" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; padding-top: 10px;">
                     <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Veículos</h2>
@@ -928,11 +957,11 @@
                     </div>
                 </div>
                 <div id="lista-veiculos" class="grid-veiculos">
-                    <!-- Cards via JS -->
+                    
                 </div>
             </section>
 
-            <!-- TELA PROGRAMAR (ADMIN) -->
+            
             <section id="tela-programar" class="tela oculto tela-programar-admin">
                 <div class="card prog-admin-header">
                     <div class="prog-admin-titulo">
@@ -949,11 +978,11 @@
                     </div>
                 </div>
                 <div id="lista-programacoes-admin" class="lista-programacoes-compacta">
-                    <!-- Cards via JS -->
+                    
                 </div>
             </section>
 
-            <!-- TELA PROGRAMAÇÃO DIÁRIA (USUÁRIO) -->
+            
             <section id="tela-programacao" class="tela oculto tela-programacao-diaria">
                 <div class="prog-diaria-header">
                     <div class="prog-diaria-titulo">
@@ -965,11 +994,11 @@
                     </button>
                 </div>
                 <div id="lista-programacao-usuario">
-                    <!-- Cards via JS -->
+                    
                 </div>
             </section>
 
-            <!-- TELA FÉRIAS -->
+            
             <section id="tela-ferias" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
                     <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Férias</h2>
@@ -978,7 +1007,7 @@
                     </button>
                 </div>
                 <div id="lista-ferias">
-                    <!-- Cards via JS -->
+                    
                 </div>
             </section>
 
@@ -986,10 +1015,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <!-- Scripts -->
+    
     <script type="module" src="src/js/main.js"></script>
     <script>
-        // Init
         lucide.createIcons();
     </script>
 </body>

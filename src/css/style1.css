@@ -1,8 +1,3 @@
-/**
- * Holambra — UI Premium (camada visual enterprise)
- * Azul institucional + neutros + microinterações
- */
-
 :root {
     --azul-950: #0a1628;
     --azul-900: #0c2744;
@@ -54,7 +49,7 @@
     --gradient-card-shine: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.88) 100%);
 }
 
-/* --- App shell --- */
+
 #app.app-root {
     min-height: 100vh;
     position: relative;
@@ -83,7 +78,7 @@ body::before {
     justify-content: flex-start;
 }
 
-/* Header premium */
+
 .cabecalho-app {
     height: 64px;
     padding: 0 20px 0 22px;
@@ -104,9 +99,26 @@ body::before {
     gap: 10px;
 }
 
-.logo-nav span {
-    max-width: min(220px, 46vw);
-    line-height: 1.25;
+.logo-nav-titulo {
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+}
+
+.logo-nav-texto {
+    display: block;
+    max-width: 100%;
+    line-height: 1.2;
+    font-size: clamp(0.65rem, 2.8vw, 0.78rem);
+    text-align: left;
+    hyphens: auto;
+    word-break: break-word;
+}
+
+.logo-nav-img {
+    flex-shrink: 0;
+    height: 32px;
+    margin-right: 8px;
 }
 
 .header-usuario span {
@@ -133,7 +145,7 @@ body::before {
     transform: scale(0.96);
 }
 
-/* Menu lateral */
+
 .menu-overlay {
     background: rgba(10, 22, 40, 0.45) !important;
     backdrop-filter: blur(8px);
@@ -141,11 +153,15 @@ body::before {
 
 .menu-conteudo {
     width: min(320px, 92vw);
+    max-height: 100dvh;
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
     border-right: 1px solid var(--borda);
     box-shadow: var(--sombra-lg) !important;
     padding: 1.75rem !important;
     gap: 0.65rem !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 .menu-brand {
@@ -223,7 +239,7 @@ body::before {
     filter: brightness(0.98);
 }
 
-/* Tipografia hierárquia */
+
 h2 {
     font-family: var(--fonte-display);
     font-size: clamp(1.35rem, 4vw, 1.65rem);
@@ -263,7 +279,7 @@ h2 {
     min-width: 180px;
 }
 
-/* Cards */
+
 .card {
     background: var(--gradient-card-shine);
     border-radius: var(--raio-lg);
@@ -285,7 +301,7 @@ h2 {
     box-shadow: var(--sombra-lg);
 }
 
-/* Inputs */
+
 .grupo-input label {
     font-size: 0.6875rem;
     font-weight: 700;
@@ -324,7 +340,7 @@ h2 {
     min-height: 110px;
 }
 
-/* Botões */
+
 .btn {
     height: var(--botao-altura);
     border-radius: var(--raio-pill);
@@ -377,7 +393,7 @@ h2 {
     background: var(--azul-50);
 }
 
-/* Dashboard hero */
+
 .dashboard-hero {
     position: relative;
     overflow: hidden;
@@ -426,7 +442,7 @@ h2 {
     font-weight: 700;
     margin: 0 0 0.35rem;
     letter-spacing: -0.03em;
-    /* Sobrescreve h2 global (azul escuro) — fundo do hero é azul */
+    
     color: #ffffff !important;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
@@ -443,11 +459,11 @@ h2 {
     font-size: 0.875rem;
     opacity: 0.92;
     font-weight: 500;
-    /* Sobrescreve p global (cinza escuro) */
+    
     color: rgba(255, 255, 255, 0.95) !important;
 }
 
-/* KPI grid */
+
 .dashboard-kpi-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -499,7 +515,7 @@ h2 {
     margin: 0.35rem 0 0;
 }
 
-/* Charts */
+
 .dashboard-charts-row {
     display: grid;
     grid-template-columns: 1fr;
@@ -535,10 +551,33 @@ h2 {
     flex-direction: column;
 }
 
+.chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    min-height: 200px;
+    flex: 1;
+}
+
 .chart-card canvas {
     flex: 1;
-    min-height: 180px;
-    max-height: 220px;
+    min-height: 200px;
+    max-height: 280px;
+    width: 100% !important;
+}
+
+@media (max-width: 480px) {
+    .chart-card {
+        min-height: 240px;
+        overflow: visible;
+        padding-bottom: 1.5rem;
+    }
+    .chart-card canvas {
+        min-height: 220px;
+        max-height: none;
+    }
+    .dashboard-charts-row {
+        overflow-x: visible;
+    }
 }
 
 .section-heading {
@@ -550,7 +589,7 @@ h2 {
     margin: 0 0 1rem;
 }
 
-/* Menu cards refinados */
+
 .menu-opcoes {
     gap: 14px;
 }
@@ -620,7 +659,7 @@ h2 {
     box-shadow: 0 4px 14px rgba(234, 88, 12, 0.22);
 }
 
-/* Operação compact */
+
 .dashboard-hero--compact {
     min-height: auto;
 }
@@ -633,14 +672,14 @@ h2 {
     grid-template-columns: repeat(2, 1fr);
 }
 
-/* Badges suaves */
+
 .badge {
     border-radius: var(--raio-pill);
     font-weight: 700;
     font-size: 0.6875rem;
 }
 
-/* Item lista */
+
 .item-lista {
     border-radius: var(--raio);
     border: 1px solid var(--borda);
@@ -648,22 +687,29 @@ h2 {
     box-shadow: var(--sombra-xs);
 }
 
-/* Admin tabs (refino) */
 .admin-tabs {
     background: var(--neutro-100);
     border: 1px solid var(--borda);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 4px;
 }
 
 .admin-tab {
     border-radius: var(--raio-sm);
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-width: max-content;
 }
 
-/* Scrollbar */
+
 ::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, var(--azul-600), var(--azul-700));
 }
 
-/* Login hero (compat) */
+
 #tela-login .login-card {
     border: 1px solid rgba(255, 255, 255, 0.95);
 }
@@ -672,17 +718,17 @@ h2 {
     border-radius: 0 0 var(--raio-lg) var(--raio-lg);
 }
 
-/* Limite dia banner */
+
 .limite-dia-banner {
     border-radius: var(--raio);
 }
 
-/* Tabelas hora extra */
+
 .tabela-escala thead tr {
     border-radius: var(--raio-sm) var(--raio-sm) 0 0;
 }
 
-/* Responsivo: menu cards stack */
+
 @media (max-width: 480px) {
     .menu-card {
         flex-direction: column;

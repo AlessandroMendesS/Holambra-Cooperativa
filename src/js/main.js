@@ -1,13 +1,12 @@
 
 import { supabase } from './supabase.js';
 
-// --- Estado e Refs ---
 const estado = {
     usuario: null,
     perfil: null,
     usuarios: [],
-    programacoesUsuario: [], // OS programadas para o usuário (para preencher apontamento)
-    realtimeChannelOS: null   // canal para atualização em tempo real das OS (Minhas Solicitações)
+    programacoesUsuario: [],
+    realtimeChannelOS: null
 };
 
 const telas = {
@@ -27,10 +26,10 @@ const telas = {
     programar: document.getElementById('tela-programar'),
     programacao: document.getElementById('tela-programacao'),
     ferias: document.getElementById('tela-ferias'),
-    gestaoOs: document.getElementById('tela-gestao-os')
+    gestaoOs: document.getElementById('tela-gestao-os'),
+    equipamentosOperacao: document.getElementById('tela-equipamentos-operacao')
 };
 
-// Listas pré-definidas para Cadastro e OS de Operação
 const SETORES_OPERACAO = ['Produção', 'Administrativo', 'Logística', 'Qualidade', 'Manutenção', 'TI', 'RH', 'Financeiro', 'Comercial', 'Almoxarifado', 'Outro'];
 const UNIDADES_OPERACAO = ['UBA Matriz', 'UBC Matriz', 'UBS Matriz', 'Holambra', 'Fábrica de Ração', 'Taquarivaí', 'Takaoka', 'Avaré', 'Itaberá', 'São Manuel', 'Taquarituba', 'Taquari'];
 const EQUIPAMENTOS_POR_UNIDADE = {
@@ -104,7 +103,6 @@ function extrairUnidadeDeSetorProgramado(setorRaw) {
         : valorOriginal;
     const ultimoUpper = ultimoTrecho.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 
-    // Compatibilidade com programações antigas salvas com código de setor.
     if (/(^|\s)TAK(\s|$)/.test(ultimoUpper) || /(^|\s)TAK(\s|$)/.test(valorUpper)) return 'Takaoka';
     if (/(^|\s)AV(\s|$)/.test(ultimoUpper) || /(^|\s)AV(\s|$)/.test(valorUpper)) return 'Avaré';
     if (/(^|\s)TAQ(\s|$)/.test(ultimoUpper) || /(^|\s)TAQ(\s|$)/.test(valorUpper)) return 'Taquarivaí';
@@ -139,10 +137,26 @@ function normalizarChaveUnidadeEquipamento(unidadeRaw) {
     return unidade.toUpperCase();
 }
 
+function obterListaEquipamentosParaUnidade(unidadeRaw) {
+    if (!unidadeRaw) return [];
+    const display = String(extrairUnidadeDeSetorProgramado(unidadeRaw) || unidadeRaw).trim();
+    const hol = display.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (['HOLAMBRA', 'UBA MATRIZ', 'UBC MATRIZ', 'UBS MATRIZ'].includes(hol) || /^UB[ACS]\s+MATRIZ$/i.test(display)) {
+        return [...(EQUIPAMENTOS_POR_UNIDADE.MATRIZ || [])];
+    }
+    if (hol.includes('TAKAOKA') || hol === 'TAK 1' || hol === 'TAK 2') {
+        const a = EQUIPAMENTOS_POR_UNIDADE['TAK 1'] || [];
+        const b = EQUIPAMENTOS_POR_UNIDADE['TAK 2'] || [];
+        return [...new Set([...a, ...b])].sort((x, y) => x.localeCompare(y, 'pt-BR'));
+    }
+    const chave = normalizarChaveUnidadeEquipamento(display);
+    const list = EQUIPAMENTOS_POR_UNIDADE[chave];
+    return Array.isArray(list) ? [...list] : [];
+}
+
 const cabecalho = document.getElementById('cabecalho-principal');
 const menuMobile = document.getElementById('menu-mobile');
 
-// --- Teste de Conexão ---
 async function testarConexao() {
     const statusDiv = document.getElementById('status-sistema');
     if (!statusDiv) return;
@@ -164,7 +178,6 @@ async function testarConexao() {
 }
 testarConexao();
 
-// --- Utils: SweetAlert2 ---
 const Toast = Swal.mixin({
     toast: true,
     position: 'top-end',
@@ -191,8 +204,7 @@ function mostrarSucesso(titulo) {
     });
 }
 
-/** Limite legal diário por funcionário (manutentor) nos apontamentos */
-const LIMITE_DIARIO_MINUTOS = 7 * 60 + 5;
+const LIMITE_DIARIO_MINUTOS = 7 * 60;
 
 function duracaoMinutosIntervalo(inicio, fim) {
     if (!inicio || !fim) return 0;
@@ -237,7 +249,7 @@ async function atualizarIndicadorLimiteDia() {
     const inicio = document.getElementById('apt-inicio')?.value;
     const fim = document.getElementById('apt-fim')?.value;
     if (!idManutentor || !dataServico) {
-        el.textContent = 'Selecione data e manutentor para ver o saldo do dia (limite 7h05).';
+        el.textContent = 'Selecione data e manutentor para ver o saldo do dia (limite 7 horas).';
         if (box) box.classList.remove('limite-dia-alerta');
         lucide.createIcons();
         return;
@@ -316,8 +328,7 @@ async function carregarResumoRelatorioOSAbertas() {
     }
 }
 
-// --- Navegação ---
-function navegarPara(idTela, opts = {}) {
+async function navegarPara(idTela, opts = {}) {
     if (idTela !== 'minhasSolicitacoes' && estado.realtimeChannelOS) {
         supabase.removeChannel(estado.realtimeChannelOS);
         estado.realtimeChannelOS = null;
@@ -340,7 +351,7 @@ function navegarPara(idTela, opts = {}) {
     }
     if (menuMobile) menuMobile.classList.add('oculto');
 
-    if (idTela === 'menu' || idTela === 'menuOperacao') {
+    if (idTela === 'menu' || idTela === 'menuOperacao' || idTela === 'equipamentosOperacao' || idTela === 'abrirOs' || idTela === 'minhasSolicitacoes') {
         const navAdmin = document.getElementById('nav-admin');
         const navHoraExtra = document.getElementById('nav-hora-extra');
         const navProgramar = document.getElementById('nav-programar');
@@ -351,6 +362,7 @@ function navegarPara(idTela, opts = {}) {
         const navOperacaoInicio = document.getElementById('nav-operacao-inicio');
         const navAbrirOs = document.getElementById('nav-abrir-os');
         const navMinhasSolicitacoes = document.getElementById('nav-minhas-solicitacoes');
+        const navEquipamentosOp = document.getElementById('nav-equipamentos-operacao');
         const navOrdensServico = document.getElementById('nav-ordens-servico');
         const navRelatorioOsAbertas = document.getElementById('nav-relatorio-os-abertas');
         const menuUsuario = document.getElementById('menu-usuario');
@@ -372,6 +384,7 @@ function navegarPara(idTela, opts = {}) {
             if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
+            if (navEquipamentosOp) navEquipamentosOp.classList.add('oculto');
             if (menuUsuario) menuUsuario.classList.add('oculto');
             if (menuAdmin) menuAdmin.classList.remove('oculto');
         } else if (isOperacao) {
@@ -387,6 +400,7 @@ function navegarPara(idTela, opts = {}) {
             if (navOperacaoInicio) navOperacaoInicio.classList.remove('oculto');
             if (navAbrirOs) navAbrirOs.classList.remove('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.remove('oculto');
+            if (navEquipamentosOp) navEquipamentosOp.classList.remove('oculto');
             if (menuUsuario) menuUsuario.classList.add('oculto');
             if (menuAdmin) menuAdmin.classList.add('oculto');
         } else {
@@ -400,6 +414,7 @@ function navegarPara(idTela, opts = {}) {
             if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
+            if (navEquipamentosOp) navEquipamentosOp.classList.add('oculto');
             if (navOrdensServico) navOrdensServico.classList.add('oculto');
             if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.add('oculto');
             if (menuUsuario) menuUsuario.classList.remove('oculto');
@@ -407,10 +422,10 @@ function navegarPara(idTela, opts = {}) {
         }
     }
     if (idTela === 'menu') {
-        carregarDashboardInicio();
+        await carregarDashboardInicio();
     }
     if (idTela === 'menuOperacao') {
-        carregarDashboardOperacao();
+        await carregarDashboardOperacao();
     }
     if (idTela === 'dashboard') {
         carregarUsuarios();
@@ -436,6 +451,7 @@ function navegarPara(idTela, opts = {}) {
         iniciarRealtimeMinhasSolicitacoes();
     }
     if (idTela === 'abrirOs') preencherSelectsAbrirOS();
+    if (idTela === 'equipamentosOperacao') preencherTelaEquipamentosOperacao();
     if (idTela === 'bancoHoras') {
         carregarUsuarios();
         carregarBancoHoras();
@@ -460,7 +476,6 @@ function navegarPara(idTela, opts = {}) {
     if (idTela === 'dashboard') carregarProgramacoesParaApontamento();
 }
 
-// Função para mostrar/ocultar campos de conforme planejado (dois botões Sim/Não). initialConforme: true/false/null (edição)
 function atualizarVisibilidadeCamposAdmin(initialConforme = null) {
     const grupoConforme = document.getElementById('grupo-conforme-planejado');
     const grupoJustificativa = document.getElementById('grupo-justificativa');
@@ -504,7 +519,6 @@ function atualizarVisibilidadeCamposAdmin(initialConforme = null) {
     setConforme(initialConforme !== undefined && initialConforme !== null ? initialConforme : null);
 }
 
-// Atualizar nome do usuário no header e menu lateral
 function atualizarNomeUsuario() {
     const nome = estado.perfil?.nome_completo || estado.usuario?.email || 'Usuário';
     const headerNome = document.getElementById('header-nome-usuario');
@@ -513,7 +527,6 @@ function atualizarNomeUsuario() {
     if (menuNome) menuNome.textContent = nome;
 }
 
-// Botão "Meus dados" - mostra dados de cadastro e edição
 document.getElementById('btn-meus-dados')?.addEventListener('click', async () => {
     const p = estado.perfil;
     if (!p) return;
@@ -543,7 +556,6 @@ document.getElementById('btn-meus-dados')?.addEventListener('click', async () =>
     });
 
     if (result.isDenied) {
-        // Clicou em Editar
         const { value: form } = await Swal.fire({
             title: 'Editar Meus Dados',
             html: `
@@ -597,7 +609,6 @@ document.getElementById('btn-meus-dados')?.addEventListener('click', async () =>
     }
 });
 
-// Listeners Menu
 document.getElementById('alternar-menu').addEventListener('click', () => {
     menuMobile.classList.remove('oculto');
     lucide.createIcons();
@@ -623,7 +634,6 @@ document.getElementById('nav-sair').addEventListener('click', async () => {
     await supabase.auth.signOut();
     estado.usuario = null;
     estado.perfil = null;
-    // Ocultar menu admin ao sair
     document.getElementById('nav-admin')?.classList.add('oculto');
     document.getElementById('nav-ordens-servico')?.classList.add('oculto');
     document.getElementById('nav-hora-extra')?.classList.add('oculto');
@@ -641,7 +651,6 @@ document.getElementById('btn-ir-cadastro-operacao')?.addEventListener('click', (
 document.getElementById('btn-voltar-login').addEventListener('click', () => navegarPara('login'));
 document.getElementById('btn-voltar-login-operacao')?.addEventListener('click', () => navegarPara('login'));
 
-// Toggle mostrar/ocultar senha
 document.getElementById('toggle-senha').addEventListener('click', () => {
     const inputSenha = document.getElementById('login-senha');
     const iconSenha = document.getElementById('icon-senha');
@@ -658,6 +667,7 @@ document.getElementById('toggle-senha').addEventListener('click', () => {
 document.getElementById('btn-novo-apt').addEventListener('click', () => {
     apontamentoEditando = null;
     document.getElementById('formulario-apontamento').reset();
+    setEstadoFinalizadoApontamento(null);
     document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
     if (btnSubmit) {
@@ -672,6 +682,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
 document.getElementById('btn-menu-apontamentos').addEventListener('click', () => {
     apontamentoEditando = null;
     document.getElementById('formulario-apontamento').reset();
+    setEstadoFinalizadoApontamento(null);
     document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
     if (btnSubmit) {
@@ -728,14 +739,12 @@ document.getElementById('btn-operacao-minhas-solicitacoes')?.addEventListener('c
 document.getElementById('btn-voltar-menu-operacao')?.addEventListener('click', () => navegarPara('menuOperacao'));
 document.getElementById('btn-voltar-menu-solicitacoes')?.addEventListener('click', () => navegarPara('menuOperacao'));
 
-// --- Autenticação ---
 
 async function verificarUsuario() {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
         estado.usuario = session.user;
 
-        // Tentar buscar perfil com retentativa (pois o trigger pode demorar ms)
         let tentativas = 0;
         let perfilEncontrado = null;
 
@@ -750,7 +759,6 @@ async function verificarUsuario() {
                 perfilEncontrado = data;
             } else {
                 tentativas++;
-                // Esperar 500ms antes de tentar de novo
                 await new Promise(r => setTimeout(r, 500));
             }
         }
@@ -764,51 +772,78 @@ async function verificarUsuario() {
                 if (navAdmin) navAdmin.classList.remove('oculto');
                 if (navHoraExtra) navHoraExtra.classList.remove('oculto');
                 if (navProgramar) navProgramar.classList.remove('oculto');
-                // Mostrar apenas menu admin na tela inicial
                 document.getElementById('menu-usuario').classList.add('oculto');
                 document.getElementById('menu-admin').classList.remove('oculto');
             } else {
-                // Ocultar menu admin para usuários normais
                 if (navAdmin) navAdmin.classList.add('oculto');
                 if (navHoraExtra) navHoraExtra.classList.add('oculto');
                 if (navProgramar) navProgramar.classList.add('oculto');
-                // Mostrar menu normal para usuários
                 document.getElementById('menu-usuario').classList.remove('oculto');
                 document.getElementById('menu-admin').classList.add('oculto');
             }
             atualizarNomeUsuario();
             if ((estado.perfil.tipo_perfil || '') === 'operacao') {
-                navegarPara('menuOperacao');
+                await navegarPara('menuOperacao');
             } else {
-                navegarPara('menu');
+                await navegarPara('menu');
             }
         } else {
             console.error('Perfil não encontrado após retentativas.');
-            // Se falhar mesmo assim, talvez redirecionar para uma tela de "Complete seu cadastro" ou erro
-            // Por enquanto, forçamos o dashboard mas avisamos
-            navegarPara('dashboard');
+            await navegarPara('dashboard');
             mostrarErro('Perfil Em Processamento', 'Seus dados ainda estão sendo processados. Recarregue a página em instantes.');
         }
     } else {
-        navegarPara('login');
+        await navegarPara('login');
     }
 }
 
-// Login (NOME para usuários, EMAIL para admin)
+document.getElementById('btn-alternar-login-email')?.addEventListener('click', () => {
+    const hid = document.getElementById('login-modo');
+    const label = document.getElementById('login-campo-label');
+    const input = document.getElementById('login-email');
+    const btn = document.getElementById('btn-alternar-login-email');
+    if (!hid || !label || !input || !btn) return;
+    const irParaEmail = hid.value !== 'email';
+    hid.value = irParaEmail ? 'email' : 'nome';
+    label.textContent = irParaEmail ? 'E-mail (cadastro operação)' : 'Nome completo (manutenção)';
+    input.placeholder = irParaEmail ? 'seu.email@empresa.com.br' : 'Seu nome completo';
+    input.type = 'text';
+    input.autocomplete = irParaEmail ? 'email' : 'username';
+    btn.textContent = irParaEmail ? 'Entrar com nome completo (manutenção)' : 'Entrar com e-mail (operação)';
+});
+
 document.getElementById('formulario-login').addEventListener('submit', async (e) => {
     e.preventDefault();
     const inputLogin = document.getElementById('login-email').value.trim();
     const senha = document.getElementById('login-senha').value;
+    const modoEmail = document.getElementById('login-modo')?.value === 'email';
 
-    // Verificação de Admin (usa email)
     const ADMIN_EMAIL = 'leticiamendes123z@gmail.com';
     const ADMIN_SENHA = 'Hab16313@';
-    const isAdmin = inputLogin === ADMIN_EMAIL && senha === ADMIN_SENHA;
+    let isAdmin = inputLogin.toLowerCase() === ADMIN_EMAIL.toLowerCase() && senha === ADMIN_SENHA;
 
     let email = inputLogin;
 
-    // Se não for admin, buscar email pelo nome
-    if (!isAdmin) {
+    if (modoEmail) {
+        if (!inputLogin.includes('@')) {
+            mostrarErro('Falha no Login', 'Informe um e-mail válido.');
+            return;
+        }
+        if (isAdmin) {
+            email = ADMIN_EMAIL;
+        } else {
+            const { data: porEmail, error: errEmail } = await supabase
+                .from('perfis')
+                .select('email')
+                .eq('email', inputLogin.trim())
+                .maybeSingle();
+            if (errEmail || !porEmail?.email) {
+                mostrarErro('Falha no Login', 'E-mail não encontrado no cadastro.');
+                return;
+            }
+            email = porEmail.email;
+        }
+    } else if (!isAdmin) {
         const { data: perfisData, error: perfilError } = await supabase
             .from('perfis')
             .select('email, nome_completo')
@@ -819,7 +854,6 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             return;
         }
 
-        // Se houver múltiplos resultados, tentar encontrar correspondência exata
         let perfilData = perfisData.find(p => p.nome_completo.toLowerCase() === inputLogin.toLowerCase());
         if (!perfilData && perfisData.length === 1) {
             perfilData = perfisData[0];
@@ -838,11 +872,8 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
 
     let { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
 
-    // Se login falhar e for admin, tentar criar a conta
     if (error && isAdmin) {
-        // Verificar se o erro é porque o usuário não existe
         if (error.message.includes('Invalid login') || error.message.includes('Email not confirmed') || error.message.includes('User not found')) {
-            // Tentar criar conta admin se não existir
             Swal.fire({
                 title: 'Criando conta de administrador...',
                 text: 'Aguarde...',
@@ -865,8 +896,6 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             Swal.close();
 
             if (signUpError) {
-                // Se der erro ao criar, pode ser que o email já exista mas precisa confirmar
-                // Tentar login novamente após um delay
                 await new Promise(r => setTimeout(r, 1000));
                 const retry = await supabase.auth.signInWithPassword({ email, password: senha });
                 if (retry.error) {
@@ -875,11 +904,9 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
                 }
                 data = retry.data;
             } else if (signUpData.user) {
-                // Se criou com sucesso, pode precisar confirmar email ou já fazer login
                 if (signUpData.session) {
                     data = signUpData;
                 } else {
-                    // Aguardar um pouco e tentar login
                     await new Promise(r => setTimeout(r, 1500));
                     const loginRetry = await supabase.auth.signInWithPassword({ email, password: senha });
                     if (loginRetry.error) {
@@ -899,12 +926,9 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
     }
 
     if (data && data.user) {
-        // Se for admin, garantir que o perfil tenha função admin
         if (isAdmin) {
-            // Aguardar um pouco para o trigger criar o perfil (se necessário)
             await new Promise(r => setTimeout(r, 1500));
 
-            // Tentar buscar o perfil várias vezes
             let perfilData = null;
             for (let i = 0; i < 5; i++) {
                 const { data: perfil, error: perfilError } = await supabase
@@ -921,7 +945,6 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             }
 
             if (perfilData) {
-                // Atualizar para admin se não for
                 if (perfilData.funcao !== 'admin') {
                     const { error: updateError } = await supabase
                         .from('perfis')
@@ -933,7 +956,6 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
                     }
                 }
             } else {
-                // Criar perfil admin se não existir
                 const { error: insertError } = await supabase
                     .from('perfis')
                     .insert({
@@ -945,7 +967,6 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
 
                 if (insertError) {
                     console.error('Erro ao criar perfil admin:', insertError);
-                    // Tentar atualizar se já existir
                     await supabase
                         .from('perfis')
                         .update({ funcao: 'admin', email: email, nome_completo: 'Administrador' })
@@ -967,7 +988,6 @@ function preencherSelectsCadastroOperacao() {
     }
 }
 
-// Cadastro Manutenção
 document.getElementById('formulario-cadastro').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -1070,7 +1090,6 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
     });
 });
 
-// Cadastro Operação
 document.getElementById('formulario-cadastro-operacao')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('cad-op-email').value.trim();
@@ -1110,54 +1129,163 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
     }
 });
 
-// --- Ordens de Serviço (Perfil Operação) ---
-async function obterProximoNumeroOS() {
-    try {
-        const { data, error } = await supabase.from('ordens_servico').select('numero_solicitacao');
-        if (error) return '00001';
-        const numeros = (data || [])
-            .map(o => String(o.numero_solicitacao || '').trim())
-            .filter(s => /^\d{4,7}$/.test(s))
-            .map(s => parseInt(s, 10))
-            .filter(n => !isNaN(n) && n >= 1);
-        const max = numeros.length ? Math.max(...numeros) : 0;
-        const proximo = max + 1;
-        return String(proximo).padStart(5, '0');
-    } catch (_) {
-        return '00001';
+function numerosInteirosAPartirDeCampo(rows, getValor) {
+    const out = [];
+    for (const row of rows || []) {
+        const s = String(getValor(row) || '').trim();
+        if (/^\d+$/.test(s)) {
+            const n = parseInt(s, 10);
+            if (!isNaN(n) && n >= 1) out.push(n);
+        }
     }
+    return out;
+}
+
+async function obterProximoNumeroOrdemUnico() {
+    try {
+        const [{ data: osRows }, { data: aptRows }, { data: progRows }] = await Promise.all([
+            supabase.from('ordens_servico').select('numero_solicitacao'),
+            supabase.from('apontamentos').select('numero_ordem'),
+            supabase.from('programacoes').select('os_numero')
+        ]);
+        const todos = [
+            ...numerosInteirosAPartirDeCampo(osRows, (r) => r.numero_solicitacao),
+            ...numerosInteirosAPartirDeCampo(aptRows, (r) => r.numero_ordem),
+            ...numerosInteirosAPartirDeCampo(progRows, (r) => r.os_numero)
+        ];
+        const max = todos.length ? Math.max(...todos) : 0;
+        return String(max + 1).padStart(4, '0');
+    } catch (_) {
+        return '0001';
+    }
+}
+
+async function obterProximoNumeroOS() {
+    return obterProximoNumeroOrdemUnico();
+}
+
+function filtroApontamentosPorUsuarioOuManutentor(uid) {
+    if (!uid) return '';
+    return `id_usuario.eq.${uid},id_manutentor.eq.${uid}`;
+}
+
+async function preencherNumeroOrdemApontamentoAutomatico() {
+    const manualInput = document.getElementById('apt-ordem-manual');
+    if (!manualInput) return;
+    manualInput.value = '…';
+    const n = await obterProximoNumeroOrdemUnico();
+    manualInput.value = n;
+    manualInput.readOnly = true;
+}
+
+function atualizarEquipamentosAbrirOS(unidade) {
+    const equipamentoSel = document.getElementById('os-equipamento');
+    if (!equipamentoSel) return;
+    const lista = obterListaEquipamentosParaUnidade(unidade);
+    equipamentoSel.innerHTML = '';
+    if (!unidade) {
+        equipamentoSel.disabled = true;
+        equipamentoSel.required = false;
+        equipamentoSel.innerHTML = '<option value="">Selecione primeiro a unidade</option>';
+        return;
+    }
+    if (lista.length === 0) {
+        equipamentoSel.disabled = true;
+        equipamentoSel.required = false;
+        equipamentoSel.innerHTML = '<option value="">Nenhum equipamento cadastrado para esta unidade</option>';
+        return;
+    }
+    equipamentoSel.disabled = false;
+    equipamentoSel.required = true;
+    equipamentoSel.innerHTML = '<option value="">Selecione o equipamento</option>';
+    lista.forEach((eq) => {
+        const opt = document.createElement('option');
+        opt.value = eq;
+        opt.textContent = eq;
+        equipamentoSel.appendChild(opt);
+    });
 }
 
 function preencherSelectsAbrirOS() {
     const setorSel = document.getElementById('os-setor');
     if (setorSel && setorSel.options.length <= 1) {
-        setorSel.innerHTML = '<option value="">Selecione o setor/unidade</option>';
+        setorSel.innerHTML = '<option value="">Selecione a unidade</option>';
         UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setorSel.appendChild(o); });
     }
     if (estado.perfil?.setor) setorSel.value = estado.perfil.setor;
+    atualizarEquipamentosAbrirOS(setorSel?.value || '');
     obterProximoNumeroOS().then(num => {
         const campo = document.getElementById('os-numero');
         if (campo) campo.value = num;
     });
 }
 
+document.getElementById('os-setor')?.addEventListener('change', (e) => {
+    atualizarEquipamentosAbrirOS(e.target.value || '');
+});
+
+function preencherTelaEquipamentosOperacao() {
+    const sel = document.getElementById('equip-op-unidade');
+    const lista = document.getElementById('equip-op-lista');
+    if (!sel || !lista) return;
+    if (sel.options.length <= 1) {
+        sel.innerHTML = '<option value="">Selecione a unidade</option>';
+        UNIDADES_OPERACAO.forEach((u) => {
+            const o = document.createElement('option');
+            o.value = u;
+            o.textContent = u;
+            sel.appendChild(o);
+        });
+    }
+    const render = () => {
+        const u = sel.value;
+        const itens = obterListaEquipamentosParaUnidade(u);
+        if (!u) {
+            lista.innerHTML = '<p class="equip-op-vazio" style="color:#64748b;font-size:0.9rem;margin:0;">Selecione uma unidade.</p>';
+            return;
+        }
+        if (itens.length === 0) {
+            lista.innerHTML = '<p class="equip-op-vazio" style="color:#64748b;font-size:0.9rem;margin:0;">Nenhum equipamento cadastrado para esta unidade.</p>';
+            return;
+        }
+        lista.innerHTML = `<ul class="equip-op-ul" style="margin:0;padding-left:1.15rem;max-height:55vh;overflow-y:auto;">${itens.map((i) => `<li style="margin:0.35rem 0;">${String(i).replace(/</g, '&lt;')}</li>`).join('')}</ul>`;
+    };
+    sel.onchange = render;
+    if (estado.perfil?.setor) sel.value = estado.perfil.setor;
+    render();
+}
+
+document.getElementById('nav-equipamentos-operacao')?.addEventListener('click', () => navegarPara('equipamentosOperacao'));
+document.getElementById('btn-operacao-equipamentos')?.addEventListener('click', () => navegarPara('equipamentosOperacao'));
+document.getElementById('btn-voltar-equipamentos-operacao')?.addEventListener('click', () => navegarPara('menuOperacao'));
+
+const VALOR_SEM_EQUIPAMENTO_APONTAMENTO = 'Sem equipamento';
+
 function atualizarEquipamentosApontamento(unidade) {
     const equipamentoSel = document.getElementById('apt-equipamento');
     if (!equipamentoSel) return;
-    const chaveUnidade = normalizarChaveUnidadeEquipamento(unidade);
-    const lista = chaveUnidade ? (EQUIPAMENTOS_POR_UNIDADE[chaveUnidade] || []) : [];
+    const lista = obterListaEquipamentosParaUnidade(unidade);
     equipamentoSel.innerHTML = '';
+    delete equipamentoSel.dataset.equipamentoOpcional;
     if (!unidade) {
         equipamentoSel.disabled = true;
+        equipamentoSel.required = false;
         equipamentoSel.innerHTML = '<option value="">Selecione primeiro a unidade</option>';
         return;
     }
     if (lista.length === 0) {
-        equipamentoSel.disabled = true;
-        equipamentoSel.innerHTML = '<option value="">Nenhum equipamento cadastrado para esta unidade</option>';
+        equipamentoSel.disabled = false;
+        equipamentoSel.required = false;
+        equipamentoSel.dataset.equipamentoOpcional = '1';
+        const opt = document.createElement('option');
+        opt.value = VALOR_SEM_EQUIPAMENTO_APONTAMENTO;
+        opt.textContent = 'Sem equipamento na lista — pode apontar (ex.: CRE, repasse, serviço geral)';
+        opt.selected = true;
+        equipamentoSel.appendChild(opt);
         return;
     }
     equipamentoSel.disabled = false;
+    equipamentoSel.required = true;
     equipamentoSel.innerHTML = '<option value="">Selecione o equipamento</option>';
     lista.forEach((eq) => {
         const opt = document.createElement('option');
@@ -1183,13 +1311,16 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
     const numeroSolicitacao = document.getElementById('os-numero').value.trim();
     const descricao = document.getElementById('os-descricao').value.trim();
     const setorUnidade = document.getElementById('os-setor').value;
+    const equipamentoOs = document.getElementById('os-equipamento')?.value?.trim() || '';
     const centroTrabalho = document.getElementById('os-centro-trabalho').value;
     const dataNecessidade = document.getElementById('os-data-necessidade').value || null;
     const destinoServico = document.getElementById('os-destino').value || null;
     const tipoManutencao = document.getElementById('os-tipo-manutencao').value || null;
     const prioridade = document.getElementById('os-prioridade').value || null;
     const anexoInput = document.getElementById('os-anexo');
-    if (!numeroSolicitacao || !setorUnidade) { mostrarErro('Campos obrigatórios', 'Preencha setor/unidade. O número é gerado automaticamente.'); return; }
+    if (!setorUnidade) { mostrarErro('Campos obrigatórios', 'Selecione a unidade.'); return; }
+    if (!equipamentoOs) { mostrarErro('Campos obrigatórios', 'Selecione o equipamento da unidade.'); return; }
+    if (!numeroSolicitacao) { mostrarErro('Campos obrigatórios', 'Número da OS não gerado. Aguarde ou reabra a tela.'); return; }
     if (!descricao || !descricao.trim()) { mostrarErro('Campos obrigatórios', 'Preencha a descrição do serviço.'); return; }
     let anexoUrl = null;
     if (anexoInput?.files?.length) {
@@ -1208,6 +1339,7 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
             descricao: descricao.trim(),
             setor: setorUnidade,
             unidade: setorUnidade,
+            equipamento: equipamentoOs,
             centro_trabalho: centroTrabalho || null,
             data_necessidade: dataNecessidade || null,
             destino_servico: destinoServico,
@@ -1216,7 +1348,15 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
             anexo: anexoUrl,
             status: 'aberta'
         };
-        const { error } = await supabase.from('ordens_servico').insert([payload]);
+        let { error } = await supabase.from('ordens_servico').insert([payload]);
+        if (error && String(error.message || '').toLowerCase().includes('equipamento')) {
+            const { equipamento: _e, ...semEq } = payload;
+            const retry = await supabase.from('ordens_servico').insert([semEq]);
+            error = retry.error;
+            if (!error) {
+                await Swal.fire({ icon: 'info', title: 'OS registrada', text: 'Atualize o banco com a coluna equipamento em ordens_servico para vincular o equipamento à OS (script SQL na pasta do projeto).' });
+            }
+        }
         if (error) throw error;
         mostrarSucesso('Solicitação enviada!');
         e.target.reset();
@@ -1267,14 +1407,13 @@ async function carregarMinhasSolicitacoes() {
                 <span class="badge ${statusClass[os.status] || 'badge-wait'}">${statusLabel[os.status] || os.status}</span>
             </div>
             <div class="minha-os-descricao">${descEscapada}</div>
-            <div class="minha-os-meta">${os.setor || os.unidade || '—'} · ${dataAbertura}</div>
+            <div class="minha-os-meta">${os.setor || os.unidade || '—'}${os.equipamento ? ' · ' + String(os.equipamento).replace(/</g, '&lt;') : ''} · ${dataAbertura}</div>
         `;
         lista.appendChild(card);
     });
     lucide.createIcons();
 }
 
-// --- Admin: Ordens Pendentes e Encaminhar ---
 async function carregarOrdensPendentes() {
     if (estado.perfil?.funcao !== 'admin') return;
     const lista = document.getElementById('lista-ordens-pendentes');
@@ -1368,7 +1507,6 @@ document.getElementById('btn-encaminhar-os')?.addEventListener('click', async ()
 
 document.getElementById('filtro-os-setor-unidade')?.addEventListener('change', () => carregarOrdensPendentes());
 
-// --- Admin: Gestão de Ordens de Serviço (TELA 2) ---
 const STATUS_OS_OPCOES = [
     { value: 'programada', label: 'Programada', cor: '#eab308' },
     { value: 'em_andamento', label: 'Em Andamento', cor: '#2563eb' },
@@ -1446,7 +1584,7 @@ async function carregarGestaoOS() {
                 <div class="gestao-os-info">
                     <span class="gestao-os-numero">#${String(numero).replace(/</g, '&lt;')}</span>
                     <span class="gestao-os-solicitante">Solicitante: ${String(nomeSolicitante).replace(/</g, '&lt;')}</span>
-                    <span class="gestao-os-meta">${(os.setor || os.unidade || '—').replace(/</g, '&lt;')} · ${os.centro_trabalho || '—'} · ${dataAbertura}</span>
+                    <span class="gestao-os-meta">${(os.setor || os.unidade || '—').replace(/</g, '&lt;')}${os.equipamento ? ' · Eq.: ' + String(os.equipamento).replace(/</g, '&lt;') : ''} · ${os.centro_trabalho || '—'} · ${dataAbertura}</span>
                 </div>
                 <div class="gestao-os-status-wrap">
                     <span class="badge ${badgeClass}">${labelStatus}</span>
@@ -1490,7 +1628,6 @@ document.getElementById('gestao-btn-limpar')?.addEventListener('click', () => {
     carregarGestaoOS();
 });
 
-// --- Programações para Apontamento (select de OS) ---
 async function carregarProgramacoesParaApontamento() {
     const selectOS = document.getElementById('apt-ordem-select');
     const selectUnidade = document.getElementById('apt-unidade');
@@ -1515,7 +1652,6 @@ async function carregarProgramacoesParaApontamento() {
         .map(p => extrairUnidadeDeSetorProgramado(p.setor_unidade))
         .filter(Boolean))];
 
-    // Popular select de OS
     selectOS.innerHTML = '<option value="">Selecione uma OS programada...</option>';
     estado.programacoesUsuario.forEach(p => {
         const opt = document.createElement('option');
@@ -1527,10 +1663,9 @@ async function carregarProgramacoesParaApontamento() {
     });
     const optOutra = document.createElement('option');
     optOutra.value = '__outra__';
-    optOutra.textContent = 'Digitar outra OS';
+    optOutra.textContent = 'OS não programada (nº automático)';
     selectOS.appendChild(optOutra);
 
-    // Adicionar setores das programações ao select unidade
     unidadesProgramadas.forEach(unidade => {
         if (!selectUnidade.querySelector(`option[value="${unidade}"]`)) {
             const opt = document.createElement('option');
@@ -1549,9 +1684,14 @@ function mostrarOcultarAptOrdemManual() {
     if (!selectOS || !manualInput) return;
     const isOutra = selectOS.value === '__outra__';
     manualInput.classList.toggle('oculto', !isOutra);
-    manualInput.required = isOutra;
+    manualInput.required = false;
     selectOS.required = !isOutra;
-    if (!isOutra) manualInput.value = '';
+    if (!isOutra) {
+        manualInput.value = '';
+        manualInput.readOnly = false;
+    } else {
+        manualInput.readOnly = true;
+    }
 }
 
 function obterOrdemApt() {
@@ -1562,7 +1702,7 @@ function obterOrdemApt() {
     return selectOS.value || '';
 }
 
-document.getElementById('apt-ordem-select')?.addEventListener('change', function () {
+document.getElementById('apt-ordem-select')?.addEventListener('change', async function () {
     const val = this.value;
     const manualInput = document.getElementById('apt-ordem-manual');
     const aptDesc = document.getElementById('apt-desc');
@@ -1574,7 +1714,9 @@ document.getElementById('apt-ordem-select')?.addEventListener('change', function
         if (aptDesc) aptDesc.value = '';
         if (aptUnidade) aptUnidade.value = '';
         atualizarEquipamentosApontamento('');
-        if (manualInput) manualInput.focus();
+        if (val === '__outra__') {
+            await preencherNumeroOrdemApontamentoAutomatico();
+        }
     } else {
         const opt = this.selectedOptions[0];
         if (opt && aptDesc) aptDesc.value = opt.dataset.problema || '';
@@ -1587,7 +1729,22 @@ document.getElementById('apt-unidade')?.addEventListener('change', (e) => {
     atualizarEquipamentosApontamento(e.target.value || '');
 });
 
-// --- Carregar Usuários (Manutentor Dropdown) ---
+function setEstadoFinalizadoApontamento(val) {
+    const hid = document.getElementById('apt-finalizado');
+    const bsim = document.getElementById('btn-apt-final-sim');
+    const bnao = document.getElementById('btn-apt-final-nao');
+    if (!hid || !bsim || !bnao) return;
+    hid.value = val === true ? 'sim' : val === false ? 'nao' : '';
+    bsim.classList.toggle('btn-primario', val === true);
+    bsim.classList.toggle('btn-secundario', val !== true);
+    bnao.classList.toggle('btn-primario', val === false);
+    bnao.classList.toggle('btn-outline', val !== false);
+    lucide.createIcons();
+}
+
+document.getElementById('btn-apt-final-sim')?.addEventListener('click', () => setEstadoFinalizadoApontamento(true));
+document.getElementById('btn-apt-final-nao')?.addEventListener('click', () => setEstadoFinalizadoApontamento(false));
+
 async function carregarUsuarios() {
     const select = document.getElementById('apt-manutentor');
     if (!select) return;
@@ -1598,19 +1755,18 @@ async function carregarUsuarios() {
         .order('nome_completo');
 
     if (data) {
-        estado.usuarios = data;
+        const manutentores = data.filter((user) => user.funcao !== 'admin' && (user.tipo_perfil === 'manutencao' || !user.tipo_perfil || user.tipo_perfil === ''));
+        estado.usuarios = manutentores;
         select.innerHTML = '<option value="">Selecione o Manutentor...</option>';
-        data.forEach(user => {
+        manutentores.forEach(user => {
             const option = document.createElement('option');
             option.value = user.id;
             option.textContent = user.nome_completo;
             select.appendChild(option);
         });
-        // Preencher manutentor com o usuário logado (cadastro do cliente)
-        if (estado.usuario?.id && data.some(u => u.id === estado.usuario.id)) {
+        if (estado.usuario?.id && manutentores.some(u => u.id === estado.usuario.id)) {
             select.value = estado.usuario.id;
         }
-        // Preencher centro de trabalho com o departamento do perfil (tag do cadastro)
         const aptCentro = document.getElementById('apt-centro');
         if (aptCentro && estado.perfil?.tag) {
             const tag = estado.perfil.tag;
@@ -1624,7 +1780,6 @@ async function carregarUsuarios() {
     setTimeout(() => atualizarIndicadorLimiteDia(), 120);
 }
 
-// --- Edição de Apontamentos ---
 
 let apontamentoEditando = null;
 
@@ -1654,31 +1809,26 @@ async function abrirEdicaoApontamento(apt) {
     document.getElementById('apt-data').value = apt.data_servico;
     document.getElementById('apt-inicio').value = apt.hora_inicio;
     document.getElementById('apt-fim').value = apt.hora_fim;
-    document.getElementById('apt-check').checked = apt.concluido;
+    setEstadoFinalizadoApontamento(apt.concluido === true ? true : apt.concluido === false ? false : null);
     document.getElementById('apt-obs').value = apt.observacoes || '';
 
-    // Conforme planejado (botões Sim/Não) e justificativa
     atualizarVisibilidadeCamposAdmin(apt.conforme_planejado);
     const campoJustificativa = document.getElementById('apt-justificativa');
     if (campoJustificativa) campoJustificativa.value = apt.justificativa || '';
 
-    // Selecionar manutentor
     await carregarUsuarios();
     document.getElementById('apt-manutentor').value = apt.id_manutentor;
 
-    // Mudar título e botão
     document.querySelector('#tela-dashboard h2').textContent = 'Editar Apontamento';
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
     btnSubmit.innerHTML = '<i data-lucide="save"></i> ATUALIZAR APONTAMENTO';
     btnSubmit.dataset.modo = 'editar';
 
-    // Scroll para o topo
     window.scrollTo(0, 0);
     setTimeout(() => atualizarIndicadorLimiteDia(), 120);
     lucide.createIcons();
 }
 
-// Modificar o submit do formulário para suportar edição
 const formAptOriginal = document.getElementById('formulario-apontamento');
 const handlerOriginal = formAptOriginal.onsubmit;
 formAptOriginal.onsubmit = null;
@@ -1694,9 +1844,21 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
     btn.innerHTML = isEdicao ? 'Atualizando...' : 'Processando...';
 
     try {
-        const ordem = obterOrdemApt();
+        const selectOS = document.getElementById('apt-ordem-select');
+        let ordem = '';
+        if (selectOS?.value === '__outra__') {
+            if (isEdicao) {
+                ordem = document.getElementById('apt-ordem-manual')?.value?.trim() || '';
+            } else {
+                ordem = await obterProximoNumeroOrdemUnico();
+                const mi = document.getElementById('apt-ordem-manual');
+                if (mi) mi.value = ordem;
+            }
+        } else {
+            ordem = selectOS?.value?.trim() || '';
+        }
         if (!ordem) {
-            throw new Error('Selecione uma OS programada ou digite o número manualmente.');
+            throw new Error('Selecione uma OS programada ou a opção «OS não programada (nº automático)».');
         }
         let desc = (document.getElementById('apt-desc').value || '').trim();
         const unidade = document.getElementById('apt-unidade').value;
@@ -1706,10 +1868,13 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         const dataServico = document.getElementById('apt-data').value;
         const inicio = document.getElementById('apt-inicio').value;
         const fim = document.getElementById('apt-fim').value;
-        const concluido = document.getElementById('apt-check').checked;
+        const finalVal = document.getElementById('apt-finalizado')?.value || '';
+        if (finalVal !== 'sim' && finalVal !== 'nao') {
+            throw new Error('Indique se o serviço foi finalizado (Sim ou Não).');
+        }
+        const concluido = finalVal === 'sim';
         const obs = document.getElementById('apt-obs').value;
 
-        // Conforme planejado: valor do hidden (sim/nao) ou botões
         const conformeVal = document.getElementById('apt-conforme-planejado')?.value || '';
         const conformePlanejado = conformeVal === 'sim';
         if (conformeVal !== 'sim' && conformeVal !== 'nao') {
@@ -1720,15 +1885,18 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         if (!idManutentor) {
             throw new Error('Selecione um manutentor.');
         }
-        if (!equipamento) {
+        const equipamentoOpcional = document.getElementById('apt-equipamento')?.dataset?.equipamentoOpcional === '1';
+        if (!equipamentoOpcional && !equipamento) {
             throw new Error('Selecione o equipamento.');
+        }
+        if (equipamentoOpcional && !equipamento) {
+            equipamento = VALOR_SEM_EQUIPAMENTO_APONTAMENTO;
         }
 
         if (!conformePlanejado && !justificativa) {
             throw new Error('Quando não foi conforme planejado, a justificativa é obrigatória.');
         }
 
-        // Descrição: obrigatória só quando Não; quando Sim pode ficar em branco
         if (!conformePlanejado && !desc) {
             throw new Error('Informe a descrição da atividade.');
         }
@@ -1741,14 +1909,13 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         const jaApontado = await totalMinutosApontadosNoDia(idManutentor, dataServico, isEdicao ? apontamentoEditando.id : null);
         if (jaApontado + duracaoNova > LIMITE_DIARIO_MINUTOS) {
             throw new Error(
-                `Limite diário de 7h05 por funcionário nesta data. Já apontado: ${formatarMinutosComoH(jaApontado)}. ` +
+                `Limite diário de 7 horas por funcionário nesta data. Já apontado: ${formatarMinutosComoH(jaApontado)}. ` +
                 `Este intervalo: ${formatarMinutosComoH(duracaoNova)}. Máximo: ${formatarMinutosComoH(LIMITE_DIARIO_MINUTOS)}.`
             );
         }
 
         let urlsFotos = apontamentoEditando?.fotos || [];
 
-        // Upload de novas fotos apenas se houver
         const inputArquivos = document.getElementById('apt-arquivos');
         const arquivos = Array.from(inputArquivos.files);
         if (arquivos.length > 0) {
@@ -1779,7 +1946,6 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
             : (obs ? `[Equipamento: ${equipamento}] ${obs}` : `[Equipamento: ${equipamento}]`);
 
         if (isEdicao) {
-            // Atualizar
             const dadosUpdate = {
                 id_manutentor: idManutentor,
                 numero_ordem: ordem,
@@ -1805,7 +1971,6 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
             if (updateError) throw new Error(updateError.message);
             mostrarSucesso('Apontamento Atualizado!');
         } else {
-            // Inserir novo
             const dadosInsert = {
                 id_usuario: estado.usuario.id,
                 id_manutentor: idManutentor,
@@ -1831,12 +1996,13 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         }
 
         e.target.reset();
+        setEstadoFinalizadoApontamento(null);
         atualizarEquipamentosApontamento('');
         apontamentoEditando = null;
         document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
         btn.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
         btn.dataset.modo = '';
-        navegarPara('menu');
+        await navegarPara('menu');
 
     } catch (erro) {
         mostrarErro('Ops!', erro.message);
@@ -1846,7 +2012,6 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
     }
 });
 
-// --- Listagens ---
 
 let buscaHistorico = '';
 
@@ -1860,10 +2025,9 @@ async function carregarHistorico() {
             *,
             manutentor:id_manutentor(nome_completo)
         `)
-        .eq('id_usuario', estado.usuario.id)
+        .or(filtroApontamentosPorUsuarioOuManutentor(estado.usuario.id))
         .order('criado_em', { ascending: false });
 
-    // Aplicar busca se houver
     if (buscaHistorico) {
         query = query.ilike('numero_ordem', `%${buscaHistorico}%`);
     }
@@ -1878,7 +2042,6 @@ async function carregarHistorico() {
     renderizarLogs(data, lista);
 }
 
-// Busca no histórico
 document.getElementById('busca-historico').addEventListener('input', (e) => {
     buscaHistorico = e.target.value.trim();
     carregarHistorico();
@@ -1898,7 +2061,6 @@ async function carregarDadosAdmin() {
     lista.innerHTML = '<div class="centro">Carregando...</div>';
     listaUsuarios.innerHTML = '<div class="centro">Carregando...</div>';
 
-    // Carregar usuários
     const { data: usuariosData, error: usuariosError } = await supabase
         .from('perfis')
         .select('id, nome_completo, email, tag, funcao, criado_em, foto_url')
@@ -1962,7 +2124,6 @@ async function carregarDadosAdmin() {
         }
     }
 
-    // Carregar apontamentos com filtros
     let query = supabase
         .from('apontamentos')
         .select(`
@@ -1995,7 +2156,6 @@ async function carregarDadosAdmin() {
     renderizarLogs(data, lista, true);
 }
 
-// Event listeners para filtros admin
 document.getElementById('btn-aplicar-filtros').addEventListener('click', () => {
     filtrosAdmin = {
         unidade: document.getElementById('filtro-unidade').value,
@@ -2041,8 +2201,7 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
         const nomeManutentor = log.manutentor?.nome_completo || 'N/A';
         const nomeUsuario = log.usuario?.nome_completo || 'N/A';
 
-        // Verificar se o usuário pode editar (é dono do apontamento ou é admin)
-        const podeEditar = isAdmin || (log.id_usuario === estado.usuario?.id);
+        const podeEditar = isAdmin || (log.id_usuario === estado.usuario?.id) || (log.id_manutentor === estado.usuario?.id);
 
         let htmlFotos = '';
         if (log.fotos && log.fotos.length > 0) {
@@ -2121,16 +2280,14 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
         `;
         conteiner.appendChild(div);
 
-        // Adicionar listener para edição (usuários podem editar seus próprios apontamentos, admins podem editar todos)
         const btnEditar = div.querySelector('.btn-editar-apt');
         if (btnEditar) {
-            btnEditar.style.display = 'none'; // Inicialmente oculto
+            btnEditar.style.display = 'none';
             btnEditar.addEventListener('click', (e) => {
                 e.stopPropagation();
                 abrirEdicaoApontamento(log);
             });
 
-            // Mostrar/esconder botão quando acordeão abrir/fechar
             const content = div.querySelector('.accordion-content');
             const observer = new MutationObserver(() => {
                 if (content.classList.contains('active')) {
@@ -2145,7 +2302,6 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
     lucide.createIcons();
 }
 
-// Função global para toggle do acordeão
 window.toggleAccordion = function (id) {
     const content = document.getElementById(id);
     const icon = document.getElementById(`icon-${id}`);
@@ -2156,7 +2312,6 @@ window.toggleAccordion = function (id) {
             icon.style.transform = 'rotate(0deg)';
         }
     } else {
-        // Fechar outros acordeões abertos no mesmo container
         const container = content.closest('.tela');
         if (container) {
             container.querySelectorAll('.accordion-content.active').forEach(item => {
@@ -2177,7 +2332,6 @@ window.toggleAccordion = function (id) {
     }
 };
 
-// Excel Export (Enhanced)
 document.getElementById('btn-exportar-excel').addEventListener('click', async () => {
     Swal.fire({
         title: 'Gerando Relatório...',
@@ -2244,6 +2398,7 @@ document.getElementById('btn-download-os-abertas')?.addEventListener('click', as
             Número: os.numero_solicitacao || '',
             Descrição: (os.descricao || os.titulo || '').replace(/\s+/g, ' ').trim(),
             'Setor / Unidade': os.setor || os.unidade || '',
+            Equipamento: os.equipamento || '',
             'Centro de Trabalho': os.centro_trabalho || '',
             Prioridade: os.prioridade || '',
             Destino: os.destino_servico || '',
@@ -2260,7 +2415,6 @@ document.getElementById('btn-download-os-abertas')?.addEventListener('click', as
     Toast.fire({ icon: 'success', title: 'Download concluído!' });
 });
 
-// --- Setores (para Programação) ---
 const SETORES = [
     '11101 MT CENTRAL', '11102 MT F.DESENV.', '11103 MT RATES', '11104 MT RESIDEN', '11105 MT ADM.PESSOAL',
     '11106 MT ADM.GERAL', '11107 MT TAREFEIROS', '11108 MT CONTABILIDADE', '11109 MT INFORMÁTICA', '11110 MT SERV.GERAIS',
@@ -2287,10 +2441,8 @@ const SETORES = [
     '91304 ITA INSUMOS II', '91305 ITA II SUP LOG', '101301 ITAPE SUP', '101304 ITAPE SUP II', '101305 ITAPE SUP LOG'
 ];
 
-// Departamentos / Centros de trabalho para programação de OS
 const DEPARTAMENTOS = ['Elétrica', 'Mecânica', 'Automação'];
 
-// --- Programações ---
 async function carregarProgramacoesAdmin() {
     if (estado.perfil?.funcao !== 'admin') return;
     const lista = document.getElementById('lista-programacoes-admin');
@@ -2445,7 +2597,6 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
             const departamento = document.getElementById('swal-departamento').value || '';
             const problema = document.getElementById('swal-problema').value?.trim() || '';
 
-            // Mantém os setores codificados para o admin e converte para unidade no apontamento via normalização.
             const setor_unidade = departamento ? `${departamento} - ${setor}` : setor;
 
             return {
@@ -2498,7 +2649,6 @@ async function excluirProgramacao(id) {
     }
 }
 
-// --- Veículos ---
 async function carregarVeiculos() {
     const lista = document.getElementById('lista-veiculos');
     const btnAdicionar = document.getElementById('btn-adicionar-veiculo');
@@ -2803,7 +2953,6 @@ async function excluirVeiculo(id) {
     }
 }
 
-// --- Funções para Banco de Horas, Hora Extra e Férias ---
 
 async function carregarBancoHoras() {
     const lista = document.getElementById('lista-banco-horas');
@@ -2815,7 +2964,6 @@ async function carregarBancoHoras() {
         return;
     }
 
-    // Buscar horas do usuário logado
     const { data: horasUsuario, error: errorHoras } = await supabase
         .from('horas_usuarios')
         .select('*')
@@ -2937,7 +3085,6 @@ async function carregarHoraExtra() {
     const tabelaEl = document.querySelector('.tabela-escala');
     if (itens.length === 0) {
         if (isAdmin) {
-            // Admin: manter tabela visível com estrutura vazia para poder adicionar
             if (tabelaEl) tabelaEl.style.display = 'table';
             if (emptyDiv) emptyDiv.style.display = 'none';
             tbody.innerHTML = `<tr><td colspan="5" class="centro" style="padding: 2rem; color: #666;">Nenhum registro na escala. Clique em "Adicionar" para inserir.</td></tr>`;
@@ -2986,7 +3133,6 @@ async function carregarHoraExtra() {
 
 document.getElementById('btn-adicionar-escala')?.addEventListener('click', () => adicionarLinhaEscala());
 
-// Botão "Informações da Escala" - texto completo das orientações
 const TEXTO_INFO_ESCALA = `Boa tarde pessoal, como alinhamos segue a escala de hora extra para os final de semana. Também já está alinhada a questão das refeições. Enfatizo que sobre o restante da escala de elétrica será alinhado.
 
 🕒 Horário:
@@ -3127,7 +3273,6 @@ async function excluirLinhaEscala(id) {
     }
 }
 
-// Ordenação da tabela de escala (clicar no header)
 document.querySelectorAll('.tabela-escala th[data-col]')?.forEach(th => {
     th.addEventListener('click', () => {
         const col = th.dataset.col;
@@ -3141,12 +3286,10 @@ async function carregarFerias() {
     const lista = document.getElementById('lista-ferias');
     lista.innerHTML = '<div class="centro">Carregando...</div>';
 
-    // Garantir que usuários estejam carregados
     if (estado.usuarios.length === 0) {
         await carregarUsuarios();
     }
 
-    // Buscar todos os usuários
     const { data: usuarios, error: errorUsuarios } = await supabase
         .from('perfis')
         .select('id, nome_completo')
@@ -3157,12 +3300,10 @@ async function carregarFerias() {
         return;
     }
 
-    // Buscar férias salvas no banco
     const { data: horasSalvas, error: errorHoras } = await supabase
         .from('horas_usuarios')
         .select('id_usuario, ferias');
 
-    // Ordenar (usuário logado primeiro)
     let usuariosArray = [...usuarios];
     const usuarioLogadoId = estado.usuario?.id;
 
@@ -3172,7 +3313,6 @@ async function carregarFerias() {
         return a.nome_completo.localeCompare(b.nome_completo);
     });
 
-    // Renderizar
     lista.innerHTML = '';
     if (usuariosArray.length === 0) {
         lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhum usuário encontrado.</p></div>';
@@ -3188,7 +3328,6 @@ async function carregarFerias() {
 
         const isAdmin = estado.perfil?.funcao === 'admin';
 
-        // Buscar férias do usuário
         const horasUsuario = horasSalvas?.find(h => h.id_usuario === usuario.id);
         let feriasArray = [];
         try {
@@ -3221,7 +3360,6 @@ async function carregarFerias() {
     lucide.createIcons();
 }
 
-// Funções auxiliares para buscar e salvar horas
 async function buscarHorasUsuario(userId) {
     const { data, error } = await supabase
         .from('horas_usuarios')
@@ -3267,17 +3405,14 @@ async function salvarHorasUsuario(userId, dados) {
     return data;
 }
 
-// Funções de edição para admins (apenas nas novas telas)
 window.editarBancoHoras = async function (userId) {
     if (estado.perfil?.funcao !== 'admin') {
         mostrarErro('Acesso Restrito', 'Apenas administradores podem editar essas informações.');
         return;
     }
 
-    // Buscar dados atuais
     const horasAtuais = await buscarHorasUsuario(userId);
 
-    // Buscar nome do usuário
     let usuario = estado.usuarios.find(u => u.id === userId);
     if (!usuario) {
         const { data: perfilData } = await supabase
@@ -3347,10 +3482,8 @@ window.editarHoraExtra = async function (userId) {
         return;
     }
 
-    // Buscar dados atuais
     const horasAtuais = await buscarHorasUsuario(userId);
 
-    // Buscar nome do usuário
     let usuario = estado.usuarios.find(u => u.id === userId);
     if (!usuario) {
         const { data: perfilData } = await supabase
@@ -3414,10 +3547,8 @@ window.editarFerias = async function (userId) {
         return;
     }
 
-    // Buscar dados atuais
     const horasAtuais = await buscarHorasUsuario(userId);
 
-    // Buscar nome do usuário
     let usuario = estado.usuarios.find(u => u.id === userId);
     if (!usuario) {
         const { data: perfilData } = await supabase
@@ -3428,7 +3559,6 @@ window.editarFerias = async function (userId) {
         usuario = { nome_completo: perfilData?.nome_completo || 'Usuário' };
     }
 
-    // Parsear férias (JSON array)
     let feriasArray = [];
     try {
         if (horasAtuais.ferias) {
@@ -3499,7 +3629,6 @@ window.editarFerias = async function (userId) {
     }
 };
 
-// --- Dashboard visual (Chart.js global) ---
 const CHART_THEME = {
     primary: '#004175',
     primaryMid: '#1e6fa3',
@@ -3554,16 +3683,17 @@ async function preencherKpiManutencao(uid) {
     const now = new Date();
     const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
 
+    const filtroUid = filtroApontamentosPorUsuarioOuManutentor(uid);
     const { count: aptMes } = await supabase
         .from('apontamentos')
         .select('*', { count: 'exact', head: true })
-        .eq('id_usuario', uid)
+        .or(filtroUid)
         .gte('data_servico', inicioMes);
 
     const { count: aptTotal } = await supabase
         .from('apontamentos')
         .select('*', { count: 'exact', head: true })
-        .eq('id_usuario', uid);
+        .or(filtroUid);
 
     const setText = (id, v) => {
         const el = document.getElementById(id);
@@ -3611,10 +3741,11 @@ async function renderizarChartsManutencao(uid) {
     const labelDisplay = formatarLabelsPt(labelsISO);
     const desde = labelsISO[0];
 
+    const filtroUid = filtroApontamentosPorUsuarioOuManutentor(uid);
     const { data: apts } = await supabase
         .from('apontamentos')
         .select('data_servico')
-        .eq('id_usuario', uid)
+        .or(filtroUid)
         .gte('data_servico', desde);
 
     const counts = contarApontamentosPorData(apts, labelsISO);
@@ -3662,7 +3793,7 @@ async function renderizarChartsManutencao(uid) {
     const { data: mApts } = await supabase
         .from('apontamentos')
         .select('concluido')
-        .eq('id_usuario', uid)
+        .or(filtroUid)
         .gte('data_servico', inicioMes);
 
     let conc = 0;
@@ -3698,6 +3829,19 @@ async function renderizarChartsManutencao(uid) {
             }
         });
     }
+
+    requestAnimationFrame(() => {
+        ['chart-apontamentos-7d', 'chart-status-mes'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && typeof Chart !== 'undefined') {
+                const ch = Chart.getChart(el);
+                if (ch) {
+                    ch.update('none');
+                    ch.resize();
+                }
+            }
+        });
+    });
 }
 
 async function renderizarChartsAdmin() {
@@ -3782,6 +3926,19 @@ async function renderizarChartsAdmin() {
             }
         });
     }
+
+    requestAnimationFrame(() => {
+        ['chart-admin-apontamentos-7d', 'chart-admin-os-status'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && typeof Chart !== 'undefined') {
+                const ch = Chart.getChart(el);
+                if (ch) {
+                    ch.update('none');
+                    ch.resize();
+                }
+            }
+        });
+    });
 }
 
 async function carregarDashboardInicio() {
@@ -3890,8 +4047,17 @@ async function carregarDashboardOperacao() {
             }
         });
     }
+    requestAnimationFrame(() => {
+        const el = document.getElementById('chart-op-status');
+        if (el && typeof Chart !== 'undefined') {
+            const ch = Chart.getChart(el);
+            if (ch) {
+                ch.update('none');
+                ch.resize();
+            }
+        }
+    });
     lucide.createIcons();
 }
 
-// Inicializar
 verificarUsuario();
