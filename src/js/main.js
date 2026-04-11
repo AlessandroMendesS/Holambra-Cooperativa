@@ -3675,24 +3675,36 @@ function contarApontamentosPorData(rows, labelsISO) {
 function preencherResumoApontamentos7d(containerId, labelsDisplay, counts) {
     const box = document.getElementById(containerId);
     if (!box) return;
-    const maxVal = Math.max(1, ...counts);
+    const maxVal = Math.max(...counts, 0);
     const soma = counts.reduce((a, b) => a + b, 0);
+    const escala = Math.max(maxVal, 1);
     if (soma === 0) {
-        box.innerHTML = '<p class="dash-op-status-vazio">Sem apontamentos neste período.</p>';
+        box.classList.add('apt-bars-chart-root--empty');
+        box.innerHTML = '<p class="apt-bars-chart-empty">Sem apontamentos neste período.</p>';
+        box.removeAttribute('role');
         return;
     }
-    const corBarra = '#004175';
-    box.innerHTML = labelsDisplay
+    box.classList.remove('apt-bars-chart-root--empty');
+    box.setAttribute('role', 'img');
+    const resumo = counts.map((c, i) => `${labelsDisplay[i]}: ${c}`).join('; ');
+    box.setAttribute('aria-label', `Apontamentos nos últimos 7 dias. ${resumo}`);
+    const cols = labelsDisplay
         .map((lb, i) => {
             const n = counts[i];
-            const pct = n === 0 ? 0 : Math.max(8, Math.round((n / maxVal) * 100));
+            const pct = Math.round((n / escala) * 100);
             const texto = String(lb).replace(/</g, '&lt;');
-            return `<div class="dash-op-status-linha">
-                    <div class="dash-op-status-top"><span>${texto}</span><strong>${n}</strong></div>
-                    <div class="dash-op-status-barra-wrap" role="presentation"><div class="dash-op-status-barra" style="width:${pct}%;background:${corBarra}"></div></div>
-                </div>`;
+            const on = n > 0 ? ' apt-bars-chart__bar--on' : '';
+            const vz = n === 0 ? ' apt-bars-chart__value--zero' : '';
+            return `<div class="apt-bars-chart__col">
+                <span class="apt-bars-chart__value${vz}">${n}</span>
+                <div class="apt-bars-chart__track" aria-hidden="true">
+                    <div class="apt-bars-chart__bar${on}" style="height:${pct}%"></div>
+                </div>
+                <span class="apt-bars-chart__label">${texto}</span>
+            </div>`;
         })
         .join('');
+    box.innerHTML = `<div class="apt-bars-chart">${cols}</div>`;
 }
 
 async function preencherKpiManutencao(uid) {
