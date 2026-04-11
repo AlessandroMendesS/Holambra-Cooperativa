@@ -580,6 +580,61 @@ h2 {
     }
 }
 
+.chart-card--op-resumo {
+    min-height: auto !important;
+}
+
+.dash-op-status-simples {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 100%;
+    flex: 0 0 auto;
+}
+
+.dash-op-status-linha {
+    flex: 0 0 auto;
+}
+
+.dash-op-status-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8125rem;
+    color: var(--neutro-700);
+    gap: 0.5rem;
+}
+
+.dash-op-status-top strong {
+    color: var(--azul-800);
+    font-variant-numeric: tabular-nums;
+}
+
+.dash-op-status-barra-wrap {
+    height: 8px;
+    margin-top: 6px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.dash-op-status-barra {
+    height: 100%;
+    border-radius: 999px;
+    max-width: 100%;
+    transition: width 0.2s ease;
+}
+
+.dash-op-status-vazio {
+    margin: 0;
+    color: var(--neutro-500);
+    font-size: 0.875rem;
+}
+
 .section-heading {
     font-size: 0.6875rem;
     font-weight: 800;

@@ -101,7 +101,7 @@
                         <input type="hidden" id="login-modo" value="nome">
                         <div class="grupo-input centro" style="margin-bottom: 1rem;">
                             <button type="button" id="btn-alternar-login-email" class="btn btn-outline" style="max-width: 100%; text-transform: none; font-size: 0.85rem;">
-                                Entrar com e-mail (operação)
+                                Entrar com login (operação)
                             </button>
                         </div>
                         <div class="grupo-input">
@@ -255,9 +255,9 @@
                         <p class="kpi-value" id="dash-op-abertas">—</p>
                     </div>
                 </div>
-                <div class="chart-card" style="margin-bottom: 1.5rem;">
+                <div class="chart-card chart-card--op-resumo" style="margin-bottom: 1.5rem;">
                     <h4 class="chart-title">Solicitações por status</h4>
-                    <div class="chart-canvas-wrap"><canvas id="chart-op-status" aria-label="Status das OS"></canvas></div>
+                    <div id="dash-op-status-simples" class="dash-op-status-simples" aria-label="Resumo por status das solicitações"></div>
                 </div>
                 <h3 class="section-heading">Ações</h3>
                 <div class="menu-opcoes">
@@ -438,9 +438,9 @@
                 </div>
 
                 <div id="dashboard-charts-manutencao" class="dashboard-charts-row">
-                    <div class="chart-card">
+                    <div class="chart-card chart-card--op-resumo">
                         <h4 class="chart-title">Apontamentos — últimos 7 dias</h4>
-                        <canvas id="chart-apontamentos-7d" aria-label="Gráfico de apontamentos"></canvas>
+                        <div id="dash-apontamentos-7d-simples" class="dash-op-status-simples" aria-label="Resumo de apontamentos por dia"></div>
                     </div>
                     <div class="chart-card">
                         <h4 class="chart-title">Status (mês atual)</h4>
@@ -449,9 +449,9 @@
                 </div>
 
                 <div id="dashboard-charts-admin" class="dashboard-charts-row oculto">
-                    <div class="chart-card">
+                    <div class="chart-card chart-card--op-resumo">
                         <h4 class="chart-title">Apontamentos — últimos 7 dias (equipe)</h4>
-                        <canvas id="chart-admin-apontamentos-7d" aria-label="Gráfico equipe"></canvas>
+                        <div id="dash-admin-apontamentos-7d-simples" class="dash-op-status-simples" aria-label="Resumo equipe por dia"></div>
                     </div>
                     <div class="chart-card">
                         <h4 class="chart-title">Ordens de serviço por status</h4>

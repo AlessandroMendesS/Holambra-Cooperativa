@@ -805,11 +805,11 @@ document.getElementById('btn-alternar-login-email')?.addEventListener('click', (
     if (!hid || !label || !input || !btn) return;
     const irParaEmail = hid.value !== 'email';
     hid.value = irParaEmail ? 'email' : 'nome';
-    label.textContent = irParaEmail ? 'E-mail (cadastro operação)' : 'Nome completo (manutenção)';
-    input.placeholder = irParaEmail ? 'seu.email@empresa.com.br' : 'Seu nome completo';
+    label.textContent = irParaEmail ? 'Login (cadastro operação)' : 'Nome completo (manutenção)';
+    input.placeholder = irParaEmail ? 'mesmo e-mail do seu cadastro' : 'Seu nome completo';
     input.type = 'text';
-    input.autocomplete = irParaEmail ? 'email' : 'username';
-    btn.textContent = irParaEmail ? 'Entrar com nome completo (manutenção)' : 'Entrar com e-mail (operação)';
+    input.autocomplete = irParaEmail ? 'username' : 'username';
+    btn.textContent = irParaEmail ? 'Entrar com nome completo (manutenção)' : 'Entrar com login (operação)';
 });
 
 document.getElementById('formulario-login').addEventListener('submit', async (e) => {
@@ -826,7 +826,7 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
 
     if (modoEmail) {
         if (!inputLogin.includes('@')) {
-            mostrarErro('Falha no Login', 'Informe um e-mail válido.');
+            mostrarErro('Falha no Login', 'Informe o login no formato do cadastro (e-mail corporativo).');
             return;
         }
         if (isAdmin) {
@@ -838,7 +838,7 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
                 .eq('email', inputLogin.trim())
                 .maybeSingle();
             if (errEmail || !porEmail?.email) {
-                mostrarErro('Falha no Login', 'E-mail não encontrado no cadastro.');
+                mostrarErro('Falha no Login', 'Login não encontrado no cadastro de operação.');
                 return;
             }
             email = porEmail.email;
@@ -3672,6 +3672,29 @@ function contarApontamentosPorData(rows, labelsISO) {
     return labelsISO.map((l) => map[l]);
 }
 
+function preencherResumoApontamentos7d(containerId, labelsDisplay, counts) {
+    const box = document.getElementById(containerId);
+    if (!box) return;
+    const maxVal = Math.max(1, ...counts);
+    const soma = counts.reduce((a, b) => a + b, 0);
+    if (soma === 0) {
+        box.innerHTML = '<p class="dash-op-status-vazio">Sem apontamentos neste período.</p>';
+        return;
+    }
+    const corBarra = '#004175';
+    box.innerHTML = labelsDisplay
+        .map((lb, i) => {
+            const n = counts[i];
+            const pct = n === 0 ? 0 : Math.max(8, Math.round((n / maxVal) * 100));
+            const texto = String(lb).replace(/</g, '&lt;');
+            return `<div class="dash-op-status-linha">
+                    <div class="dash-op-status-top"><span>${texto}</span><strong>${n}</strong></div>
+                    <div class="dash-op-status-barra-wrap" role="presentation"><div class="dash-op-status-barra" style="width:${pct}%;background:${corBarra}"></div></div>
+                </div>`;
+        })
+        .join('');
+}
+
 async function preencherKpiManutencao(uid) {
     const hoje = new Date().toISOString().slice(0, 10);
     const { data: prog } = await supabase
@@ -3749,44 +3772,7 @@ async function renderizarChartsManutencao(uid) {
         .gte('data_servico', desde);
 
     const counts = contarApontamentosPorData(apts, labelsISO);
-
-    destruirChartCanvas('chart-apontamentos-7d');
-    const ctx1 = document.getElementById('chart-apontamentos-7d');
-    if (ctx1 && typeof Chart !== 'undefined') {
-        new Chart(ctx1, {
-            type: 'line',
-            data: {
-                labels: labelDisplay,
-                datasets: [
-                    {
-                        label: 'Apontamentos',
-                        data: counts,
-                        borderColor: CHART_THEME.primary,
-                        backgroundColor: CHART_THEME.fill,
-                        fill: true,
-                        tension: 0.35,
-                        borderWidth: 2,
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'index' },
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1, precision: 0 },
-                        grid: { color: CHART_THEME.grid }
-                    },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
+    preencherResumoApontamentos7d('dash-apontamentos-7d-simples', labelDisplay, counts);
 
     const now = new Date();
     const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -3831,7 +3817,7 @@ async function renderizarChartsManutencao(uid) {
     }
 
     requestAnimationFrame(() => {
-        ['chart-apontamentos-7d', 'chart-status-mes'].forEach((id) => {
+        ['chart-status-mes'].forEach((id) => {
             const el = document.getElementById(id);
             if (el && typeof Chart !== 'undefined') {
                 const ch = Chart.getChart(el);
@@ -3855,39 +3841,7 @@ async function renderizarChartsAdmin() {
         .gte('data_servico', desde);
 
     const counts = contarApontamentosPorData(apts, labelsISO);
-
-    destruirChartCanvas('chart-admin-apontamentos-7d');
-    const ctx1 = document.getElementById('chart-admin-apontamentos-7d');
-    if (ctx1 && typeof Chart !== 'undefined') {
-        new Chart(ctx1, {
-            type: 'bar',
-            data: {
-                labels: labelDisplay,
-                datasets: [
-                    {
-                        label: 'Apontamentos',
-                        data: counts,
-                        backgroundColor: 'rgba(0, 65, 117, 0.88)',
-                        borderRadius: 8,
-                        borderSkipped: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1, precision: 0 },
-                        grid: { color: CHART_THEME.grid }
-                    },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
+    preencherResumoApontamentos7d('dash-admin-apontamentos-7d-simples', labelDisplay, counts);
 
     const { data: ordens } = await supabase.from('ordens_servico').select('status');
     const statusMap = {};
@@ -3928,7 +3882,7 @@ async function renderizarChartsAdmin() {
     }
 
     requestAnimationFrame(() => {
-        ['chart-admin-apontamentos-7d', 'chart-admin-os-status'].forEach((id) => {
+        ['chart-admin-os-status'].forEach((id) => {
             const el = document.getElementById(id);
             if (el && typeof Chart !== 'undefined') {
                 const ch = Chart.getChart(el);
@@ -4002,6 +3956,8 @@ async function carregarDashboardOperacao() {
     if (error) {
         setText('dash-op-total', '—');
         setText('dash-op-abertas', '—');
+        const bErr = document.getElementById('dash-op-status-simples');
+        if (bErr) bErr.innerHTML = '<p class="dash-op-status-vazio">Não foi possível carregar o resumo.</p>';
         lucide.createIcons();
         return;
     }
@@ -4018,45 +3974,26 @@ async function carregarDashboardOperacao() {
     });
     const keys = Object.keys(statusCount);
     const vals = keys.map((k) => statusCount[k]);
-    const palette = ['#004175', '#1e6fa3', '#4a8eb8', '#7dd3fc', '#bae6fd'];
+    const labelStatusOp = { aberta: 'Aberta', programada: 'Programada', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
+    const coresOp = ['#004175', '#1e6fa3', '#4a8eb8', '#7dd3fc', '#bae6fd', '#94a3b8'];
 
-    destruirChartCanvas('chart-op-status');
-    const ctx = document.getElementById('chart-op-status');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: keys.length ? keys : ['Sem dados'],
-                datasets: [
-                    {
-                        data: keys.length ? vals : [1],
-                        backgroundColor: keys.length
-                            ? keys.map((_, i) => palette[i % palette.length])
-                            : ['#e2e8f0'],
-                        borderWidth: 0
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '60%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
-                }
-            }
-        });
-    }
-    requestAnimationFrame(() => {
-        const el = document.getElementById('chart-op-status');
-        if (el && typeof Chart !== 'undefined') {
-            const ch = Chart.getChart(el);
-            if (ch) {
-                ch.update('none');
-                ch.resize();
-            }
+    const boxOp = document.getElementById('dash-op-status-simples');
+    if (boxOp) {
+        if (!keys.length) {
+            boxOp.innerHTML = '<p class="dash-op-status-vazio">Sem solicitações para exibir.</p>';
+        } else {
+            const totalSt = vals.reduce((a, b) => a + b, 0) || 1;
+            boxOp.innerHTML = keys.map((k, i) => {
+                const n = statusCount[k];
+                const pct = Math.max(6, Math.round((n / totalSt) * 100));
+                const nome = labelStatusOp[k] || k;
+                return `<div class="dash-op-status-linha">
+                    <div class="dash-op-status-top"><span>${String(nome).replace(/</g, '&lt;')}</span><strong>${n}</strong></div>
+                    <div class="dash-op-status-barra-wrap" role="presentation"><div class="dash-op-status-barra" style="width:${pct}%;background:${coresOp[i % coresOp.length]}"></div></div>
+                </div>`;
+            }).join('');
         }
-    });
+    }
     lucide.createIcons();
 }
 
