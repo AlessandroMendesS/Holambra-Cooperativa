@@ -281,7 +281,14 @@
                     <button class="menu-card" id="btn-operacao-equipamentos">
                         <div class="menu-card-icon"><i data-lucide="wrench"></i></div>
                         <h3>Equipamentos por unidade</h3>
-                        <p>Consultar lista de equipamentos da unidade</p>
+                        <p>Consultar lista e incluir equipamento que faltar</p>
+                    </button>
+                </div>
+                <div class="card op-equip-extra-card">
+                    <p class="op-equip-extra-titulo"><i data-lucide="plus-square"></i> Equipamento fora da lista?</p>
+                    <p class="op-equip-extra-texto">Inclua nomes que não aparecem ao abrir OS.</p>
+                    <button type="button" class="btn btn-outline" id="btn-operacao-ir-incluir-equip" style="width: 100%;">
+                        Incluir novo equipamento
                     </button>
                 </div>
             </section>
@@ -297,6 +304,14 @@
                         <select id="equip-op-unidade" class="select-campo"></select>
                     </div>
                     <div id="equip-op-lista" class="equip-op-lista"></div>
+                    <div class="equip-op-adicionar">
+                        <label for="equip-op-novo-nome">Não encontrou na lista?</label>
+                        <div class="equip-op-adicionar-linha">
+                            <input type="text" id="equip-op-novo-nome" class="input-campo" placeholder="Nome do equipamento" maxlength="200" autocomplete="off">
+                            <button type="button" class="btn btn-primario" id="equip-op-btn-adicionar">Adicionar</button>
+                        </div>
+                        <p class="equip-op-adicionar-hint">Gravado no banco (Supabase); aparece em <strong>Abrir OS</strong> e em <strong>Apontamento</strong> para a mesma unidade. Quem cadastrou ou um <strong>admin</strong> pode excluir.</p>
+                    </div>
                 </div>
             </section>
 
@@ -422,7 +437,7 @@
                     </div>
                     <div class="kpi-card">
                         <p class="kpi-label">Limite diário</p>
-                        <p class="kpi-value">7h</p>
+                        <p class="kpi-value">8h40</p>
                         <p class="kpi-hint">Por funcionário / dia (soma dos intervalos)</p>
                     </div>
                 </div>
@@ -683,7 +698,7 @@
                         </div>
                         <div id="apt-limite-dia" class="limite-dia-banner" role="status">
                             <i data-lucide="timer"></i>
-                            <span id="apt-limite-dia-texto">Limite diário: 7 horas (soma dos apontamentos). Carregando…</span>
+                            <span id="apt-limite-dia-texto">Limite diário: 8 h 40 min (soma dos apontamentos). Carregando…</span>
                         </div>
 
                         <div class="grupo-input">

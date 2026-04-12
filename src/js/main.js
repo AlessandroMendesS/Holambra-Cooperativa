@@ -6,7 +6,9 @@ const estado = {
     perfil: null,
     usuarios: [],
     programacoesUsuario: [],
-    realtimeChannelOS: null
+    realtimeChannelOS: null,
+    /** @type {Map<string, { id: string, nome: string }[]> | null} */
+    equipamentosExtrasMap: null
 };
 
 const telas = {
@@ -177,21 +179,115 @@ function normalizarChaveUnidadeEquipamento(unidadeRaw) {
     return unidade.toUpperCase();
 }
 
+async function carregarEquipamentosExtrasSupabase() {
+    const m = new Map();
+    if (!estado.usuario) {
+        estado.equipamentosExtrasMap = m;
+        return;
+    }
+    const { data, error } = await supabase.from('equipamentos_extras').select('id, unidade_chave, nome').order('nome');
+    if (error) {
+        estado.equipamentosExtrasMap = m;
+        const msg = String(error.message || '');
+        if (!msg.includes('does not exist') && !msg.includes('schema cache') && error.code !== 'PGRST116') {
+            console.warn('equipamentos_extras:', error);
+        }
+        return;
+    }
+    for (const row of data || []) {
+        const k = row.unidade_chave;
+        if (!m.has(k)) m.set(k, []);
+        m.get(k).push({ id: row.id, nome: row.nome });
+    }
+    estado.equipamentosExtrasMap = m;
+}
+
+function obterLinhasExtrasUnidade(unidadeRaw) {
+    const k = chaveStorageEquipamentosExtras(unidadeRaw);
+    if (!k || !estado.equipamentosExtrasMap) return [];
+    return estado.equipamentosExtrasMap.get(k) || [];
+}
+
+function chaveStorageEquipamentosExtras(unidadeRaw) {
+    if (!unidadeRaw) return '';
+    const display = String(extrairUnidadeDeSetorProgramado(unidadeRaw) || unidadeRaw).trim();
+    const hol = display.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (['HOLAMBRA', 'UBA MATRIZ', 'UBC MATRIZ', 'UBS MATRIZ'].includes(hol) || /^UB[ACS]\s+MATRIZ$/i.test(display)) {
+        return '__MATRIZ__';
+    }
+    if (hol.includes('TAKAOKA') || hol === 'TAK 1' || hol === 'TAK 2') {
+        return '__TAKAOKA__';
+    }
+    return normalizarChaveUnidadeEquipamento(display);
+}
+
+function obterEquipamentosExtrasParaUnidade(unidadeRaw) {
+    return obterLinhasExtrasUnidade(unidadeRaw).map((r) => String(r.nome).trim()).filter(Boolean);
+}
+
+async function adicionarEquipamentoExtraNaUnidade(unidadeRaw, nomeEquipamento) {
+    const nome = String(nomeEquipamento || '').trim();
+    if (!nome) return { ok: false, msg: 'Digite o nome do equipamento.' };
+    if (nome.length > 200) return { ok: false, msg: 'Nome muito longo (máx. 200 caracteres).' };
+    const k = chaveStorageEquipamentosExtras(unidadeRaw);
+    if (!k) return { ok: false, msg: 'Selecione uma unidade.' };
+    if (!estado.usuario?.id) return { ok: false, msg: 'Faça login novamente.' };
+    await carregarEquipamentosExtrasSupabase();
+    const lower = nome.toLowerCase();
+    const listaCompleta = obterListaEquipamentosParaUnidade(unidadeRaw);
+    if (listaCompleta.some((x) => String(x).trim().toLowerCase() === lower)) {
+        return { ok: false, msg: 'Este equipamento já está na lista (padrão ou já cadastrado).' };
+    }
+    const { error } = await supabase.from('equipamentos_extras').insert({
+        unidade_chave: k,
+        nome,
+        id_criador: estado.usuario.id
+    });
+    if (error) {
+        if (error.code === '23505') {
+            return { ok: false, msg: 'Este equipamento já existe para esta unidade.' };
+        }
+        if (String(error.message || '').includes('does not exist')) {
+            return {
+                ok: false,
+                msg: 'Tabela não encontrada. Execute supabase_setup_equipamentos_extras.sql no Supabase.'
+            };
+        }
+        return { ok: false, msg: error.message || 'Não foi possível salvar.' };
+    }
+    await carregarEquipamentosExtrasSupabase();
+    return { ok: true };
+}
+
+async function excluirEquipamentoExtraPorId(id) {
+    const { error } = await supabase.from('equipamentos_extras').delete().eq('id', id);
+    if (error) {
+        mostrarErro('Excluir equipamento', error.message || 'Sem permissão ou equipamento já removido.');
+        return false;
+    }
+    await carregarEquipamentosExtrasSupabase();
+    return true;
+}
+
 function obterListaEquipamentosParaUnidade(unidadeRaw) {
     if (!unidadeRaw) return [];
     const display = String(extrairUnidadeDeSetorProgramado(unidadeRaw) || unidadeRaw).trim();
     const hol = display.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    let base;
     if (['HOLAMBRA', 'UBA MATRIZ', 'UBC MATRIZ', 'UBS MATRIZ'].includes(hol) || /^UB[ACS]\s+MATRIZ$/i.test(display)) {
-        return [...(EQUIPAMENTOS_POR_UNIDADE.MATRIZ || [])];
-    }
-    if (hol.includes('TAKAOKA') || hol === 'TAK 1' || hol === 'TAK 2') {
+        base = [...(EQUIPAMENTOS_POR_UNIDADE.MATRIZ || [])];
+    } else if (hol.includes('TAKAOKA') || hol === 'TAK 1' || hol === 'TAK 2') {
         const a = EQUIPAMENTOS_POR_UNIDADE['TAK 1'] || [];
         const b = EQUIPAMENTOS_POR_UNIDADE['TAK 2'] || [];
-        return [...new Set([...a, ...b])].sort((x, y) => x.localeCompare(y, 'pt-BR'));
+        base = [...new Set([...a, ...b])].sort((x, y) => x.localeCompare(y, 'pt-BR'));
+    } else {
+        const chave = normalizarChaveUnidadeEquipamento(display);
+        const list = EQUIPAMENTOS_POR_UNIDADE[chave];
+        base = Array.isArray(list) ? [...list] : [];
     }
-    const chave = normalizarChaveUnidadeEquipamento(display);
-    const list = EQUIPAMENTOS_POR_UNIDADE[chave];
-    return Array.isArray(list) ? [...list] : [];
+    const extras = obterEquipamentosExtrasParaUnidade(unidadeRaw);
+    if (!extras.length) return base;
+    return [...new Set([...base, ...extras])].sort((x, y) => x.localeCompare(y, 'pt-BR'));
 }
 
 const cabecalho = document.getElementById('cabecalho-principal');
@@ -244,7 +340,8 @@ function mostrarSucesso(titulo) {
     });
 }
 
-const LIMITE_DIARIO_MINUTOS = 7 * 60;
+const LIMITE_DIARIO_MINUTOS = 8 * 60 + 40;
+const LIMITE_DIARIO_TEXTO_LEGIVEL = '8 h 40 min';
 
 function duracaoMinutosIntervalo(inicio, fim) {
     if (!inicio || !fim) return 0;
@@ -289,7 +386,7 @@ async function atualizarIndicadorLimiteDia() {
     const inicio = document.getElementById('apt-inicio')?.value;
     const fim = document.getElementById('apt-fim')?.value;
     if (!idManutentor || !dataServico) {
-        el.textContent = 'Selecione data e manutentor para ver o saldo do dia (limite 7 horas).';
+        el.textContent = `Selecione data e manutentor para ver o saldo do dia (limite ${LIMITE_DIARIO_TEXTO_LEGIVEL}).`;
         if (box) box.classList.remove('limite-dia-alerta');
         lucide.createIcons();
         return;
@@ -491,8 +588,8 @@ async function navegarPara(idTela, opts = {}) {
         carregarMinhasSolicitacoes();
         iniciarRealtimeMinhasSolicitacoes();
     }
-    if (idTela === 'abrirOs') preencherSelectsAbrirOS();
-    if (idTela === 'equipamentosOperacao') preencherTelaEquipamentosOperacao();
+    if (idTela === 'abrirOs') await preencherSelectsAbrirOS();
+    if (idTela === 'equipamentosOperacao') await preencherTelaEquipamentosOperacao();
     if (idTela === 'bancoHoras') {
         carregarUsuarios();
         carregarBancoHoras();
@@ -675,6 +772,7 @@ document.getElementById('nav-sair').addEventListener('click', async () => {
     await supabase.auth.signOut();
     estado.usuario = null;
     estado.perfil = null;
+    estado.equipamentosExtrasMap = null;
     document.getElementById('nav-admin')?.classList.add('oculto');
     document.getElementById('nav-ordens-servico')?.classList.add('oculto');
     document.getElementById('nav-hora-extra')?.classList.add('oculto');
@@ -717,7 +815,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
         btnSubmit.dataset.modo = '';
     }
     mostrarOcultarAptOrdemManual();
-    atualizarEquipamentosApontamento('');
+    void atualizarEquipamentosApontamento('');
     atualizarVisibilidadeCamposAdmin();
     navegarPara('dashboard');
 });
@@ -733,7 +831,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
         btnSubmit.dataset.modo = '';
     }
     mostrarOcultarAptOrdemManual();
-    atualizarEquipamentosApontamento('');
+    void atualizarEquipamentosApontamento('');
     atualizarVisibilidadeCamposAdmin();
     navegarPara('dashboard');
 });
@@ -775,9 +873,9 @@ document.getElementById('btn-voltar-menu-programacao')?.addEventListener('click'
 
 document.getElementById('btn-voltar-gestao-os')?.addEventListener('click', () => navegarPara('admin'));
 document.getElementById('nav-operacao-inicio')?.addEventListener('click', () => navegarPara('menuOperacao'));
-document.getElementById('nav-abrir-os')?.addEventListener('click', () => { preencherSelectsAbrirOS(); navegarPara('abrirOs'); });
+document.getElementById('nav-abrir-os')?.addEventListener('click', () => navegarPara('abrirOs'));
 document.getElementById('nav-minhas-solicitacoes')?.addEventListener('click', () => navegarPara('minhasSolicitacoes'));
-document.getElementById('btn-operacao-abrir-os')?.addEventListener('click', () => { preencherSelectsAbrirOS(); navegarPara('abrirOs'); });
+document.getElementById('btn-operacao-abrir-os')?.addEventListener('click', () => navegarPara('abrirOs'));
 document.getElementById('btn-operacao-minhas-solicitacoes')?.addEventListener('click', () => navegarPara('minhasSolicitacoes'));
 document.getElementById('btn-voltar-menu-operacao')?.addEventListener('click', () => navegarPara('menuOperacao'));
 document.getElementById('btn-voltar-menu-solicitacoes')?.addEventListener('click', () => navegarPara('menuOperacao'));
@@ -808,6 +906,7 @@ async function verificarUsuario() {
 
         if (perfilEncontrado) {
             estado.perfil = perfilEncontrado;
+            void carregarEquipamentosExtrasSupabase();
             const navAdmin = document.getElementById('nav-admin');
             const navHoraExtra = document.getElementById('nav-hora-extra');
             const navProgramar = document.getElementById('nav-programar');
@@ -1272,7 +1371,8 @@ async function preencherNumeroOrdemApontamentoAutomatico() {
     manualInput.readOnly = true;
 }
 
-function atualizarEquipamentosAbrirOS(unidade) {
+async function atualizarEquipamentosAbrirOS(unidade) {
+    await carregarEquipamentosExtrasSupabase();
     const equipamentoSel = document.getElementById('os-equipamento');
     if (!equipamentoSel) return;
     const lista = obterListaEquipamentosParaUnidade(unidade);
@@ -1300,7 +1400,7 @@ function atualizarEquipamentosAbrirOS(unidade) {
     });
 }
 
-function preencherSelectsAbrirOS() {
+async function preencherSelectsAbrirOS() {
     const setorSel = document.getElementById('os-setor');
     if (setorSel && setorSel.options.length <= 1) {
         setorSel.innerHTML = '<option value="">Selecione a unidade</option>';
@@ -1312,7 +1412,7 @@ function preencherSelectsAbrirOS() {
     if (sc && estado.perfil?.setor_centro_padrao && SETORES.includes(estado.perfil.setor_centro_padrao)) {
         sc.value = estado.perfil.setor_centro_padrao;
     }
-    atualizarEquipamentosAbrirOS(setorSel?.value || '');
+    await atualizarEquipamentosAbrirOS(setorSel?.value || '');
     obterProximoNumeroOS().then(num => {
         const campo = document.getElementById('os-numero');
         if (campo) campo.value = num;
@@ -1320,12 +1420,14 @@ function preencherSelectsAbrirOS() {
 }
 
 document.getElementById('os-setor')?.addEventListener('change', (e) => {
-    atualizarEquipamentosAbrirOS(e.target.value || '');
+    void atualizarEquipamentosAbrirOS(e.target.value || '');
 });
 
-function preencherTelaEquipamentosOperacao() {
+async function preencherTelaEquipamentosOperacao() {
     const sel = document.getElementById('equip-op-unidade');
     const lista = document.getElementById('equip-op-lista');
+    const inpNovo = document.getElementById('equip-op-novo-nome');
+    const btnAdd = document.getElementById('equip-op-btn-adicionar');
     if (!sel || !lista) return;
     if (sel.options.length <= 1) {
         sel.innerHTML = '<option value="">Selecione a unidade</option>';
@@ -1336,23 +1438,100 @@ function preencherTelaEquipamentosOperacao() {
             sel.appendChild(o);
         });
     }
-    const render = () => {
+
+    const sincronizarSelectsOutrasTelas = async (u) => {
+        const osSetor = document.getElementById('os-setor')?.value;
+        if (osSetor && u === osSetor) await atualizarEquipamentosAbrirOS(osSetor);
+        const aptU = document.getElementById('apt-unidade')?.value;
+        if (aptU && u === aptU) await atualizarEquipamentosApontamento(aptU);
+    };
+
+    const render = async () => {
+        lista.innerHTML = '<p class="equip-op-vazio">Carregando lista…</p>';
+        await carregarEquipamentosExtrasSupabase();
         const u = sel.value;
         const itens = obterListaEquipamentosParaUnidade(u);
         if (!u) {
-            lista.innerHTML = '<p class="equip-op-vazio" style="color:#64748b;font-size:0.9rem;margin:0;">Selecione uma unidade.</p>';
+            lista.innerHTML = '<p class="equip-op-vazio">Selecione uma unidade.</p>';
             return;
         }
         if (itens.length === 0) {
-            lista.innerHTML = '<p class="equip-op-vazio" style="color:#64748b;font-size:0.9rem;margin:0;">Nenhum equipamento cadastrado para esta unidade.</p>';
+            lista.innerHTML =
+                '<p class="equip-op-vazio">Nenhum equipamento na lista padrão para esta unidade. Use o campo abaixo para incluir o primeiro.</p>';
             return;
         }
-        lista.innerHTML = `<ul class="equip-op-ul" style="margin:0;padding-left:1.15rem;max-height:55vh;overflow-y:auto;">${itens.map((i) => `<li style="margin:0.35rem 0;">${String(i).replace(/</g, '&lt;')}</li>`).join('')}</ul>`;
+        const idPorNomeLower = new Map(
+            obterLinhasExtrasUnidade(u).map((L) => [String(L.nome).trim().toLowerCase(), L.id])
+        );
+        lista.innerHTML = `<ul class="equip-op-ul">${itens
+            .map((i) => {
+                const esc = String(i).replace(/</g, '&lt;');
+                const idEx = idPorNomeLower.get(String(i).trim().toLowerCase());
+                const isExtra = Boolean(idEx);
+                const tag = isExtra ? ' <span class="equip-op-tag-extra">cadastro extra</span>' : '';
+                const btnEx = idEx
+                    ? `<button type="button" class="equip-op-btn-excluir btn btn-outline btn-sm" data-id="${String(idEx).replace(/"/g, '')}" title="Remover do banco (todos os usuários)">Excluir</button>`
+                    : '';
+                return `<li class="equip-op-li equip-op-li-linha${isExtra ? ' equip-op-li--extra' : ''}"><span class="equip-op-li-texto">${esc}${tag}</span>${btnEx}</li>`;
+            })
+            .join('')}</ul>`;
+
+        lista.querySelectorAll('.equip-op-btn-excluir').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                const { isConfirmed } = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Remover equipamento?',
+                    text: 'O item será excluído do banco e some da lista para todos os usuários.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, remover',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#b91c1c'
+                });
+                if (!isConfirmed || !id) return;
+                const ok = await excluirEquipamentoExtraPorId(id);
+                if (!ok) return;
+                mostrarSucesso('Equipamento removido.');
+                await render();
+                await sincronizarSelectsOutrasTelas(sel.value);
+                lucide.createIcons();
+            });
+        });
     };
-    sel.onchange = render;
+
+    sel.onchange = () => {
+        void render();
+    };
     if (estado.perfil?.setor) sel.value = estado.perfil.setor;
-    render();
+    await render();
+
+    const aoIncluir = async () => {
+        const u = sel.value;
+        const nome = inpNovo?.value?.trim() || '';
+        const r = await adicionarEquipamentoExtraNaUnidade(u, nome);
+        if (!r.ok) {
+            mostrarErro('Equipamento', r.msg);
+            return;
+        }
+        if (inpNovo) inpNovo.value = '';
+        mostrarSucesso('Equipamento salvo no banco para esta unidade.');
+        await render();
+        await sincronizarSelectsOutrasTelas(u);
+        lucide.createIcons();
+    };
+    if (btnAdd && !btnAdd.dataset.boundEquipOp) {
+        btnAdd.dataset.boundEquipOp = '1';
+        btnAdd.addEventListener('click', () => void aoIncluir());
+        inpNovo?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                void aoIncluir();
+            }
+        });
+    }
 }
+
+document.getElementById('btn-operacao-ir-incluir-equip')?.addEventListener('click', () => navegarPara('equipamentosOperacao'));
 
 document.getElementById('nav-equipamentos-operacao')?.addEventListener('click', () => navegarPara('equipamentosOperacao'));
 document.getElementById('btn-operacao-equipamentos')?.addEventListener('click', () => navegarPara('equipamentosOperacao'));
@@ -1360,7 +1539,8 @@ document.getElementById('btn-voltar-equipamentos-operacao')?.addEventListener('c
 
 const VALOR_SEM_EQUIPAMENTO_APONTAMENTO = 'Sem equipamento';
 
-function atualizarEquipamentosApontamento(unidade) {
+async function atualizarEquipamentosApontamento(unidade) {
+    await carregarEquipamentosExtrasSupabase();
     const equipamentoSel = document.getElementById('apt-equipamento');
     if (!equipamentoSel) return;
     const lista = obterListaEquipamentosParaUnidade(unidade);
@@ -1956,7 +2136,7 @@ document.getElementById('apt-ordem-select')?.addEventListener('change', async fu
     if (val === '__outra__' || val === '') {
         if (aptDesc) aptDesc.value = '';
         if (aptUnidade) aptUnidade.value = '';
-        atualizarEquipamentosApontamento('');
+        await atualizarEquipamentosApontamento('');
         if (val === '__outra__') {
             await preencherNumeroOrdemApontamentoAutomatico();
         }
@@ -1964,12 +2144,12 @@ document.getElementById('apt-ordem-select')?.addEventListener('change', async fu
         const opt = this.selectedOptions[0];
         if (opt && aptDesc) aptDesc.value = opt.dataset.problema || '';
         if (opt && aptUnidade) aptUnidade.value = opt.dataset.setor || '';
-        atualizarEquipamentosApontamento(aptUnidade?.value || '');
+        await atualizarEquipamentosApontamento(aptUnidade?.value || '');
     }
 });
 
 document.getElementById('apt-unidade')?.addEventListener('change', (e) => {
-    atualizarEquipamentosApontamento(e.target.value || '');
+    void atualizarEquipamentosApontamento(e.target.value || '');
 });
 
 function setEstadoFinalizadoApontamento(val) {
@@ -2044,7 +2224,7 @@ async function abrirEdicaoApontamento(apt) {
     mostrarOcultarAptOrdemManual();
     document.getElementById('apt-desc').value = apt.descricao;
     document.getElementById('apt-unidade').value = apt.unidade;
-    atualizarEquipamentosApontamento(apt.unidade);
+    await atualizarEquipamentosApontamento(apt.unidade);
     if (document.getElementById('apt-equipamento')) {
         document.getElementById('apt-equipamento').value = apt.equipamento || '';
     }
@@ -2159,7 +2339,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         const jaApontado = await totalMinutosApontadosNoDia(idManutentor, dataServico, isEdicao ? apontamentoEditando.id : null);
         if (jaApontado + duracaoNova > LIMITE_DIARIO_MINUTOS) {
             throw new Error(
-                `Limite diário de 7 horas por funcionário nesta data. Já apontado: ${formatarMinutosComoH(jaApontado)}. ` +
+                `Limite diário de ${LIMITE_DIARIO_TEXTO_LEGIVEL} por funcionário nesta data. Já apontado: ${formatarMinutosComoH(jaApontado)}. ` +
                 `Este intervalo: ${formatarMinutosComoH(duracaoNova)}. Máximo: ${formatarMinutosComoH(LIMITE_DIARIO_MINUTOS)}.`
             );
         }
@@ -2251,7 +2431,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         e.target.reset();
         popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
         setEstadoFinalizadoApontamento(null);
-        atualizarEquipamentosApontamento('');
+        await atualizarEquipamentosApontamento('');
         apontamentoEditando = null;
         document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
         btn.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';

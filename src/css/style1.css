@@ -1171,6 +1171,128 @@ h2 {
     font-style: italic;
 }
 
+.op-equip-extra-card {
+    margin-top: 1.25rem;
+    padding: 1rem 1.1rem;
+}
+
+.op-equip-extra-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    color: var(--azul-800);
+    margin: 0 0 0.35rem 0;
+}
+
+.op-equip-extra-titulo svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+}
+
+.op-equip-extra-texto {
+    font-size: 0.8125rem;
+    color: var(--neutro-500);
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+}
+
+.equip-op-lista {
+    min-height: 2rem;
+}
+
+.equip-op-vazio {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.equip-op-ul {
+    margin: 0;
+    padding-left: 1.15rem;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.equip-op-li {
+    margin: 0.35rem 0;
+}
+
+.equip-op-li-linha {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.equip-op-li-texto {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.equip-op-btn-excluir {
+    flex-shrink: 0;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    height: auto;
+    min-height: 0;
+    text-transform: none;
+}
+
+.equip-op-li--extra {
+    list-style-type: circle;
+}
+
+.equip-op-tag-extra {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #0369a1;
+    margin-left: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.equip-op-adicionar {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--borda);
+}
+
+.equip-op-adicionar label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--azul-800);
+    margin-bottom: 0.5rem;
+}
+
+.equip-op-adicionar-linha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.equip-op-adicionar-linha .input-campo {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.equip-op-adicionar-linha .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.equip-op-adicionar-hint {
+    font-size: 0.75rem;
+    color: var(--neutro-500);
+    margin: 0.5rem 0 0;
+    line-height: 1.35;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
