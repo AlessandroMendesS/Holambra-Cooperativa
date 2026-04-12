@@ -134,15 +134,6 @@ function popularSelectSetoresMT(selectId, placeholder = 'Selecione o setor (cód
     });
 }
 
-function aplicarHighlightEstrelas(container, n) {
-    if (!container) return;
-    const max = Number.isFinite(n) ? n : 0;
-    container.querySelectorAll('.os-star-btn').forEach((btn) => {
-        const v = parseInt(btn.dataset.estrela, 10);
-        btn.classList.toggle('is-on', v <= max);
-    });
-}
-
 function extrairUnidadeDeSetorProgramado(setorRaw) {
     if (!setorRaw) return '';
     const valorOriginal = String(setorRaw).trim();
@@ -1064,10 +1055,6 @@ function preencherSelectsCadastroOperacao() {
         UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setor.appendChild(o); });
     }
     popularSelectSetoresMT('cad-op-setor-centro', 'Selecione se quiser gravar como padrão…');
-    const npsVal = document.getElementById('cad-op-nps-val');
-    const npsWrap = document.getElementById('cad-op-nps-stars');
-    if (npsVal) npsVal.value = '';
-    if (npsWrap) aplicarHighlightEstrelas(npsWrap, 0);
 }
 
 document.getElementById('formulario-cadastro').addEventListener('submit', async (e) => {
@@ -1181,9 +1168,6 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
     const setorUnidade = document.getElementById('cad-op-setor').value;
     const setorCentroPadrao = document.getElementById('cad-op-setor-centro')?.value?.trim() || null;
     const funcao_cargo = document.getElementById('cad-op-funcao').value.trim();
-    const npsRaw = document.getElementById('cad-op-nps-val')?.value?.trim();
-    const npsCadastro = npsRaw && /^\d$/.test(npsRaw) ? parseInt(npsRaw, 10) : null;
-    const npsOk = npsCadastro != null && npsCadastro >= 1 && npsCadastro <= 5 ? npsCadastro : null;
 
     Swal.fire({ title: 'Criando conta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const { data, error } = await supabase.auth.signUp({
@@ -1205,17 +1189,15 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
             setor: setorUnidade || null,
             unidade: setorUnidade || null,
             funcao_cargo: funcao_cargo || null,
-            setor_centro_padrao: setorCentroPadrao,
-            nps_cadastro_operacao: npsOk
+            setor_centro_padrao: setorCentroPadrao
         };
         let { error: perfErr } = await supabase.from('perfis').update(perfilUpd).eq('id', data.user.id);
-        if (perfErr && (String(perfErr.message || '').toLowerCase().includes('setor_centro_padrao')
-            || String(perfErr.message || '').toLowerCase().includes('nps_cadastro'))) {
-            const { setor_centro_padrao: _a, nps_cadastro_operacao: _b, ...rest } = perfilUpd;
+        if (perfErr && String(perfErr.message || '').toLowerCase().includes('setor_centro_padrao')) {
+            const { setor_centro_padrao: _a, ...rest } = perfilUpd;
             const r2 = await supabase.from('perfis').update(rest).eq('id', data.user.id);
             perfErr = r2.error;
             if (!perfErr) {
-                await Swal.fire({ icon: 'info', title: 'Conta criada', text: 'Execute supabase_add_setor_centro_avaliacao_os.sql para gravar setor MT padrão e nota do cadastro no perfil.' });
+                await Swal.fire({ icon: 'info', title: 'Conta criada', text: 'Execute supabase_add_setor_centro_avaliacao_os.sql para gravar o setor MT padrão no perfil.' });
             }
         }
         if (perfErr) {
@@ -1244,6 +1226,16 @@ function numerosInteirosAPartirDeCampo(rows, getValor) {
 }
 
 async function obterProximoNumeroOrdemUnico() {
+    try {
+        const { data: rpcN, error: rpcErr } = await supabase.rpc('proximo_numero_ordem');
+        if (!rpcErr && rpcN != null && String(rpcN).trim() !== '') {
+            const s = String(rpcN).trim();
+            if (/^\d+$/.test(s)) return s.padStart(4, '0');
+            return s;
+        }
+    } catch (_) {
+        /* RPC ausente ou sem permissão — fallback abaixo */
+    }
     try {
         const [{ data: osRows }, { data: aptRows }, { data: progRows }] = await Promise.all([
             supabase.from('ordens_servico').select('numero_solicitacao'),
@@ -1531,6 +1523,10 @@ function secaoAvaliacaoMinhaOS(os) {
         </div>`;
 }
 
+function escaparHtmlBasico(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 async function carregarMinhasSolicitacoes() {
     const lista = document.getElementById('lista-minhas-solicitacoes');
     if (!lista) return;
@@ -1546,6 +1542,32 @@ async function carregarMinhasSolicitacoes() {
         lucide.createIcons();
         return;
     }
+
+    let mapNormColabs = new Map();
+    try {
+        const { data: todasProg } = await supabase.from('programacoes').select('os_numero, id_colaborador').limit(2000);
+        for (const p of todasProg || []) {
+            const k = normalizarChaveNumeroOs(p.os_numero);
+            if (!mapNormColabs.has(k)) mapNormColabs.set(k, new Set());
+            mapNormColabs.get(k).add(p.id_colaborador);
+        }
+    } catch (_) {
+        mapNormColabs = new Map();
+    }
+
+    const idsNomes = new Set();
+    for (const os of data) {
+        if (os.id_responsavel) idsNomes.add(os.id_responsavel);
+        const kn = normalizarChaveNumeroOs(numeroOsParaProgramacao(os, os.id));
+        const setC = mapNormColabs.get(kn);
+        if (setC) setC.forEach((id) => idsNomes.add(id));
+    }
+    let nomePorId = new Map();
+    if (idsNomes.size > 0) {
+        const { data: perfRows } = await supabase.from('perfis').select('id, nome_completo').in('id', [...idsNomes]);
+        nomePorId = new Map((perfRows || []).map((r) => [r.id, String(r.nome_completo || '').trim() || '—']));
+    }
+
     const statusLabel = { aberta: 'Aberta', programada: 'Programada', em_andamento: 'Em Andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
     const statusClass = { aberta: 'badge-wait', programada: 'badge-programada', em_andamento: 'badge-andamento', concluida: 'badge-concluida', cancelada: 'badge-cancelada' };
     data.forEach(os => {
@@ -1561,12 +1583,29 @@ async function carregarMinhasSolicitacoes() {
         if (linhaCentro) metaBits.push(linhaCentro);
         if (nomEq) metaBits.push(nomEq);
         metaBits.push(dataAbertura);
+
+        const knOs = normalizarChaveNumeroOs(numeroOsParaProgramacao(os, os.id));
+        const colabsProg = [...(mapNormColabs.get(knOs) || [])];
+        const ordemIds = [];
+        if (os.id_responsavel) ordemIds.push(os.id_responsavel);
+        for (const cid of colabsProg) {
+            if (!ordemIds.includes(cid)) ordemIds.push(cid);
+        }
+        let blocoDesignados = '';
+        if (ordemIds.length > 0) {
+            const nomes = ordemIds.map((id) => escaparHtmlBasico(nomePorId.get(id) || id.slice(0, 8))).join(', ');
+            blocoDesignados = `<div class="minha-os-designados"><span class="minha-os-designados-titulo">Designado(s):</span> ${nomes}</div>`;
+        } else if (os.status === 'aberta') {
+            blocoDesignados = '<div class="minha-os-designados minha-os-designados--aguarde">Aguardando designação pela manutenção</div>';
+        }
+
         card.innerHTML = `
             <div class="minha-os-header">
                 <span class="minha-os-numero">#${String(numero).replace(/</g, '&lt;')}</span>
                 <span class="badge ${statusClass[os.status] || 'badge-wait'}">${statusLabel[os.status] || os.status}</span>
             </div>
             <div class="minha-os-descricao">${descEscapada}</div>
+            ${blocoDesignados}
             <div class="minha-os-meta">${metaBits.join(' · ')}</div>
             ${secaoAvaliacaoMinhaOS(os)}
         `;
@@ -1602,16 +1641,6 @@ document.getElementById('lista-minhas-solicitacoes')?.addEventListener('click', 
             mostrarErro('Erro', msg || 'Não foi possível salvar a avaliação.');
         }
     }
-});
-
-document.getElementById('cad-op-nps-stars')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.os-star-btn');
-    if (!btn) return;
-    const n = parseInt(btn.dataset.estrela, 10);
-    const wrap = document.getElementById('cad-op-nps-stars');
-    const hid = document.getElementById('cad-op-nps-val');
-    if (hid) hid.value = String(n);
-    if (wrap) aplicarHighlightEstrelas(wrap, n);
 });
 
 async function carregarOrdensPendentes() {
@@ -2644,17 +2673,159 @@ document.getElementById('btn-download-os-abertas')?.addEventListener('click', as
 
 const DEPARTAMENTOS = ['Elétrica', 'Mecânica', 'Automação'];
 
+function numeroOsParaProgramacao(os, osId) {
+    const n = String(os?.numero_solicitacao || '').trim();
+    if (/^\d+$/.test(n)) return n;
+    return String(osId || '').slice(0, 8).replace(/-/g, '');
+}
+
+function normalizarChaveNumeroOs(num) {
+    const t = String(num || '').trim();
+    if (/^\d+$/.test(t)) return String(parseInt(t, 10));
+    return t;
+}
+
+function chaveParProgramacaoAdmin(os, osId, colabId) {
+    return `${normalizarChaveNumeroOs(numeroOsParaProgramacao(os, osId))}|${colabId}`;
+}
+
+function atualizarProgAdminCheckboxesDesabilitados() {
+    const osId = document.getElementById('prog-admin-os-select')?.value || '';
+    const lista = estado.progAdminListaOs;
+    const chaves = estado.progAdminChavesOcupadas;
+    const os = osId && lista ? lista.find((o) => o.id === osId) : null;
+    document.querySelectorAll('.prog-admin-colab-cb').forEach((cb) => {
+        if (!os || !chaves) {
+            cb.disabled = true;
+            cb.checked = false;
+            return;
+        }
+        const ocupada = chaves.has(chaveParProgramacaoAdmin(os, os.id, cb.value));
+        cb.disabled = ocupada;
+        if (ocupada) cb.checked = false;
+    });
+}
+
 async function carregarProgramacoesAdmin() {
     if (estado.perfil?.funcao !== 'admin') return;
     const lista = document.getElementById('lista-programacoes-admin');
+    const listaOs = document.getElementById('prog-admin-os-abertas-lista');
+    const selOs = document.getElementById('prog-admin-os-select');
+    const colabsWrap = document.getElementById('prog-admin-colabs-checkboxes');
+    const dataProgInput = document.getElementById('prog-admin-data-prog');
     if (!lista) return;
-    lista.innerHTML = '<div class="centro" style="padding: 2rem;">Carregando...</div>';
+
+    if (dataProgInput && !dataProgInput.value) {
+        dataProgInput.value = new Date().toISOString().slice(0, 10);
+    }
+
+    if (listaOs) listaOs.innerHTML = '<div class="centro" style="padding:1rem;">Carregando…</div>';
+    lista.innerHTML = '<div class="centro" style="padding: 1rem;">Carregando programações…</div>';
+    if (selOs) {
+        selOs.innerHTML = '<option value="">Selecione a OS…</option>';
+        selOs.disabled = true;
+    }
+    if (colabsWrap) colabsWrap.innerHTML = '<p class="prog-admin-vazio" style="padding:0.5rem;">Carregando colaboradores…</p>';
 
     await carregarUsuarios();
-    const { data: prog, error } = await supabase
-        .from('programacoes')
+    const colabs = (estado.usuarios || []).filter(
+        (u) => u.funcao !== 'admin' && (u.tipo_perfil === 'manutencao' || !u.tipo_perfil || u.tipo_perfil === '')
+    );
+
+    const { data: ordensMix, error: errOrdens } = await supabase
+        .from('ordens_servico')
         .select('*')
-        .order('criado_em', { ascending: false });
+        .in('status', ['aberta', 'programada'])
+        .order('criado_em', { ascending: false })
+        .limit(250);
+
+    const paraLista = ordensMix || [];
+
+    const { data: todasProgChaves } = await supabase.from('programacoes').select('os_numero, id_colaborador');
+    const chavesOcupadas = new Set(
+        (todasProgChaves || []).map((p) => `${normalizarChaveNumeroOs(p.os_numero)}|${p.id_colaborador}`)
+    );
+
+    estado.progAdminListaOs = paraLista;
+    estado.progAdminChavesOcupadas = chavesOcupadas;
+    estado.progAdminColabs = colabs;
+
+    if (listaOs) {
+        if (errOrdens) {
+            listaOs.innerHTML = `<p class="prog-admin-vazio">${String(errOrdens.message || 'Erro ao carregar OS.').replace(/</g, '&lt;')}</p>`;
+        } else if (paraLista.length === 0) {
+            listaOs.innerHTML = '<p class="prog-admin-vazio">Nenhuma OS disponível.</p>';
+        } else {
+            listaOs.innerHTML = paraLista
+                .map((os) => {
+                    const oid = String(os.id || '').replace(/"/g, '&quot;');
+                    const num = String(os.numero_solicitacao || os.id?.slice(0, 8) || '—').replace(/</g, '&lt;');
+                    const st = os.status === 'programada' ? ' <span class="prog-admin-badge-prog">Prog.</span>' : '';
+                    const un = String(os.setor || os.unidade || '—').replace(/</g, '&lt;');
+                    const eq = os.equipamento ? ` · ${String(os.equipamento).replace(/</g, '&lt;')}` : '';
+                    const desc = String(os.descricao || os.titulo || '—')
+                        .replace(/</g, '&lt;')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    const curto = desc.length > 160 ? `${desc.slice(0, 160)}…` : desc;
+                    return `<div class="prog-admin-os-aberta-item" data-os-id="${oid}" role="button" tabindex="0" title="Usar esta OS no formulário"><strong>#${num}</strong>${st} — ${un}${eq}<br><span class="prog-admin-os-desc-preview">${curto}</span></div>`;
+                })
+                .join('');
+            listaOs.querySelectorAll('.prog-admin-os-aberta-item[data-os-id]').forEach((el) => {
+                const escolher = () => {
+                    const id = el.getAttribute('data-os-id');
+                    const sel = document.getElementById('prog-admin-os-select');
+                    if (sel && id) {
+                        sel.value = id;
+                        atualizarProgAdminCheckboxesDesabilitados();
+                    }
+                };
+                el.addEventListener('click', escolher);
+                el.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        escolher();
+                    }
+                });
+            });
+        }
+    }
+
+    if (selOs && !errOrdens && paraLista.length > 0) {
+        selOs.disabled = false;
+        paraLista.forEach((os) => {
+            const opt = document.createElement('option');
+            opt.value = os.id;
+            const num = String(os.numero_solicitacao || os.id?.slice(0, 8) || '—');
+            const un = String(os.setor || os.unidade || '').replace(/\s+/g, ' ').trim() || '—';
+            let texto = `#${num} — ${un}`;
+            if (texto.length > 96) texto = `${texto.slice(0, 93)}…`;
+            opt.textContent = texto;
+            selOs.appendChild(opt);
+        });
+    } else if (selOs) {
+        selOs.innerHTML = `<option value="">${errOrdens ? 'Erro ao carregar OS' : 'Nenhuma OS disponível'}</option>`;
+    }
+
+    if (colabsWrap) {
+        colabsWrap.innerHTML = '';
+        if (colabs.length === 0) {
+            colabsWrap.innerHTML = '<p class="prog-admin-vazio">Sem colaboradores de manutenção cadastrados.</p>';
+        } else {
+            colabs.forEach((c) => {
+                const id = String(c.id || '').replace(/"/g, '&quot;');
+                const nome = String(c.nome_completo || '—').replace(/</g, '&lt;');
+                const lab = document.createElement('label');
+                lab.className = 'prog-admin-colab-label';
+                lab.innerHTML = `<input type="checkbox" class="prog-admin-colab-cb" value="${id}"> <span>${nome}</span>`;
+                colabsWrap.appendChild(lab);
+            });
+        }
+    }
+
+    atualizarProgAdminCheckboxesDesabilitados();
+
+    const { data: prog, error } = await supabase.from('programacoes').select('*').order('criado_em', { ascending: false });
 
     if (error) {
         lista.innerHTML = `<div class="card centro" style="padding: 2rem; color: #991b1b;">${error.message?.includes('does not exist') ? 'Tabela programacoes não encontrada. Execute supabase_setup_programacoes.sql' : error.message}</div>`;
@@ -2664,15 +2835,16 @@ async function carregarProgramacoesAdmin() {
 
     lista.innerHTML = '';
     if (!prog || prog.length === 0) {
-        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhuma programação. Clique em + para criar.</p></div>';
+        lista.innerHTML =
+            '<div class="card centro" style="padding: 2rem 1rem;"><p style="color: #666;">Nenhuma programação registrada ainda.</p></div>';
         lucide.createIcons();
         return;
     }
 
-    prog.forEach(p => {
+    prog.forEach((p) => {
         const card = document.createElement('div');
         card.className = 'card card-programacao';
-        const nomeColab = estado.usuarios?.find(u => u.id === p.id_colaborador)?.nome_completo || '—';
+        const nomeColab = estado.usuarios?.find((u) => u.id === p.id_colaborador)?.nome_completo || '—';
         const dataFmt = p.data_programada ? new Date(p.data_programada + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
@@ -2690,11 +2862,111 @@ async function carregarProgramacoesAdmin() {
         `;
         lista.appendChild(card);
     });
-    lista.querySelectorAll('.btn-excluir-prog').forEach(btn => {
+    lista.querySelectorAll('.btn-excluir-prog').forEach((btn) => {
         btn.addEventListener('click', () => excluirProgramacao(btn.dataset.id));
     });
     lucide.createIcons();
 }
+
+document.getElementById('prog-admin-os-select')?.addEventListener('change', atualizarProgAdminCheckboxesDesabilitados);
+
+document.getElementById('prog-admin-btn-programar')?.addEventListener('click', async () => {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const osId = document.getElementById('prog-admin-os-select')?.value || '';
+    const colabIds = [...document.querySelectorAll('.prog-admin-colab-cb:checked')]
+        .map((cb) => cb.value)
+        .filter(Boolean);
+    const dataProg = document.getElementById('prog-admin-data-prog')?.value || new Date().toISOString().slice(0, 10);
+    if (!osId) {
+        mostrarErro('Seleção obrigatória', 'Escolha uma ordem de serviço na lista.');
+        return;
+    }
+    if (colabIds.length === 0) {
+        mostrarErro('Manutentores', 'Marque pelo menos um manutentor.');
+        return;
+    }
+    try {
+        const { data: os, error: e1 } = await supabase
+            .from('ordens_servico')
+            .select('titulo, descricao, setor, unidade, setor_centro, numero_solicitacao, status')
+            .eq('id', osId)
+            .single();
+        if (e1 || !os) throw new Error('OS não encontrada.');
+        if (os.status !== 'aberta' && os.status !== 'programada') {
+            mostrarErro('OS', 'Só é possível programar OS em aberto ou já programadas (outro colaborador).');
+            await carregarProgramacoesAdmin();
+            try {
+                carregarOrdensPendentes();
+            } catch (_) { /* noop */ }
+            return;
+        }
+        const numeroOs = numeroOsParaProgramacao(os, osId);
+        const { data: progDup } = await supabase.from('programacoes').select('os_numero, id_colaborador');
+        const ocupSet = new Set(
+            (progDup || []).map((p) => `${normalizarChaveNumeroOs(p.os_numero)}|${p.id_colaborador}`)
+        );
+        const toAdd = colabIds.filter((cid) => !ocupSet.has(chaveParProgramacaoAdmin(os, osId, cid)));
+        if (toAdd.length === 0) {
+            mostrarErro('Programação', 'Todos os selecionados já estão nesta OS na programação.');
+            return;
+        }
+
+        const sufixoCentro = os.setor_centro ? ` · ${os.setor_centro}` : '';
+        const setorUnidade = `${os.unidade || ''} - ${os.setor || ''}${sufixoCentro}`.trim();
+        const problema = (os.titulo || '') + (os.descricao ? '\n' + os.descricao : '');
+        const jaProgramada = os.status === 'programada';
+        const idResponsavelPrincipal = toAdd[0];
+
+        if (!jaProgramada) {
+            const { error: e2 } = await supabase
+                .from('ordens_servico')
+                .update({ status: 'programada', id_responsavel: idResponsavelPrincipal, atualizado_em: new Date().toISOString() })
+                .eq('id', osId);
+            if (e2) throw e2;
+        }
+
+        const linhas = toAdd.map((colabId) => ({
+            id_colaborador: colabId,
+            os_numero: numeroOs,
+            setor_unidade: setorUnidade || '—',
+            problema: problema || '—',
+            data_programada: dataProg
+        }));
+        const { error: e3 } = await supabase.from('programacoes').insert(linhas);
+        if (e3) {
+            if (!jaProgramada) {
+                await supabase
+                    .from('ordens_servico')
+                    .update({ status: 'aberta', id_responsavel: null, atualizado_em: new Date().toISOString() })
+                    .eq('id', osId);
+            }
+            throw e3;
+        }
+
+        const n = toAdd.length;
+        mostrarSucesso(
+            jaProgramada
+                ? n > 1
+                    ? `${n} colaboradores adicionados à mesma OS na programação diária.`
+                    : 'Colaborador adicionado à mesma OS na programação diária.'
+                : n > 1
+                  ? `OS programada para ${n} colaboradores! Todos verão na programação diária e no apontamento.`
+                  : 'OS programada! O colaborador verá na Programação diária e no apontamento.'
+        );
+        const sel = document.getElementById('prog-admin-os-select');
+        if (sel) sel.value = '';
+        document.querySelectorAll('.prog-admin-colab-cb').forEach((cb) => {
+            cb.checked = false;
+        });
+        atualizarProgAdminCheckboxesDesabilitados();
+        await carregarProgramacoesAdmin();
+        try {
+            carregarOrdensPendentes();
+        } catch (_) { /* noop */ }
+    } catch (err) {
+        mostrarErro('Erro', err.message || 'Não foi possível programar.');
+    }
+});
 
 async function carregarProgramacaoDiaria() {
     const lista = document.getElementById('lista-programacao-usuario');
@@ -2769,7 +3041,7 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
     const hoje = new Date().toISOString().slice(0, 10);
 
     const { value: form } = await Swal.fire({
-        title: 'Nova programação',
+        title: 'Programação manual (avançado)',
         html: `
             <div style="text-align:left;">
                 <label style="display:block;margin-bottom:4px;font-weight:600;">Data programada</label>

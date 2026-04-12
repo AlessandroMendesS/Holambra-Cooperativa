@@ -228,19 +228,6 @@
                             </select>
                             <p class="hint-cadastro-op" style="font-size:0.8rem;color:#64748b;margin:0.35rem 0 0;">Mesma lista usada ao abrir OS. Pode alterar a cada solicitação.</p>
                         </div>
-                        <div class="grupo-input cadastro-op-avaliacao">
-                            <label>Como avalia este cadastro até agora? <span style="font-weight:400;color:#888">(opcional)</span></label>
-                            <p class="hint-cadastro-op" style="font-size:0.8rem;color:#64748b;margin:0 0 0.5rem;">A mesma escala será usada em <strong>Minhas solicitações</strong> para OS concluídas (1 = pouco satisfeito, 5 = muito satisfeito).</p>
-                            <input type="hidden" id="cad-op-nps-val" value="">
-                            <div class="os-stars os-stars--input" id="cad-op-nps-stars" role="radiogroup" aria-label="Avaliação opcional do cadastro">
-                                <button type="button" class="os-star-btn" data-estrela="1" aria-label="1 de 5, pouco satisfeito">★</button>
-                                <button type="button" class="os-star-btn" data-estrela="2" aria-label="2 de 5">★</button>
-                                <button type="button" class="os-star-btn" data-estrela="3" aria-label="3 de 5">★</button>
-                                <button type="button" class="os-star-btn" data-estrela="4" aria-label="4 de 5">★</button>
-                                <button type="button" class="os-star-btn" data-estrela="5" aria-label="5 de 5, muito satisfeito">★</button>
-                            </div>
-                            <div class="os-stars-legend-row"><span>Pouco satisfeito</span><span>Muito satisfeito</span></div>
-                        </div>
                         <div class="grupo-input">
                             <label>Função</label>
                             <input type="text" id="cad-op-funcao" class="input-campo" placeholder="Ex: Analista, Coordenador" required>
@@ -289,7 +276,7 @@
                     <button class="menu-card" id="btn-operacao-minhas-solicitacoes">
                         <div class="menu-card-icon"><i data-lucide="list"></i></div>
                         <h3>Minhas Solicitações</h3>
-                        <p>Histórico e status (Aberta, Programada, Em Execução, Finalizada)</p>
+                        <p>Histórico e status</p>
                     </button>
                     <button class="menu-card" id="btn-operacao-equipamentos">
                         <div class="menu-card-icon"><i data-lucide="wrench"></i></div>
@@ -998,17 +985,45 @@
                 <div class="card prog-admin-header">
                     <div class="prog-admin-titulo">
                         <h2 style="margin: 0;">Programar OS</h2>
-                        <p style="margin: 0.35rem 0 0; font-size: 0.9rem; color: var(--cor-texto-suave);">Criar programação para colaboradores</p>
                     </div>
                     <div class="prog-admin-botoes">
                         <button class="btn btn-outline" id="btn-voltar-menu-programar" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;">
                             <i data-lucide="arrow-left"></i> Voltar
                         </button>
-                        <button class="btn btn-primario" id="btn-nova-programacao" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;" title="Nova programação">
-                            <i data-lucide="plus"></i> Nova
+                        <button class="btn btn-outline" id="btn-nova-programacao" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;" title="Formulário completo (setor, texto livre)">
+                            <i data-lucide="settings-2"></i> Manual
                         </button>
                     </div>
                 </div>
+                <div class="prog-admin-workspace card">
+                    <div class="prog-admin-grid">
+                        <div class="prog-admin-panel prog-admin-panel--lista">
+                            <h3 class="prog-admin-subtitulo">OS disponíveis</h3>
+                            <div id="prog-admin-os-abertas-lista" class="prog-admin-os-abertas-lista" aria-live="polite"></div>
+                        </div>
+                        <div class="prog-admin-panel prog-admin-panel--form">
+                            <h3 class="prog-admin-subtitulo">Atribuir a manutentores</h3>
+                            <div class="grupo-input">
+                                <label for="prog-admin-os-select">Ordem de serviço</label>
+                                <select id="prog-admin-os-select" class="select-campo">
+                                    <option value="">Selecione a OS…</option>
+                                </select>
+                            </div>
+                            <div class="grupo-input">
+                                <label>Manutentores <span class="prog-admin-hint">(marque um ou mais)</span></label>
+                                <div id="prog-admin-colabs-checkboxes" class="prog-admin-colabs-checkboxes" role="group" aria-label="Manutentores"></div>
+                            </div>
+                            <div class="grupo-input">
+                                <label for="prog-admin-data-prog">Data da programação</label>
+                                <input type="date" id="prog-admin-data-prog" class="input-campo">
+                            </div>
+                            <button type="button" class="btn btn-primario prog-admin-btn-acao" id="prog-admin-btn-programar">
+                                <i data-lucide="calendar-check"></i> Programar selecionados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <h3 class="prog-admin-subtitulo prog-admin-secao-listagem">Já programadas</h3>
                 <div id="lista-programacoes-admin" class="lista-programacoes-compacta">
                     
                 </div>
