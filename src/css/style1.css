@@ -908,6 +908,104 @@ h2 {
     border-radius: var(--raio);
 }
 
+.os-stars {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.os-stars--input .os-star-btn {
+    font-size: 1.65rem;
+    line-height: 1;
+    padding: 0.15rem 0.2rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #cbd5e1;
+    transition: color 0.15s ease, transform 0.12s ease;
+}
+
+.os-stars--input .os-star-btn:hover,
+.os-stars--input .os-star-btn:focus-visible {
+    color: #eab308;
+    transform: scale(1.08);
+    outline: none;
+}
+
+.os-stars--input .os-star-btn.is-on {
+    color: #ca8a04;
+}
+
+.os-stars-legend-row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 220px;
+    margin-top: 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--neutro-500);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.cadastro-op-avaliacao .os-stars-legend-row {
+    max-width: 280px;
+}
+
+.minha-os-avaliacao {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.minha-os-avaliacao-titulo {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--neutro-600);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.02em;
+}
+
+.minha-os-avaliacao--lida .os-stars-read {
+    font-size: 1.25rem;
+    color: #ca8a04;
+    letter-spacing: 0.05em;
+}
+
+.minha-os-avaliacao--lida .os-stars-read-num {
+    margin-left: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--neutro-600);
+}
+
+.gestao-os-avaliacao {
+    margin-top: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed rgba(15, 23, 42, 0.1);
+    font-size: 0.875rem;
+    color: var(--neutro-700);
+}
+
+.gestao-os-avaliacao-stars {
+    color: #ca8a04;
+    letter-spacing: 0.06em;
+    margin-left: 0.25rem;
+}
+
+.gestao-os-avaliacao-num {
+    font-weight: 700;
+    color: var(--azul-800);
+}
+
+.gestao-os-avaliacao--pendente em {
+    color: var(--neutro-500);
+    font-style: normal;
+    font-weight: 500;
+}
 
 .tabela-escala thead tr {
     border-radius: var(--raio-sm) var(--raio-sm) 0 0;

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -105,8 +105,8 @@
                             </button>
                         </div>
                         <div class="grupo-input">
-                            <label id="login-campo-label">NOME DE USUÁRIO (manutenção)</label>
-                            <input type="text" id="login-email" class="input-campo" placeholder="Seu nome completo" required autocomplete="username">
+                            <label id="login-campo-label">Login (manutenção)</label>
+                            <input type="text" id="login-email" class="input-campo" placeholder="E-mail ou nome cadastrado no perfil" required autocomplete="username">
                         </div>
                         <div class="grupo-input">
                             <label>SENHA DE ACESSO</label>
@@ -222,6 +222,26 @@
                             </select>
                         </div>
                         <div class="grupo-input">
+                            <label>Setor (código MT / centro) <span style="font-weight:400;color:#888">(opcional)</span></label>
+                            <select id="cad-op-setor-centro" class="select-campo">
+                                <option value="">Selecione se quiser gravar como padrão…</option>
+                            </select>
+                            <p class="hint-cadastro-op" style="font-size:0.8rem;color:#64748b;margin:0.35rem 0 0;">Mesma lista usada ao abrir OS. Pode alterar a cada solicitação.</p>
+                        </div>
+                        <div class="grupo-input cadastro-op-avaliacao">
+                            <label>Como avalia este cadastro até agora? <span style="font-weight:400;color:#888">(opcional)</span></label>
+                            <p class="hint-cadastro-op" style="font-size:0.8rem;color:#64748b;margin:0 0 0.5rem;">A mesma escala será usada em <strong>Minhas solicitações</strong> para OS concluídas (1 = pouco satisfeito, 5 = muito satisfeito).</p>
+                            <input type="hidden" id="cad-op-nps-val" value="">
+                            <div class="os-stars os-stars--input" id="cad-op-nps-stars" role="radiogroup" aria-label="Avaliação opcional do cadastro">
+                                <button type="button" class="os-star-btn" data-estrela="1" aria-label="1 de 5, pouco satisfeito">★</button>
+                                <button type="button" class="os-star-btn" data-estrela="2" aria-label="2 de 5">★</button>
+                                <button type="button" class="os-star-btn" data-estrela="3" aria-label="3 de 5">★</button>
+                                <button type="button" class="os-star-btn" data-estrela="4" aria-label="4 de 5">★</button>
+                                <button type="button" class="os-star-btn" data-estrela="5" aria-label="5 de 5, muito satisfeito">★</button>
+                            </div>
+                            <div class="os-stars-legend-row"><span>Pouco satisfeito</span><span>Muito satisfeito</span></div>
+                        </div>
+                        <div class="grupo-input">
                             <label>Função</label>
                             <input type="text" id="cad-op-funcao" class="input-campo" placeholder="Ex: Analista, Coordenador" required>
                         </div>
@@ -304,6 +324,12 @@
                         <div class="grupo-input">
                             <label>Unidade <span style="color:#b91c1c;">*</span></label>
                             <select id="os-setor" class="select-campo" required></select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Setor (código / centro MT) <span style="color:#b91c1c;">*</span></label>
+                            <select id="os-setor-centro" class="select-campo" required>
+                                <option value="">Carregando setores…</option>
+                            </select>
                         </div>
                         <div class="grupo-input">
                             <label>Equipamento <span style="color:#b91c1c;">*</span></label>
@@ -610,6 +636,12 @@
                                     <option>Taquari</option>
                                 </optgroup>
                                 
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Setor (código / centro MT) <span style="color:#b91c1c;">*</span></label>
+                            <select id="apt-setor-centro" class="select-campo" required>
+                                <option value="">Selecione o setor…</option>
                             </select>
                         </div>
                         <div class="grupo-input">

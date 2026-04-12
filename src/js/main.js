@@ -93,6 +93,55 @@ const EQUIPAMENTOS_POR_UNIDADE = {
     'FABRICA': ['MOINHO PEQUENO', 'MOINHO GRANDE', 'CAIXA DOSADORA (CONJUNTO)']
 };
 let suporteCampoEquipamentoApontamento = null;
+let suporteCampoSetorCentroApontamento = null;
+
+const SETORES = [
+    '11014 MT',
+    '11101 MT CENTRAL', '11102 MT F.DESENV.', '11103 MT RATES', '11104 MT RESIDEN', '11105 MT ADM.PESSOAL',
+    '11106 MT ADM.GERAL', '11107 MT TAREFEIROS', '11108 MT CONTABILIDADE', '11109 MT INFORMÁTICA', '11110 MT SERV.GERAIS',
+    '11111 MT REFEITÓRIO', '11112 MT PIS/COFINS', '11113 MT MED S. TRAB', '11114 MT SER ELET', '11115 MT DH',
+    '11201 MT RECURSOS', '11202 MT CRÉD/REPASS', '11301 MT INSUMOS', '11302 MT TSI', '11303 MT AG PRECISÃO',
+    '11304 MT INSUMOS II', '11305 MT INSUMOS LOG', '11401 MT ENGENHARIA', '11402 MT EQUIPE ADM', '11501 MT MARKETING',
+    '11601 MT ADM LOG', '11602 MT TRANSPORT', '11603 MT ASSIST. TEC.', '11604 MT P. HOUSE', '11605 MT ENERGIA',
+    '11606 MT IND SUCOS', '11607 MT TRIBUTÁRIO', '11608 MT AUDITORIA GRC', '12101 MT AG ADM', '12102 MT AG MANUT',
+    '12103 MT ALMOX CORPR', '12104 MT AG LOG', '12201 MT AG COM', '12202 MT AG COM COOP', '12203 MT AG COM TERC',
+    '12204 MT AG ADQ COOP', '12205 MT AG ADQ TERC', '12301 MT AG UBC', '12302 MT AG UBS', '12401 MT AG ARM. ALG',
+    '12402 MT AG UBA I', '12403 MT AG UBA II', '13101 MT DIPER ADM', '13201 MT DIPER COMFR', '13202 MT DIPER LOGFR',
+    '13301 MT DIPER COMFL', '13302 MT DIPER LOGFL', '14101 MT CITR ADM', '14201 MT CITR COOP', '14202 MT CITR TERC',
+    '14203 MT CITR LOG', '21101 TAQ ADM', '21201 TAQ PROD COOP', '21202 TAQ PROD TERC', '21203 TAQ ADQ COOP',
+    '21204 TAQ ADQ TERC', '21205 TAQ UBC', '21301 TAQ INSUMOS', '21304 TAQ INSUMOS II', '21305 TAQ INSUMOS LOG',
+    '31101 TAK ADM', '31102 TAK PROD COOP', '31103 TAK PROD TERC', '31104 TAK ADQ COOP', '31105 TAK ADQ TERC',
+    '31106 TAK UBC', '31107 TAK UBS', '31108 TAK CITRUS', '31109 TAK LOG', '41101 AV ADM', '41201 AV PROD COOP',
+    '41202 AV PROD TERC', '41203 AV ADQ COOP', '41204 AV ADQ TERC', '41205 AV UBC', '41301 AV INSUMOS',
+    '41304 AV INSUMOS II', '41305 AV INSUMOS LOG', '51101 TQRI ADM', '51201 TQRI PROD COOP', '51202 TQRI PROD TERC',
+    '51203 TQRI ADQ COOP', '51301 TQRI UBC', '51302 TQRI LOG', '61301 ITABE INSUMOS', '61305 ITABE INSU LOG',
+    '71101 S.MANU ADM', '71201 S.M PROD COOP', '71202 S.M PROD TERC', '71205 S.MANU UBC', '71301 S.MANU INSUMOS',
+    '71302 S.MANU RAÇÃO', '71303 S.M REVENDA RAÇÃO', '71305 S.MANU LOG', '81101 TQRITUBA ADM', '81201 TQBA PROD COOP',
+    '81202 TQBA PROD TERC', '81205 TQBA UBC', '81301 TQBA INSUMOS', '81305 TQBA SUP LOG', '91101 ITA II ADM',
+    '91102 TRANSPORTE CBT', '91201 ITA II COM CP', '91202 ITA II COM TER', '91205 ITA II UBC', '91301 ITA II SUP',
+    '91304 ITA INSUMOS II', '91305 ITA II SUP LOG', '101301 ITAPE SUP', '101304 ITAPE SUP II', '101305 ITAPE SUP LOG'
+];
+
+function popularSelectSetoresMT(selectId, placeholder = 'Selecione o setor (código)...') {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    SETORES.forEach((s) => {
+        const o = document.createElement('option');
+        o.value = s;
+        o.textContent = s;
+        sel.appendChild(o);
+    });
+}
+
+function aplicarHighlightEstrelas(container, n) {
+    if (!container) return;
+    const max = Number.isFinite(n) ? n : 0;
+    container.querySelectorAll('.os-star-btn').forEach((btn) => {
+        const v = parseInt(btn.dataset.estrela, 10);
+        btn.classList.toggle('is-on', v <= max);
+    });
+}
 
 function extrairUnidadeDeSetorProgramado(setorRaw) {
     if (!setorRaw) return '';
@@ -320,8 +369,9 @@ async function carregarResumoRelatorioOSAbertas() {
         const num = String(os.numero_solicitacao || os.id || '—').replace(/</g, '&lt;');
         const desc = String(os.descricao || os.titulo || '—').replace(/</g, '&lt;');
         const setor = String(os.setor || os.unidade || '—').replace(/</g, '&lt;');
+        const centro = os.setor_centro ? ` · ${String(os.setor_centro).replace(/</g, '&lt;')}` : '';
         const curto = desc.length > 140 ? `${desc.slice(0, 140)}…` : desc;
-        return `<div class="preview-os-item"><strong>#${num}</strong><span class="preview-os-setor">${setor}</span><p class="preview-os-desc">${curto}</p></div>`;
+        return `<div class="preview-os-item"><strong>#${num}</strong><span class="preview-os-setor">${setor}${centro}</span><p class="preview-os-desc">${curto}</p></div>`;
     }).join('');
     if (n > 12) {
         lista.insertAdjacentHTML('beforeend', `<p class="preview-os-mais">+ ${n - 12} outra(s) no arquivo Excel.</p>`);
@@ -667,6 +717,7 @@ document.getElementById('toggle-senha').addEventListener('click', () => {
 document.getElementById('btn-novo-apt').addEventListener('click', () => {
     apontamentoEditando = null;
     document.getElementById('formulario-apontamento').reset();
+    popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
     setEstadoFinalizadoApontamento(null);
     document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
@@ -682,6 +733,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
 document.getElementById('btn-menu-apontamentos').addEventListener('click', () => {
     apontamentoEditando = null;
     document.getElementById('formulario-apontamento').reset();
+    popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
     setEstadoFinalizadoApontamento(null);
     document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
@@ -805,11 +857,11 @@ document.getElementById('btn-alternar-login-email')?.addEventListener('click', (
     if (!hid || !label || !input || !btn) return;
     const irParaEmail = hid.value !== 'email';
     hid.value = irParaEmail ? 'email' : 'nome';
-    label.textContent = irParaEmail ? 'Login (cadastro operação)' : 'Nome completo (manutenção)';
-    input.placeholder = irParaEmail ? 'mesmo e-mail do seu cadastro' : 'Seu nome completo';
+    label.textContent = irParaEmail ? 'Login (cadastro operação)' : 'Login (manutenção)';
+    input.placeholder = irParaEmail ? 'Email cadastrado no perfil' : 'E-mail ou nome cadastrado no perfil';
     input.type = 'text';
     input.autocomplete = irParaEmail ? 'username' : 'username';
-    btn.textContent = irParaEmail ? 'Entrar com nome completo (manutenção)' : 'Entrar com login (operação)';
+    btn.textContent = irParaEmail ? 'Entrar com login (manutenção)' : 'Entrar com login (operação)';
 });
 
 document.getElementById('formulario-login').addEventListener('submit', async (e) => {
@@ -844,26 +896,51 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             email = porEmail.email;
         }
     } else if (!isAdmin) {
-        const { data: perfisData, error: perfilError } = await supabase
-            .from('perfis')
-            .select('email, nome_completo')
-            .ilike('nome_completo', `%${inputLogin}%`);
+        const raw = inputLogin.trim();
+        let perfilData = null;
 
-        if (perfilError || !perfisData || perfisData.length === 0) {
-            mostrarErro('Falha no Login', 'Nome de usuário não encontrado. Verifique se digitou corretamente.');
-            return;
+        if (raw.includes('@')) {
+            const { data: listMail, error: errMail } = await supabase
+                .from('perfis')
+                .select('email, nome_completo')
+                .ilike('email', raw);
+            if (errMail) {
+                mostrarErro('Falha no Login', 'Erro ao consultar o cadastro. Tente novamente.');
+                return;
+            }
+            if (listMail?.length === 1 && listMail[0].email) {
+                perfilData = listMail[0];
+            } else if (listMail && listMail.length > 1) {
+                mostrarErro('Falha no Login', 'E-mail ambíguo. Use o mesmo endereço cadastrado no perfil.');
+                return;
+            }
         }
 
-        let perfilData = perfisData.find(p => p.nome_completo.toLowerCase() === inputLogin.toLowerCase());
-        if (!perfilData && perfisData.length === 1) {
-            perfilData = perfisData[0];
-        } else if (!perfilData && perfisData.length > 1) {
-            mostrarErro('Falha no Login', 'Múltiplos usuários encontrados. Digite o nome completo.');
-            return;
+        if (!perfilData) {
+            const { data: perfisData, error: perfilError } = await supabase
+                .from('perfis')
+                .select('email, nome_completo')
+                .ilike('nome_completo', `%${raw}%`);
+
+            if (perfilError || !perfisData || perfisData.length === 0) {
+                mostrarErro('Falha no Login', 'Login não encontrado. Use o e-mail ou o nome cadastrado no perfil.');
+                return;
+            }
+
+            perfilData = perfisData.find((p) => p.nome_completo && p.nome_completo.toLowerCase() === raw.toLowerCase());
+            if (!perfilData && perfisData.length === 1) {
+                perfilData = perfisData[0];
+            } else if (!perfilData && perfisData.length > 1) {
+                mostrarErro(
+                    'Falha no Login',
+                    'Vários perfis correspondem. Digite o e-mail cadastrado ou o nome completo exatamente como no cadastro.'
+                );
+                return;
+            }
         }
 
         if (!perfilData || !perfilData.email) {
-            mostrarErro('Falha no Login', 'Email não encontrado para este usuário.');
+            mostrarErro('Falha no Login', 'E-mail de acesso não encontrado para este login.');
             return;
         }
 
@@ -986,6 +1063,11 @@ function preencherSelectsCadastroOperacao() {
         setor.innerHTML = '<option value="">Selecione...</option>';
         UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setor.appendChild(o); });
     }
+    popularSelectSetoresMT('cad-op-setor-centro', 'Selecione se quiser gravar como padrão…');
+    const npsVal = document.getElementById('cad-op-nps-val');
+    const npsWrap = document.getElementById('cad-op-nps-stars');
+    if (npsVal) npsVal.value = '';
+    if (npsWrap) aplicarHighlightEstrelas(npsWrap, 0);
 }
 
 document.getElementById('formulario-cadastro').addEventListener('submit', async (e) => {
@@ -1097,7 +1179,11 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
     const nome = document.getElementById('cad-op-nome').value.trim();
     const telefone = document.getElementById('cad-op-telefone').value.trim();
     const setorUnidade = document.getElementById('cad-op-setor').value;
+    const setorCentroPadrao = document.getElementById('cad-op-setor-centro')?.value?.trim() || null;
     const funcao_cargo = document.getElementById('cad-op-funcao').value.trim();
+    const npsRaw = document.getElementById('cad-op-nps-val')?.value?.trim();
+    const npsCadastro = npsRaw && /^\d$/.test(npsRaw) ? parseInt(npsRaw, 10) : null;
+    const npsOk = npsCadastro != null && npsCadastro >= 1 && npsCadastro <= 5 ? npsCadastro : null;
 
     Swal.fire({ title: 'Criando conta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     const { data, error } = await supabase.auth.signUp({
@@ -1111,15 +1197,31 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
         return;
     }
     if (data.user) {
-        await supabase.from('perfis').update({
+        const perfilUpd = {
             tipo_perfil: 'operacao',
             nome_completo: nome,
             email,
             telefone: telefone || null,
             setor: setorUnidade || null,
             unidade: setorUnidade || null,
-            funcao_cargo: funcao_cargo || null
-        }).eq('id', data.user.id);
+            funcao_cargo: funcao_cargo || null,
+            setor_centro_padrao: setorCentroPadrao,
+            nps_cadastro_operacao: npsOk
+        };
+        let { error: perfErr } = await supabase.from('perfis').update(perfilUpd).eq('id', data.user.id);
+        if (perfErr && (String(perfErr.message || '').toLowerCase().includes('setor_centro_padrao')
+            || String(perfErr.message || '').toLowerCase().includes('nps_cadastro'))) {
+            const { setor_centro_padrao: _a, nps_cadastro_operacao: _b, ...rest } = perfilUpd;
+            const r2 = await supabase.from('perfis').update(rest).eq('id', data.user.id);
+            perfErr = r2.error;
+            if (!perfErr) {
+                await Swal.fire({ icon: 'info', title: 'Conta criada', text: 'Execute supabase_add_setor_centro_avaliacao_os.sql para gravar setor MT padrão e nota do cadastro no perfil.' });
+            }
+        }
+        if (perfErr) {
+            mostrarErro('Perfil', perfErr.message || 'Não foi possível atualizar o perfil.');
+            return;
+        }
         if (data.session) {
             mostrarSucesso('Conta criada!');
             await verificarUsuario();
@@ -1213,6 +1315,11 @@ function preencherSelectsAbrirOS() {
         UNIDADES_OPERACAO.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; setorSel.appendChild(o); });
     }
     if (estado.perfil?.setor) setorSel.value = estado.perfil.setor;
+    popularSelectSetoresMT('os-setor-centro', 'Selecione o setor (código / centro)…');
+    const sc = document.getElementById('os-setor-centro');
+    if (sc && estado.perfil?.setor_centro_padrao && SETORES.includes(estado.perfil.setor_centro_padrao)) {
+        sc.value = estado.perfil.setor_centro_padrao;
+    }
     atualizarEquipamentosAbrirOS(setorSel?.value || '');
     obterProximoNumeroOS().then(num => {
         const campo = document.getElementById('os-numero');
@@ -1306,11 +1413,23 @@ async function verificarSuporteCampoEquipamentoApontamento() {
     return suporteCampoEquipamentoApontamento;
 }
 
+async function verificarSuporteCampoSetorCentroApontamento() {
+    if (suporteCampoSetorCentroApontamento !== null) return suporteCampoSetorCentroApontamento;
+    try {
+        const { error } = await supabase.from('apontamentos').select('setor_centro').limit(1);
+        suporteCampoSetorCentroApontamento = !error || !String(error.message || '').toLowerCase().includes('column');
+    } catch (_) {
+        suporteCampoSetorCentroApontamento = false;
+    }
+    return suporteCampoSetorCentroApontamento;
+}
+
 document.getElementById('formulario-abrir-os')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const numeroSolicitacao = document.getElementById('os-numero').value.trim();
     const descricao = document.getElementById('os-descricao').value.trim();
     const setorUnidade = document.getElementById('os-setor').value;
+    const setorCentro = document.getElementById('os-setor-centro')?.value?.trim() || '';
     const equipamentoOs = document.getElementById('os-equipamento')?.value?.trim() || '';
     const centroTrabalho = document.getElementById('os-centro-trabalho').value;
     const dataNecessidade = document.getElementById('os-data-necessidade').value || null;
@@ -1319,6 +1438,7 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
     const prioridade = document.getElementById('os-prioridade').value || null;
     const anexoInput = document.getElementById('os-anexo');
     if (!setorUnidade) { mostrarErro('Campos obrigatórios', 'Selecione a unidade.'); return; }
+    if (!setorCentro) { mostrarErro('Campos obrigatórios', 'Selecione o setor (código / centro MT).'); return; }
     if (!equipamentoOs) { mostrarErro('Campos obrigatórios', 'Selecione o equipamento da unidade.'); return; }
     if (!numeroSolicitacao) { mostrarErro('Campos obrigatórios', 'Número da OS não gerado. Aguarde ou reabra a tela.'); return; }
     if (!descricao || !descricao.trim()) { mostrarErro('Campos obrigatórios', 'Preencha a descrição do serviço.'); return; }
@@ -1346,7 +1466,8 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
             tipo_manutencao: tipoManutencao,
             prioridade: prioridade,
             anexo: anexoUrl,
-            status: 'aberta'
+            status: 'aberta',
+            setor_centro: setorCentro
         };
         let { error } = await supabase.from('ordens_servico').insert([payload]);
         if (error && String(error.message || '').toLowerCase().includes('equipamento')) {
@@ -1355,6 +1476,14 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
             error = retry.error;
             if (!error) {
                 await Swal.fire({ icon: 'info', title: 'OS registrada', text: 'Atualize o banco com a coluna equipamento em ordens_servico para vincular o equipamento à OS (script SQL na pasta do projeto).' });
+            }
+        }
+        if (error && String(error.message || '').toLowerCase().includes('setor_centro')) {
+            const { setor_centro: _sc, ...semSc } = payload;
+            const retry2 = await supabase.from('ordens_servico').insert([semSc]);
+            error = retry2.error;
+            if (!error) {
+                await Swal.fire({ icon: 'info', title: 'OS registrada', text: 'Execute supabase_add_setor_centro_avaliacao_os.sql no Supabase para gravar o setor (código MT).' });
             }
         }
         if (error) throw error;
@@ -1376,6 +1505,30 @@ function iniciarRealtimeMinhasSolicitacoes() {
         })
         .subscribe();
     estado.realtimeChannelOS = channel;
+}
+
+function secaoAvaliacaoMinhaOS(os) {
+    if (os.status !== 'concluida') return '';
+    const a = os.avaliacao_solicitante;
+    if (a != null && a >= 1 && a <= 5) {
+        return `<div class="minha-os-avaliacao minha-os-avaliacao--lida">
+            <span class="minha-os-avaliacao-titulo">Sua avaliação</span>
+            <span class="os-stars-read" aria-hidden="true">${'★'.repeat(a)}${'☆'.repeat(5 - a)}</span>
+            <span class="os-stars-read-num">(${a}/5)</span>
+        </div>`;
+    }
+    const idEsc = String(os.id || '').replace(/"/g, '');
+    const botoes = [1, 2, 3, 4, 5]
+        .map(
+            (n) =>
+                `<button type="button" class="os-star-btn os-star-btn--salvar" data-os-id="${idEsc}" data-estrela="${n}" aria-label="${n} de 5 estrelas">★</button>`
+        )
+        .join('');
+    return `<div class="minha-os-avaliacao" data-os-id="${idEsc}">
+            <span class="minha-os-avaliacao-titulo">Avalie o atendimento da manutenção</span>
+            <div class="os-stars os-stars--input" role="radiogroup" aria-label="Avaliar de 1 a 5 estrelas">${botoes}</div>
+            <div class="os-stars-legend-row"><span>Pouco satisfeito</span><span>Muito satisfeito</span></div>
+        </div>`;
 }
 
 async function carregarMinhasSolicitacoes() {
@@ -1401,18 +1554,65 @@ async function carregarMinhasSolicitacoes() {
         const dataAbertura = os.criado_em ? new Date(os.criado_em).toLocaleDateString('pt-BR') : '—';
         const numero = os.numero_solicitacao || os.id?.slice(0, 8) || '—';
         const descEscapada = (os.descricao || '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+        const linhaUnidade = (os.setor || os.unidade || '—').replace(/</g, '&lt;');
+        const linhaCentro = os.setor_centro ? String(os.setor_centro).replace(/</g, '&lt;') : '';
+        const nomEq = os.equipamento ? String(os.equipamento).replace(/</g, '&lt;') : '';
+        const metaBits = [linhaUnidade];
+        if (linhaCentro) metaBits.push(linhaCentro);
+        if (nomEq) metaBits.push(nomEq);
+        metaBits.push(dataAbertura);
         card.innerHTML = `
             <div class="minha-os-header">
                 <span class="minha-os-numero">#${String(numero).replace(/</g, '&lt;')}</span>
                 <span class="badge ${statusClass[os.status] || 'badge-wait'}">${statusLabel[os.status] || os.status}</span>
             </div>
             <div class="minha-os-descricao">${descEscapada}</div>
-            <div class="minha-os-meta">${os.setor || os.unidade || '—'}${os.equipamento ? ' · ' + String(os.equipamento).replace(/</g, '&lt;') : ''} · ${dataAbertura}</div>
+            <div class="minha-os-meta">${metaBits.join(' · ')}</div>
+            ${secaoAvaliacaoMinhaOS(os)}
         `;
         lista.appendChild(card);
     });
     lucide.createIcons();
 }
+
+document.getElementById('lista-minhas-solicitacoes')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.os-star-btn--salvar');
+    if (!btn || !estado.usuario?.id) return;
+    e.preventDefault();
+    const osId = btn.dataset.osId;
+    const est = parseInt(btn.dataset.estrela, 10);
+    if (!osId || est < 1 || est > 5) return;
+    try {
+        const { error } = await supabase
+            .from('ordens_servico')
+            .update({
+                avaliacao_solicitante: est,
+                avaliacao_solicitante_em: new Date().toISOString()
+            })
+            .eq('id', osId)
+            .eq('id_solicitante', estado.usuario.id);
+        if (error) throw error;
+        Toast.fire({ icon: 'success', title: 'Obrigado pela avaliação!' });
+        carregarMinhasSolicitacoes();
+    } catch (err) {
+        const msg = String(err.message || err || '');
+        if (msg.toLowerCase().includes('column')) {
+            mostrarErro('Banco de dados', 'Execute o script supabase_add_setor_centro_avaliacao_os.sql no Supabase.');
+        } else {
+            mostrarErro('Erro', msg || 'Não foi possível salvar a avaliação.');
+        }
+    }
+});
+
+document.getElementById('cad-op-nps-stars')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.os-star-btn');
+    if (!btn) return;
+    const n = parseInt(btn.dataset.estrela, 10);
+    const wrap = document.getElementById('cad-op-nps-stars');
+    const hid = document.getElementById('cad-op-nps-val');
+    if (hid) hid.value = String(n);
+    if (wrap) aplicarHighlightEstrelas(wrap, n);
+});
 
 async function carregarOrdensPendentes() {
     if (estado.perfil?.funcao !== 'admin') return;
@@ -1462,7 +1662,7 @@ async function carregarOrdensPendentes() {
             <div style="flex:1;">
                 <strong>${(os.titulo || '').replace(/</g, '&lt;')}</strong>
                 <p style="font-size:0.85rem;color:#666;margin:4px 0 0;">${(os.descricao || '').replace(/</g, '&lt;').substring(0, 80)}...</p>
-                <p style="font-size:0.8rem;color:#888;margin-top:4px;">${os.setor || os.unidade} • ${dataAbertura}</p>
+                <p style="font-size:0.8rem;color:#888;margin-top:4px;">${os.setor || os.unidade}${os.setor_centro ? ' · ' + String(os.setor_centro).replace(/</g, '&lt;') : ''} • ${dataAbertura}</p>
             </div>
         `;
         lista.appendChild(div);
@@ -1485,14 +1685,15 @@ document.getElementById('btn-encaminhar-os')?.addEventListener('click', async ()
     if (ids.length === 0) { mostrarErro('Selecione ao menos uma OS', 'Marque as ordens que deseja encaminhar.'); return; }
     try {
         for (const id of ids) {
-            const { data: os } = await supabase.from('ordens_servico').select('titulo, descricao, setor, unidade').eq('id', id).single();
+            const { data: os } = await supabase.from('ordens_servico').select('titulo, descricao, setor, unidade, setor_centro').eq('id', id).single();
             await supabase.from('ordens_servico').update({ status: 'programada', id_responsavel: responsavel, atualizado_em: new Date().toISOString() }).eq('id', id);
             if (os) {
                 const numeroOs = id.slice(0, 8).replace(/-/g, '');
+                const sufixoCentro = os.setor_centro ? ` · ${os.setor_centro}` : '';
                 await supabase.from('programacoes').insert([{
                     id_colaborador: responsavel,
                     os_numero: numeroOs,
-                    setor_unidade: `${os.unidade} - ${os.setor}`,
+                    setor_unidade: `${os.unidade} - ${os.setor}${sufixoCentro}`,
                     problema: os.titulo + (os.descricao ? '\n' + os.descricao : ''),
                     data_programada: new Date().toISOString().slice(0, 10)
                 }]);
@@ -1584,7 +1785,7 @@ async function carregarGestaoOS() {
                 <div class="gestao-os-info">
                     <span class="gestao-os-numero">#${String(numero).replace(/</g, '&lt;')}</span>
                     <span class="gestao-os-solicitante">Solicitante: ${String(nomeSolicitante).replace(/</g, '&lt;')}</span>
-                    <span class="gestao-os-meta">${(os.setor || os.unidade || '—').replace(/</g, '&lt;')}${os.equipamento ? ' · Eq.: ' + String(os.equipamento).replace(/</g, '&lt;') : ''} · ${os.centro_trabalho || '—'} · ${dataAbertura}</span>
+                    <span class="gestao-os-meta">${(os.setor || os.unidade || '—').replace(/</g, '&lt;')}${os.setor_centro ? ' · ' + String(os.setor_centro).replace(/</g, '&lt;') : ''}${os.equipamento ? ' · Eq.: ' + String(os.equipamento).replace(/</g, '&lt;') : ''} · ${os.centro_trabalho || '—'} · ${dataAbertura}</span>
                 </div>
                 <div class="gestao-os-status-wrap">
                     <span class="badge ${badgeClass}">${labelStatus}</span>
@@ -1596,6 +1797,13 @@ async function carregarGestaoOS() {
             </div>
             <div class="gestao-os-descricao">${descEscapada}</div>
             <div class="gestao-os-rodape">${os.prioridade || '—'} · ${os.destino_servico || '—'} · ${os.tipo_manutencao || '—'}</div>
+            ${os.status === 'concluida'
+                ? (os.avaliacao_solicitante != null && os.avaliacao_solicitante >= 1 && os.avaliacao_solicitante <= 5
+                    ? `<div class="gestao-os-avaliacao"><strong>Avaliação do solicitante:</strong> <span class="gestao-os-avaliacao-stars" aria-hidden="true">${'★'.repeat(
+                        os.avaliacao_solicitante
+                    )}${'☆'.repeat(5 - os.avaliacao_solicitante)}</span> <span class="gestao-os-avaliacao-num">(${os.avaliacao_solicitante}/5)</span></div>`
+                    : '<div class="gestao-os-avaliacao gestao-os-avaliacao--pendente"><strong>Avaliação do solicitante:</strong> <em>ainda não registrada</em></div>')
+                : ''}
         `;
         lista.appendChild(card);
     });
@@ -1632,6 +1840,12 @@ async function carregarProgramacoesParaApontamento() {
     const selectOS = document.getElementById('apt-ordem-select');
     const selectUnidade = document.getElementById('apt-unidade');
     if (!selectOS || !selectUnidade) return;
+
+    popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
+    const asc0 = document.getElementById('apt-setor-centro');
+    if (asc0 && estado.perfil?.setor_centro_padrao && SETORES.includes(estado.perfil.setor_centro_padrao)) {
+        asc0.value = estado.perfil.setor_centro_padrao;
+    }
 
     let og = selectUnidade.querySelector('optgroup[label="Setores programados"]');
     if (!og) {
@@ -1805,6 +2019,9 @@ async function abrirEdicaoApontamento(apt) {
     if (document.getElementById('apt-equipamento')) {
         document.getElementById('apt-equipamento').value = apt.equipamento || '';
     }
+    popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
+    const ascEd = document.getElementById('apt-setor-centro');
+    if (ascEd && apt.setor_centro) ascEd.value = apt.setor_centro;
     document.getElementById('apt-centro').value = apt.centro_trabalho;
     document.getElementById('apt-data').value = apt.data_servico;
     document.getElementById('apt-inicio').value = apt.hora_inicio;
@@ -1862,7 +2079,8 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         }
         let desc = (document.getElementById('apt-desc').value || '').trim();
         const unidade = document.getElementById('apt-unidade').value;
-        const equipamento = document.getElementById('apt-equipamento')?.value || '';
+        let equipamento = document.getElementById('apt-equipamento')?.value || '';
+        const setorCentroMt = document.getElementById('apt-setor-centro')?.value?.trim() || '';
         const idManutentor = document.getElementById('apt-manutentor').value;
         const centro = document.getElementById('apt-centro').value;
         const dataServico = document.getElementById('apt-data').value;
@@ -1884,6 +2102,9 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
 
         if (!idManutentor) {
             throw new Error('Selecione um manutentor.');
+        }
+        if (!setorCentroMt) {
+            throw new Error('Selecione o setor (código / centro MT).');
         }
         const equipamentoOpcional = document.getElementById('apt-equipamento')?.dataset?.equipamentoOpcional === '1';
         if (!equipamentoOpcional && !equipamento) {
@@ -1941,6 +2162,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
 
         btn.innerHTML = isEdicao ? 'Salvando alterações...' : 'Salvando dados...';
         const suportaEquipamentoApontamento = await verificarSuporteCampoEquipamentoApontamento();
+        const suportaSetorCentroApt = await verificarSuporteCampoSetorCentroApontamento();
         const obsFinal = suportaEquipamentoApontamento
             ? obs
             : (obs ? `[Equipamento: ${equipamento}] ${obs}` : `[Equipamento: ${equipamento}]`);
@@ -1962,6 +2184,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
                 justificativa: justificativa || null
             };
             if (suportaEquipamentoApontamento) dadosUpdate.equipamento = equipamento;
+            if (suportaSetorCentroApt) dadosUpdate.setor_centro = setorCentroMt;
 
             const { error: updateError } = await supabase
                 .from('apontamentos')
@@ -1988,6 +2211,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
                 justificativa: justificativa || null
             };
             if (suportaEquipamentoApontamento) dadosInsert.equipamento = equipamento;
+            if (suportaSetorCentroApt) dadosInsert.setor_centro = setorCentroMt;
 
             const { error: insertError } = await supabase.from('apontamentos').insert([dadosInsert]);
 
@@ -1996,6 +2220,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         }
 
         e.target.reset();
+        popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
         setEstadoFinalizadoApontamento(null);
         atualizarEquipamentosApontamento('');
         apontamentoEditando = null;
@@ -2398,6 +2623,8 @@ document.getElementById('btn-download-os-abertas')?.addEventListener('click', as
             Número: os.numero_solicitacao || '',
             Descrição: (os.descricao || os.titulo || '').replace(/\s+/g, ' ').trim(),
             'Setor / Unidade': os.setor || os.unidade || '',
+            'Setor (código MT)': os.setor_centro || '',
+            'Avaliação (1-5)': os.avaliacao_solicitante != null ? String(os.avaliacao_solicitante) : '',
             Equipamento: os.equipamento || '',
             'Centro de Trabalho': os.centro_trabalho || '',
             Prioridade: os.prioridade || '',
@@ -2414,32 +2641,6 @@ document.getElementById('btn-download-os-abertas')?.addEventListener('click', as
     XLSX.writeFile(wb, `Relatorio_OS_abertas_${new Date().toISOString().split('T')[0]}.xlsx`);
     Toast.fire({ icon: 'success', title: 'Download concluído!' });
 });
-
-const SETORES = [
-    '11101 MT CENTRAL', '11102 MT F.DESENV.', '11103 MT RATES', '11104 MT RESIDEN', '11105 MT ADM.PESSOAL',
-    '11106 MT ADM.GERAL', '11107 MT TAREFEIROS', '11108 MT CONTABILIDADE', '11109 MT INFORMÁTICA', '11110 MT SERV.GERAIS',
-    '11111 MT REFEITÓRIO', '11112 MT PIS/COFINS', '11113 MT MED S. TRAB', '11114 MT SER ELET', '11115 MT DH',
-    '11201 MT RECURSOS', '11202 MT CRÉD/REPASS', '11301 MT INSUMOS', '11302 MT TSI', '11303 MT AG PRECISÃO',
-    '11304 MT INSUMOS II', '11305 MT INSUMOS LOG', '11401 MT ENGENHARIA', '11402 MT EQUIPE ADM', '11501 MT MARKETING',
-    '11601 MT ADM LOG', '11602 MT TRANSPORT', '11603 MT ASSIST. TEC.', '11604 MT P. HOUSE', '11605 MT ENERGIA',
-    '11606 MT IND SUCOS', '11607 MT TRIBUTÁRIO', '11608 MT AUDITORIA GRC', '12101 MT AG ADM', '12102 MT AG MANUT',
-    '12103 MT ALMOX CORPR', '12104 MT AG LOG', '12201 MT AG COM', '12202 MT AG COM COOP', '12203 MT AG COM TERC',
-    '12204 MT AG ADQ COOP', '12205 MT AG ADQ TERC', '12301 MT AG UBC', '12302 MT AG UBS', '12401 MT AG ARM. ALG',
-    '12402 MT AG UBA I', '12403 MT AG UBA II', '13101 MT DIPER ADM', '13201 MT DIPER COMFR', '13202 MT DIPER LOGFR',
-    '13301 MT DIPER COMFL', '13302 MT DIPER LOGFL', '14101 MT CITR ADM', '14201 MT CITR COOP', '14202 MT CITR TERC',
-    '14203 MT CITR LOG', '21101 TAQ ADM', '21201 TAQ PROD COOP', '21202 TAQ PROD TERC', '21203 TAQ ADQ COOP',
-    '21204 TAQ ADQ TERC', '21205 TAQ UBC', '21301 TAQ INSUMOS', '21304 TAQ INSUMOS II', '21305 TAQ INSUMOS LOG',
-    '31101 TAK ADM', '31102 TAK PROD COOP', '31103 TAK PROD TERC', '31104 TAK ADQ COOP', '31105 TAK ADQ TERC',
-    '31106 TAK UBC', '31107 TAK UBS', '31108 TAK CITRUS', '31109 TAK LOG', '41101 AV ADM', '41201 AV PROD COOP',
-    '41202 AV PROD TERC', '41203 AV ADQ COOP', '41204 AV ADQ TERC', '41205 AV UBC', '41301 AV INSUMOS',
-    '41304 AV INSUMOS II', '41305 AV INSUMOS LOG', '51101 TQRI ADM', '51201 TQRI PROD COOP', '51202 TQRI PROD TERC',
-    '51203 TQRI ADQ COOP', '51301 TQRI UBC', '51302 TQRI LOG', '61301 ITABE INSUMOS', '61305 ITABE INSU LOG',
-    '71101 S.MANU ADM', '71201 S.M PROD COOP', '71202 S.M PROD TERC', '71205 S.MANU UBC', '71301 S.MANU INSUMOS',
-    '71302 S.MANU RAÇÃO', '71303 S.M REVENDA RAÇÃO', '71305 S.MANU LOG', '81101 TQRITUBA ADM', '81201 TQBA PROD COOP',
-    '81202 TQBA PROD TERC', '81205 TQBA UBC', '81301 TQBA INSUMOS', '81305 TQBA SUP LOG', '91101 ITA II ADM',
-    '91102 TRANSPORTE CBT', '91201 ITA II COM CP', '91202 ITA II COM TER', '91205 ITA II UBC', '91301 ITA II SUP',
-    '91304 ITA INSUMOS II', '91305 ITA II SUP LOG', '101301 ITAPE SUP', '101304 ITAPE SUP II', '101305 ITAPE SUP LOG'
-];
 
 const DEPARTAMENTOS = ['Elétrica', 'Mecânica', 'Automação'];
 
