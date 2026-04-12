@@ -29,7 +29,9 @@ const telas = {
     programacao: document.getElementById('tela-programacao'),
     ferias: document.getElementById('tela-ferias'),
     gestaoOs: document.getElementById('tela-gestao-os'),
-    equipamentosOperacao: document.getElementById('tela-equipamentos-operacao')
+    equipamentosOperacao: document.getElementById('tela-equipamentos-operacao'),
+    moinhoIdeias: document.getElementById('tela-moinho-ideias'),
+    preventivas: document.getElementById('tela-preventivas')
 };
 
 const SETORES_OPERACAO = ['Produção', 'Administrativo', 'Logística', 'Qualidade', 'Manutenção', 'TI', 'RH', 'Financeiro', 'Comercial', 'Almoxarifado', 'Outro'];
@@ -612,6 +614,10 @@ async function navegarPara(idTela, opts = {}) {
     if (idTela === 'programar') carregarProgramacoesAdmin();
     if (idTela === 'programacao') carregarProgramacaoDiaria();
     if (idTela === 'dashboard') carregarProgramacoesParaApontamento();
+    if (idTela === 'moinhoIdeias') {
+        fecharFormularioMoinhoIdeias();
+        carregarListaMoinhoIdeias();
+    }
 }
 
 function atualizarVisibilidadeCamposAdmin(initialConforme = null) {
@@ -808,7 +814,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
     document.getElementById('formulario-apontamento').reset();
     popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
     setEstadoFinalizadoApontamento(null);
-    document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
+    definirCabecalhoApontamentoNovo();
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
     if (btnSubmit) {
         btnSubmit.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
@@ -824,7 +830,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
     document.getElementById('formulario-apontamento').reset();
     popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
     setEstadoFinalizadoApontamento(null);
-    document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
+    definirCabecalhoApontamentoNovo();
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
     if (btnSubmit) {
         btnSubmit.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
@@ -1360,6 +1366,79 @@ async function obterProximoNumeroOS() {
 function filtroApontamentosPorUsuarioOuManutentor(uid) {
     if (!uid) return '';
     return `id_usuario.eq.${uid},id_manutentor.eq.${uid}`;
+}
+
+/** Alinha nº de OS entre apontamentos, programações e ordens_servico (ex.: 1 vs 0001). */
+function variantesNumeroOs(n) {
+    const s = String(n ?? '').trim();
+    if (!s) return [];
+    const out = new Set([s]);
+    if (/^\d+$/.test(s)) {
+        const num = parseInt(s, 10);
+        out.add(String(num));
+        out.add(String(num).padStart(4, '0'));
+        if (s.length < 4) out.add(s.padStart(4, '0'));
+    }
+    return [...out];
+}
+
+/** Quando o apontamento marca serviço concluído, encerra a OS correspondente (se existir no cadastro). */
+async function encerrarOrdemServicoSeConcluido(numeroOrdem, concluido) {
+    if (!concluido || !numeroOrdem) return;
+    for (const v of variantesNumeroOs(numeroOrdem)) {
+        const { data, error } = await supabase
+            .from('ordens_servico')
+            .update({ status: 'concluida', atualizado_em: new Date().toISOString() })
+            .eq('numero_solicitacao', v)
+            .neq('status', 'cancelada')
+            .select('id');
+        if (!error && data?.length) return;
+    }
+}
+
+/** Oculta programações cuja OS já está concluída ou cancelada (evita novo apontamento na mesma OS). */
+async function filtrarProgramacoesOsAindaAbertas(programacoes) {
+    const prog = programacoes || [];
+    const nums = [...new Set(prog.map((p) => p.os_numero).filter(Boolean))];
+    if (nums.length === 0) return prog;
+    const todasVariantes = [...new Set(nums.flatMap(variantesNumeroOs))];
+    const { data: ordens, error } = await supabase
+        .from('ordens_servico')
+        .select('numero_solicitacao, status')
+        .in('numero_solicitacao', todasVariantes);
+    if (error || !ordens?.length) return prog;
+    const fechadas = new Set();
+    for (const o of ordens) {
+        if (o.status === 'concluida' || o.status === 'cancelada') {
+            variantesNumeroOs(o.numero_solicitacao).forEach((x) => fechadas.add(x));
+        }
+    }
+    return prog.filter((p) => {
+        const vs = variantesNumeroOs(p.os_numero);
+        return !vs.some((x) => fechadas.has(x));
+    });
+}
+
+function definirCabecalhoApontamentoNovo() {
+    const h = document.getElementById('tela-dashboard-titulo');
+    const s = document.getElementById('tela-dashboard-subtitulo');
+    if (h) h.textContent = 'Apontamento de serviço';
+    if (s) {
+        s.textContent =
+            'Selecione a OS programada, preencha horários e informe se o trabalho foi concluído. Ao marcar «Sim» em concluído, a OS é encerrada e some das listas em aberto.';
+        s.classList.remove('oculto');
+        s.style.display = '';
+    }
+}
+
+function definirCabecalhoApontamentoEdicao() {
+    const h = document.getElementById('tela-dashboard-titulo');
+    const s = document.getElementById('tela-dashboard-subtitulo');
+    if (h) h.textContent = 'Editar apontamento';
+    if (s) {
+        s.classList.add('oculto');
+        s.style.display = 'none';
+    }
 }
 
 async function preencherNumeroOrdemApontamentoAutomatico() {
@@ -2064,13 +2143,17 @@ async function carregarProgramacoesParaApontamento() {
     }
     og.innerHTML = '';
 
-    const { data: prog, error } = await supabase
+    const { data: progRaw, error } = await supabase
         .from('programacoes')
         .select('*')
         .eq('id_colaborador', estado.usuario?.id)
         .order('data_programada', { ascending: false });
 
-    estado.programacoesUsuario = prog || [];
+    let prog = progRaw || [];
+    if (!error && prog.length > 0) {
+        prog = await filtrarProgramacoesOsAindaAbertas(prog);
+    }
+    estado.programacoesUsuario = prog;
     const unidadesProgramadas = [...new Set((prog || [])
         .map(p => extrairUnidadeDeSetorProgramado(p.setor_unidade))
         .filter(Boolean))];
@@ -2245,7 +2328,7 @@ async function abrirEdicaoApontamento(apt) {
     await carregarUsuarios();
     document.getElementById('apt-manutentor').value = apt.id_manutentor;
 
-    document.querySelector('#tela-dashboard h2').textContent = 'Editar Apontamento';
+    definirCabecalhoApontamentoEdicao();
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
     btnSubmit.innerHTML = '<i data-lucide="save"></i> ATUALIZAR APONTAMENTO';
     btnSubmit.dataset.modo = 'editar';
@@ -2433,9 +2516,10 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         setEstadoFinalizadoApontamento(null);
         await atualizarEquipamentosApontamento('');
         apontamentoEditando = null;
-        document.querySelector('#tela-dashboard h2').textContent = 'Registrar Serviço';
+        definirCabecalhoApontamentoNovo();
         btn.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
         btn.dataset.modo = '';
+        await encerrarOrdemServicoSeConcluido(ordem, concluido);
         await navegarPara('menu');
 
     } catch (erro) {
@@ -2480,6 +2564,254 @@ document.getElementById('busca-historico').addEventListener('input', (e) => {
     buscaHistorico = e.target.value.trim();
     carregarHistorico();
 });
+
+async function excluirApontamentoConfirmar(log) {
+    if (!log?.id || !estado.usuario) return;
+    const numSeg = String(log.numero_ordem ?? '').replace(/</g, '');
+    const result = await Swal.fire({
+        title: 'Excluir apontamento?',
+        html: `OS <strong>#${numSeg}</strong> — esta ação não pode ser desfeita.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Excluir'
+    });
+    if (!result.isConfirmed) return;
+    try {
+        const { error } = await supabase.from('apontamentos').delete().eq('id', log.id);
+        if (error) throw error;
+        mostrarSucesso('Apontamento excluído.');
+        await carregarHistorico();
+        const telaAdmin = document.getElementById('tela-admin');
+        if (telaAdmin && !telaAdmin.classList.contains('oculto')) {
+            await carregarDadosAdmin();
+        }
+    } catch (e) {
+        mostrarErro('Erro', e.message || 'Não foi possível excluir. Se o erro citar RLS ou permissão, execute supabase_policies_apontamentos_delete.sql no Supabase.');
+    }
+}
+
+function moinhoIdeiasStorageKey() {
+    return 'holambra_moinho_ideias_' + (estado.usuario?.id || '');
+}
+
+function fecharFormularioMoinhoIdeias() {
+    const wrap = document.getElementById('moinho-formulario-wrap');
+    const btn = document.getElementById('btn-moinho-toggle-form');
+    if (wrap) wrap.classList.add('oculto');
+    if (btn) {
+        btn.innerHTML = '<i data-lucide="plus-circle"></i> Nova melhoria';
+    }
+    lucide.createIcons();
+}
+
+function abrirFormularioMoinhoIdeias() {
+    const wrap = document.getElementById('moinho-formulario-wrap');
+    const btn = document.getElementById('btn-moinho-toggle-form');
+    if (wrap) wrap.classList.remove('oculto');
+    if (btn) {
+        btn.innerHTML = '<i data-lucide="x-circle"></i> Fechar formulário';
+    }
+    lucide.createIcons();
+    wrap?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function alternarFormularioMoinhoIdeias() {
+    const wrap = document.getElementById('moinho-formulario-wrap');
+    if (!wrap) return;
+    if (wrap.classList.contains('oculto')) abrirFormularioMoinhoIdeias();
+    else fecharFormularioMoinhoIdeias();
+}
+
+async function listarMelhoriasMoinhoIdeias() {
+    const { data, error } = await supabase
+        .from('melhorias_moinho')
+        .select('*')
+        .order('criado_em', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+        if (data.length === 0) return [];
+        const ids = [...new Set(data.map((r) => r.id_usuario).filter(Boolean))];
+        const nomeMap = {};
+        if (ids.length) {
+            const { data: perfis } = await supabase.from('perfis').select('id, nome_completo').in('id', ids);
+            (perfis || []).forEach((p) => {
+                nomeMap[p.id] = p.nome_completo || 'Colaborador';
+            });
+        }
+        return data.map((r) => ({
+            ...r,
+            _autor_nome: nomeMap[r.id_usuario] || 'Colaborador'
+        }));
+    }
+
+    try {
+        const raw = localStorage.getItem(moinhoIdeiasStorageKey());
+        const arr = raw ? JSON.parse(raw) : [];
+        return arr.map((r) => ({
+            ...r,
+            _autor_nome: 'Você (somente neste aparelho)'
+        }));
+    } catch (_) {
+        return [];
+    }
+}
+
+async function carregarListaMoinhoIdeias() {
+    const lista = document.getElementById('lista-moinho-ideias');
+    if (!lista || !estado.usuario) return;
+    lista.innerHTML = '<div class="centro">Carregando…</div>';
+    const itens = await listarMelhoriasMoinhoIdeias();
+    lista.innerHTML = '';
+    if (!itens.length) {
+        lista.innerHTML =
+            '<div class="card centro" style="padding:2rem;color:#666;">Nenhuma melhoria registrada ainda.</div>';
+        lucide.createIcons();
+        return;
+    }
+    itens.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.style.marginBottom = '1rem';
+        const fotos = (item.fotos || [])
+            .map((u) => `<a href="${String(u).replace(/"/g, '&quot;')}" target="_blank" rel="noopener"><img src="${String(u).replace(/"/g, '&quot;')}" class="thumb-img" alt=""></a>`)
+            .join('');
+        const dataFmt = item.criado_em ? new Date(item.criado_em).toLocaleString('pt-BR') : '';
+        const esc = (t) =>
+            String(t || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/\n/g, '<br>');
+        const autor = esc(item._autor_nome || 'Colaborador');
+        const podeExcluirMoinho = estado.usuario && item.id_usuario === estado.usuario.id;
+        div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <div style="flex:1;min-width:200px;">
+                    <p style="margin:0 0 0.35rem 0;font-size:0.8rem;color:#64748b;"><i data-lucide="user" style="width:14px;height:14px;vertical-align:middle;"></i> ${autor}</p>
+                    <strong style="color:var(--cor-primaria);">${esc((item.descricao || '').length > 200 ? (item.descricao || '').slice(0, 200) + '…' : item.descricao || '')}</strong>
+                </div>
+                ${podeExcluirMoinho ? `<button type="button" class="btn btn-outline btn-excluir-moinho" data-moinho-id="${item.id}" style="font-size:0.8rem;height:auto;padding:0.35rem 0.65rem;color:#b91c1c;border-color:#fecaca;">Excluir</button>` : ''}
+            </div>
+            ${item.antes ? `<p style="font-size:0.9rem;margin:0.25rem 0;"><strong>Antes:</strong> ${esc(item.antes)}</p>` : ''}
+            ${item.depois ? `<p style="font-size:0.9rem;margin:0.25rem 0;"><strong>Depois:</strong> ${esc(item.depois)}</p>` : ''}
+            ${item.ganhos ? `<p style="font-size:0.9rem;margin:0.25rem 0;"><strong>Ganhos:</strong> ${esc(item.ganhos)}</p>` : ''}
+            ${fotos ? `<div class="imgs-galeria" style="margin-top:0.75rem;">${fotos}</div>` : ''}
+            ${dataFmt ? `<p style="font-size:0.8rem;color:#888;margin-top:0.75rem;">${dataFmt}</p>` : ''}
+        `;
+        lista.appendChild(div);
+        div.querySelector('.btn-excluir-moinho')?.addEventListener('click', () => excluirMelhoriaMoinhoIdeias(item.id));
+    });
+    lucide.createIcons();
+}
+
+async function excluirMelhoriaMoinhoIdeias(id) {
+    if (!id || !estado.usuario) return;
+    const result = await Swal.fire({
+        title: 'Excluir este registro?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Excluir',
+        cancelButtonText: 'Cancelar'
+    });
+    if (!result.isConfirmed) return;
+    const { error } = await supabase.from('melhorias_moinho').delete().eq('id', id).eq('id_usuario', estado.usuario.id);
+    if (!error) {
+        mostrarSucesso('Registro excluído.');
+        await carregarListaMoinhoIdeias();
+        return;
+    }
+    try {
+        const raw = localStorage.getItem(moinhoIdeiasStorageKey()) || '[]';
+        const arr = JSON.parse(raw).filter((x) => x.id !== id);
+        localStorage.setItem(moinhoIdeiasStorageKey(), JSON.stringify(arr));
+        mostrarSucesso('Registro excluído.');
+        await carregarListaMoinhoIdeias();
+    } catch (e) {
+        mostrarErro('Erro', e.message || 'Não foi possível excluir.');
+    }
+}
+
+document.getElementById('form-moinho-ideias')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!estado.usuario) return;
+    const desc = document.getElementById('moinho-descricao')?.value?.trim() || '';
+    const antes = document.getElementById('moinho-antes')?.value?.trim() || '';
+    const situacaoDepois = document.getElementById('moinho-depois')?.value?.trim() || '';
+    const ganhos = document.getElementById('moinho-ganhos')?.value?.trim() || '';
+    const inputFotos = document.getElementById('moinho-fotos');
+    const arquivos = Array.from(inputFotos?.files || []);
+    if (!desc) {
+        mostrarErro('Campos', 'Informe a descrição da melhoria.');
+        return;
+    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    const txtOrig = btn?.innerHTML;
+    btn.disabled = true;
+    try {
+        const urlsFotos = [];
+        for (let i = 0; i < arquivos.length; i++) {
+            if (btn) btn.innerHTML = `Enviando imagem ${i + 1}/${arquivos.length}…`;
+            const arquivo = arquivos[i];
+            const nomeLimpo = arquivo.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            const caminho = `melhorias_moinho/${estado.usuario.id}/${Date.now()}_${i}_${nomeLimpo}`;
+            const { error: upErr } = await supabase.storage.from('fotos_apontamentos').upload(caminho, arquivo);
+            if (upErr) throw new Error(upErr.message || 'Falha no upload da imagem.');
+            const { data: urlData } = supabase.storage.from('fotos_apontamentos').getPublicUrl(caminho);
+            if (urlData?.publicUrl) urlsFotos.push(urlData.publicUrl);
+        }
+        const payload = {
+            id_usuario: estado.usuario.id,
+            descricao: desc,
+            antes: antes || null,
+            depois: situacaoDepois || null,
+            ganhos: ganhos || null,
+            fotos: urlsFotos,
+            criado_em: new Date().toISOString()
+        };
+        const { data: insRows, error: insErr } = await supabase.from('melhorias_moinho').insert([payload]).select('id');
+        if (!insErr && insRows?.length) {
+            mostrarSucesso('Melhoria registrada!');
+            e.target.reset();
+            fecharFormularioMoinhoIdeias();
+            await carregarListaMoinhoIdeias();
+            return;
+        }
+        const localRow = {
+            ...payload,
+            id: crypto.randomUUID()
+        };
+        const raw = localStorage.getItem(moinhoIdeiasStorageKey()) || '[]';
+        const arr = JSON.parse(raw);
+        arr.unshift(localRow);
+        localStorage.setItem(moinhoIdeiasStorageKey(), JSON.stringify(arr));
+        mostrarSucesso(
+            'Melhoria salva neste dispositivo. Para sincronizar na equipe, execute supabase_setup_melhorias_moinho.sql no Supabase.'
+        );
+        e.target.reset();
+        fecharFormularioMoinhoIdeias();
+        await carregarListaMoinhoIdeias();
+    } catch (err) {
+        mostrarErro('Erro', err.message || 'Não foi possível salvar.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = txtOrig || '<i data-lucide="save"></i> Salvar melhoria';
+        }
+        lucide.createIcons();
+    }
+});
+
+document.getElementById('btn-menu-moinho-ideias')?.addEventListener('click', () => navegarPara('moinhoIdeias'));
+document.getElementById('btn-moinho-toggle-form')?.addEventListener('click', () => alternarFormularioMoinhoIdeias());
+document.getElementById('btn-moinho-cancelar-form')?.addEventListener('click', () => {
+    fecharFormularioMoinhoIdeias();
+    document.getElementById('form-moinho-ideias')?.reset();
+});
+document.getElementById('btn-menu-preventivas')?.addEventListener('click', () => navegarPara('preventivas'));
+document.getElementById('btn-voltar-menu-moinho')?.addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-preventivas')?.addEventListener('click', () => navegarPara('menu'));
 
 let filtrosAdmin = {
     unidade: '',
@@ -2650,30 +2982,31 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
         div.className = `item-lista accordion-item ${log.concluido ? 'concluido' : 'pendente'}`;
         const accordionId = `accordion-${log.id}-${index}`;
         div.innerHTML = `
-            <button class="accordion-header" onclick="toggleAccordion('${accordionId}')">
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <div style="display:flex; align-items:center; gap:10px; flex:1;">
-                        <i data-lucide="chevron-down" class="accordion-icon" id="icon-${accordionId}" style="width:20px; height:20px; transition:transform 0.3s;"></i>
-                        <span style="font-weight:800; color:var(--cor-primaria);"># ${log.numero_ordem}</span>
-                        <span style="font-size:0.9rem; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+            <div style="display:flex; align-items:stretch; width:100%; flex-wrap:wrap;">
+                <button type="button" class="accordion-header" style="flex:1; min-width:200px; width:auto;" onclick="toggleAccordion('${accordionId}')">
+                    <div style="display:flex; align-items:center; gap:10px; width:100%; min-width:0;">
+                        <i data-lucide="chevron-down" class="accordion-icon" id="icon-${accordionId}" style="width:20px; height:20px; transition:transform 0.3s; flex-shrink:0;"></i>
+                        <span style="font-weight:800; color:var(--cor-primaria); flex-shrink:0;"># ${log.numero_ordem}</span>
+                        <span style="font-size:0.9rem; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0;">
                             ${log.descricao.length > 40 ? log.descricao.substring(0, 40) + '...' : log.descricao}
                         </span>
                     </div>
-                    <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
-                        <span class="badge ${log.concluido ? 'badge-ok' : 'badge-wait'}">
-                            ${log.concluido ? 'CONCLUÍDO' : 'PENDENTE'}
-                        </span>
-                    </div>
+                </button>
+                <div style="display:flex; gap:8px; align-items:center; flex-shrink:0; flex-wrap:wrap; padding:0.65rem 1rem; background:var(--branco); border-top:1px solid #eef2f7;" onclick="event.stopPropagation();">
+                    ${podeEditar ? `
+                    <button type="button" class="btn btn-outline hist-btn-editar" data-apt-id="${log.id}" style="font-size:0.8rem; padding:0.35rem 0.65rem; height:auto; text-transform:none;">
+                        <i data-lucide="edit-2" style="width:14px;height:14px;"></i> Editar
+                    </button>
+                    <button type="button" class="btn btn-outline hist-btn-excluir" data-apt-id="${log.id}" style="font-size:0.8rem; padding:0.35rem 0.65rem; height:auto; text-transform:none; color:#b91c1c;border-color:#fecaca;">
+                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Excluir
+                    </button>` : ''}
+                    <span class="badge ${log.concluido ? 'badge-ok' : 'badge-wait'}">
+                        ${log.concluido ? 'CONCLUÍDO' : 'PENDENTE'}
+                    </span>
                 </div>
-            </button>
+            </div>
             <div class="accordion-content" id="${accordionId}">
                 <div style="font-size: 0.95rem; color: #444; padding-top: 1rem;">
-                    ${podeEditar ? `<div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-                        <button class="btn-editar-apt" data-id="${log.id}" onclick="event.stopPropagation();" style="background:none; border:none; cursor:pointer; padding:5px; color:var(--cor-primaria); display:flex; align-items:center; gap:5px;" title="Editar">
-                            <i data-lucide="edit-2" style="width:18px; height:18px;"></i>
-                            <span style="font-size:0.85rem;">Editar</span>
-                        </button>
-                    </div>` : ''}
                     <p style="margin-bottom:4px;"><strong>${log.descricao}</strong></p>
                     <p style="font-size:0.85rem; color:#666;">
                         <i data-lucide="map-pin" style="width:14px; height:14px; vertical-align:middle;"></i> 
@@ -2714,23 +3047,19 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
         `;
         conteiner.appendChild(div);
 
-        const btnEditar = div.querySelector('.btn-editar-apt');
+        const btnEditar = div.querySelector('.hist-btn-editar');
         if (btnEditar) {
-            btnEditar.style.display = 'none';
             btnEditar.addEventListener('click', (e) => {
                 e.stopPropagation();
                 abrirEdicaoApontamento(log);
             });
-
-            const content = div.querySelector('.accordion-content');
-            const observer = new MutationObserver(() => {
-                if (content.classList.contains('active')) {
-                    btnEditar.style.display = 'flex';
-                } else {
-                    btnEditar.style.display = 'none';
-                }
+        }
+        const btnExcluir = div.querySelector('.hist-btn-excluir');
+        if (btnExcluir) {
+            btnExcluir.addEventListener('click', (e) => {
+                e.stopPropagation();
+                excluirApontamentoConfirmar(log);
             });
-            observer.observe(content, { attributes: true, attributeFilter: ['class'] });
         }
     });
     lucide.createIcons();
@@ -3153,7 +3482,7 @@ async function carregarProgramacaoDiaria() {
     if (!lista) return;
     lista.innerHTML = '<div class="centro" style="padding: 2rem;">Carregando...</div>';
 
-    const { data: prog, error } = await supabase
+    const { data: progRaw, error } = await supabase
         .from('programacoes')
         .select('*')
         .eq('id_colaborador', estado.usuario?.id)
@@ -3165,9 +3494,14 @@ async function carregarProgramacaoDiaria() {
         return;
     }
 
+    let prog = progRaw || [];
+    if (prog.length > 0) {
+        prog = await filtrarProgramacoesOsAindaAbertas(prog);
+    }
+
     lista.innerHTML = '';
     if (!prog || prog.length === 0) {
-        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhuma programação para você hoje.</p></div>';
+        lista.innerHTML = '<div class="card centro" style="padding: 3rem 1rem;"><p style="color: #666;">Nenhuma programação ativa para você no momento.</p><p style="color:#888;font-size:0.85rem;margin-top:0.5rem;">OS já concluídas ou canceladas não aparecem aqui.</p></div>';
         lucide.createIcons();
         return;
     }
@@ -3282,7 +3616,7 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
 
 async function excluirProgramacao(id) {
     if (estado.perfil?.funcao !== 'admin') return;
-    const { value: ok } = await Swal.fire({
+    const result = await Swal.fire({
         title: 'Excluir programação?',
         icon: 'warning',
         showCancelButton: true,
@@ -3290,7 +3624,7 @@ async function excluirProgramacao(id) {
         cancelButtonText: 'Cancelar',
         confirmButtonText: 'Excluir'
     });
-    if (ok) {
+    if (result.isConfirmed) {
         try {
             const { error } = await supabase.from('programacoes').delete().eq('id', id);
             if (error) throw error;
@@ -3586,7 +3920,7 @@ async function editarVeiculo(id) {
 
 async function excluirVeiculo(id) {
     if (estado.perfil?.funcao !== 'admin') return;
-    const { value: ok } = await Swal.fire({
+    const result = await Swal.fire({
         title: 'Excluir veículo?',
         icon: 'warning',
         showCancelButton: true,
@@ -3594,7 +3928,7 @@ async function excluirVeiculo(id) {
         cancelButtonText: 'Cancelar',
         confirmButtonText: 'Excluir'
     });
-    if (ok) {
+    if (result.isConfirmed) {
         try {
             const { error } = await supabase.from('veiculos').delete().eq('id', id);
             if (error) throw error;
@@ -3905,7 +4239,7 @@ async function editarLinhaEscala(id) {
 
 async function excluirLinhaEscala(id) {
     if (estado.perfil?.funcao !== 'admin') return;
-    const { value: ok } = await Swal.fire({
+    const result = await Swal.fire({
         title: 'Excluir registro?',
         text: 'Esta ação não pode ser desfeita.',
         icon: 'warning',
@@ -3914,7 +4248,7 @@ async function excluirLinhaEscala(id) {
         cancelButtonText: 'Cancelar',
         confirmButtonText: 'Excluir'
     });
-    if (ok) {
+    if (result.isConfirmed) {
         try {
             const { error } = await supabase.from('escala_hora_extra').delete().eq('id', id);
             if (error) throw error;

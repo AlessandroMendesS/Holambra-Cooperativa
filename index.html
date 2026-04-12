@@ -286,7 +286,7 @@
                 </div>
                 <div class="card op-equip-extra-card">
                     <p class="op-equip-extra-titulo"><i data-lucide="plus-square"></i> Equipamento fora da lista?</p>
-                    <p class="op-equip-extra-texto">Inclua nomes que não aparecem ao abrir OS.</p>
+                    <p class="op-equip-extra-texto">Inclua nomes que não aparecem ao abrir OS.                 </p>
                     <button type="button" class="btn btn-outline" id="btn-operacao-ir-incluir-equip" style="width: 100%;">
                         Incluir novo equipamento
                     </button>
@@ -503,7 +503,23 @@
                             <i data-lucide="clipboard-list"></i>
                         </div>
                         <h3>Meus Apontamentos</h3>
-                        <p>Registrar novo serviço</p>
+                        <p>Registrar horas e situação da OS (programada ou automática)</p>
+                    </button>
+
+                    <button class="menu-card" id="btn-menu-moinho-ideias">
+                        <div class="menu-card-icon">
+                            <i data-lucide="lightbulb"></i>
+                        </div>
+                        <h3>Moinho de Ideias</h3>
+                        <p>Registrar melhorias, antes/depois e ganhos</p>
+                    </button>
+
+                    <button class="menu-card" id="btn-menu-preventivas">
+                        <div class="menu-card-icon">
+                            <i data-lucide="shield-check"></i>
+                        </div>
+                        <h3>Preventivas</h3>
+                        <p>Manutenções preventivas</p>
                     </button>
                     
                     <button class="menu-card" id="btn-menu-historico">
@@ -598,7 +614,12 @@
             
             <section id="tela-dashboard" class="tela oculto">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
-                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Registrar Serviço</h2>
+                    <div style="flex: 1; min-width: 200px; padding-left: 5px;">
+                        <h2 id="tela-dashboard-titulo" style="margin: 0 0 0.35rem 0;">Apontamento de serviço</h2>
+                        <p id="tela-dashboard-subtitulo" style="margin: 0; font-size: 0.9rem; color: var(--cor-texto-suave); line-height: 1.45; max-width: 36rem;">
+                            Selecione a OS programada, preencha horários e informe se o trabalho foi concluído. Ao marcar «Sim» em concluído, a OS é encerrada e some das listas em aberto.
+                        </p>
+                    </div>
                     <button class="btn btn-outline" id="btn-voltar-menu" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem; flex-shrink: 0;">
                         <i data-lucide="arrow-left"></i> Voltar
                     </button>
@@ -1070,6 +1091,69 @@
                 </div>
                 <div id="lista-ferias">
                     
+                </div>
+            </section>
+
+            <section id="tela-moinho-ideias" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <h2 style="margin: 0 0 0.35rem 0;">Moinho de Ideias</h2>
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--cor-texto-suave); line-height: 1.45;">
+                            Veja abaixo as melhorias registradas pela equipe. Abra o formulário somente quando for incluir a sua.
+                        </p>
+                    </div>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-menu-moinho" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;">
+                        <i data-lucide="arrow-left"></i> Voltar
+                    </button>
+                </div>
+                <h3 class="section-heading" style="margin-bottom: 1rem;">Melhorias da equipe</h3>
+                <div id="lista-moinho-ideias" style="margin-bottom: 1.25rem;"></div>
+                <button type="button" class="btn btn-primario" id="btn-moinho-toggle-form" style="width: 100%; margin-bottom: 1rem;">
+                    <i data-lucide="plus-circle"></i> Nova melhoria
+                </button>
+                <div id="moinho-formulario-wrap" class="card oculto" style="margin-bottom: 1.5rem;">
+                    <form id="form-moinho-ideias">
+                        <div class="grupo-input">
+                            <label>Descrição da melhoria</label>
+                            <textarea id="moinho-descricao" class="textarea-campo" required placeholder="O que foi melhorado?"></textarea>
+                        </div>
+                        <div class="grid-duplo">
+                            <div class="grupo-input">
+                                <label>Situação antes</label>
+                                <textarea id="moinho-antes" class="textarea-campo" style="min-height: 100px;" placeholder="Como era antes"></textarea>
+                            </div>
+                            <div class="grupo-input">
+                                <label>Situação depois</label>
+                                <textarea id="moinho-depois" class="textarea-campo" style="min-height: 100px;" placeholder="Como ficou após a melhoria"></textarea>
+                            </div>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Ganhos obtidos</label>
+                            <textarea id="moinho-ganhos" class="textarea-campo" style="min-height: 80px;" placeholder="Ex.: redução de paradas, segurança, custo, tempo…"></textarea>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Imagens (antes, depois ou geral)</label>
+                            <input type="file" id="moinho-fotos" class="input-campo" multiple accept="image/*" style="padding-top: 13px;">
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                            <button type="submit" class="btn btn-primario"><i data-lucide="save"></i> Salvar melhoria</button>
+                            <button type="button" class="btn btn-outline" id="btn-moinho-cancelar-form">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section id="tela-preventivas" class="tela oculto">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; padding-top: 10px;">
+                    <h2 style="margin: 0; padding-left: 5px; flex: 1; min-width: 200px;">Preventivas</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-menu-preventivas" style="width: auto; padding: 0 1rem; height: 40px; font-size: 0.9rem;">
+                        <i data-lucide="arrow-left"></i> Voltar
+                    </button>
+                </div>
+                <div class="card centro" style="padding: 3rem 1.5rem;">
+                    <i data-lucide="construction" style="width: 56px; height: 56px; color: var(--cor-texto-suave); margin-bottom: 1rem;"></i>
+                    <p style="margin: 0; font-size: 1.05rem; color: #444; font-weight: 600;">Em breve — funcionalidade em desenvolvimento</p>
+                    <p style="margin: 0.75rem 0 0; font-size: 0.9rem; color: var(--cor-texto-suave); max-width: 28rem; margin-left: auto; margin-right: auto;">A área de manutenções preventivas será disponibilizada em uma próxima versão.</p>
                 </div>
             </section>
 
