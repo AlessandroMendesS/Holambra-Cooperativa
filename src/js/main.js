@@ -4730,6 +4730,38 @@ function obterOpcoesGraficoRoscaDashboard() {
     };
 }
 
+/** Rosca admin: vários status de OS — legenda mais compacta para não estourar à direita no mobile. */
+function obterOpcoesGraficoRoscaDashboardAdmin(numCategorias) {
+    const narrow = typeof window !== 'undefined' && window.innerWidth <= 520;
+    const w = typeof window !== 'undefined' ? window.innerWidth : 400;
+    const legMax = Math.max(100, Math.min(300, w - 48));
+    const extras = Math.max(0, (numCategorias || 1) - 2);
+    const padB = narrow ? 4 + extras * 12 : 8 + extras * 8;
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: narrow ? '50%' : '60%',
+        layout: {
+            padding: narrow
+                ? { top: 2, right: 2, bottom: padB, left: 2 }
+                : { top: 8, right: 8, bottom: padB, left: 8 }
+        },
+        plugins: {
+            legend: {
+                position: 'bottom',
+                maxWidth: legMax,
+                align: 'center',
+                labels: {
+                    usePointStyle: true,
+                    boxWidth: narrow ? 6 : 8,
+                    padding: narrow ? 4 : 10,
+                    font: { size: narrow ? 9 : 11 }
+                }
+            }
+        }
+    };
+}
+
 function redimensionarChartsDashboardAtrasado() {
     if (typeof Chart === 'undefined') return;
     const ids = ['chart-status-mes', 'chart-admin-os-status'];
@@ -4955,6 +4987,7 @@ async function renderizarChartsAdmin() {
     destruirChartCanvas('chart-admin-os-status');
     const ctx2 = document.getElementById('chart-admin-os-status');
     if (ctx2 && typeof Chart !== 'undefined') {
+        const nCat = keys.length || 1;
         new Chart(ctx2, {
             type: 'doughnut',
             data: {
@@ -4969,7 +5002,7 @@ async function renderizarChartsAdmin() {
                     }
                 ]
             },
-            options: obterOpcoesGraficoRoscaDashboard()
+            options: obterOpcoesGraficoRoscaDashboardAdmin(nCat)
         });
     }
 
