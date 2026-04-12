@@ -44,10 +44,13 @@ body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
     width: 100%;
     max-width: 100%;
     position: relative;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 body::before {
@@ -68,7 +71,11 @@ body::before {
     max-width: 480px;
     margin: 0 auto;
     padding: 20px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: center; 
@@ -88,7 +95,7 @@ body::before {
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
     position: fixed;
     top: 0; left: 0; right: 0;
-    z-index: 50;
+    z-index: 80;
     height: 70px;
 }
 
@@ -720,12 +727,19 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
     }
     
     .conteiner { 
-        padding: 12px; 
+        padding: 12px;
+        padding-left: max(12px, env(safe-area-inset-left, 0px));
+        padding-right: max(12px, env(safe-area-inset-right, 0px));
+        padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
         margin-left: 0;
         margin-right: 0;
+    }
+
+    .cabecalho-app:not(.oculto) ~ .conteiner {
+        justify-content: flex-start;
     }
     
     .card { 
@@ -956,20 +970,29 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
 #tela-login {
     background: transparent;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
+}
+
+#tela-login.oculto,
+#tela-login[hidden] {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 #tela-login .conteiner {
     background: transparent;
 }
 
+/* Evita 100vw no mobile (barra de endereço / overflow lateral) */
 .login-hero-visual {
     position: absolute;
     top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100vw;
-    max-width: 100vw;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
     height: min(42vw, 220px);
     background:
         linear-gradient(180deg, rgba(0, 65, 117, 0.12) 0%, transparent 65%),

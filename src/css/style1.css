@@ -69,19 +69,21 @@ body::before {
 
 .conteiner {
     max-width: 920px;
-    padding: 28px 22px 48px;
+    padding: 28px max(22px, env(safe-area-inset-right, 0px)) max(48px, env(safe-area-inset-bottom, 0px)) max(22px, env(safe-area-inset-left, 0px));
     justify-content: center;
+    min-height: 100dvh;
 }
 
 .cabecalho-app:not(.oculto) ~ .conteiner {
-    padding-top: 96px;
+    padding-top: max(96px, calc(64px + env(safe-area-inset-top, 0px)));
     justify-content: flex-start;
 }
 
 
 .cabecalho-app {
-    height: 64px;
-    padding: 0 20px 0 22px;
+    height: auto;
+    min-height: 64px;
+    padding: max(10px, env(safe-area-inset-top, 0px)) 20px 10px 22px;
     background: rgba(255, 255, 255, 0.82) !important;
     backdrop-filter: blur(16px) saturate(1.2);
     -webkit-backdrop-filter: blur(16px) saturate(1.2);
@@ -147,8 +149,11 @@ body::before {
 
 
 .menu-overlay {
+    z-index: 200 !important;
     background: rgba(10, 22, 40, 0.45) !important;
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    touch-action: pan-y;
 }
 
 .menu-conteudo {
@@ -158,6 +163,7 @@ body::before {
     border-right: 1px solid var(--borda);
     box-shadow: var(--sombra-lg) !important;
     padding: 1.75rem !important;
+    padding-bottom: max(1.75rem, env(safe-area-inset-bottom, 0px)) !important;
     gap: 0.65rem !important;
     overflow-y: auto;
     overflow-x: hidden;
@@ -558,7 +564,29 @@ h2 {
     flex: 1;
 }
 
-.chart-card canvas {
+.chart-card--doughnut {
+    min-height: 0;
+}
+
+.chart-canvas-wrap--doughnut {
+    position: relative;
+    width: 100%;
+    height: 230px;
+    min-height: 210px;
+    max-width: 100%;
+    flex: 0 0 auto;
+}
+
+.chart-canvas-wrap--doughnut canvas {
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
+.chart-card:not(.chart-card--doughnut) canvas {
     flex: 1;
     min-height: 200px;
     max-height: 280px;
@@ -571,12 +599,23 @@ h2 {
         overflow: visible;
         padding-bottom: 1.5rem;
     }
-    .chart-card canvas {
+    .chart-card:not(.chart-card--doughnut) canvas {
         min-height: 220px;
         max-height: none;
     }
+    .chart-canvas-wrap--doughnut {
+        height: 240px;
+        min-height: 220px;
+    }
     .dashboard-charts-row {
         overflow-x: visible;
+    }
+}
+
+@media (min-width: 768px) {
+    .chart-canvas-wrap--doughnut {
+        height: 260px;
+        min-height: 240px;
     }
 }
 

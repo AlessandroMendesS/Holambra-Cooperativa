@@ -468,19 +468,37 @@ async function carregarResumoRelatorioOSAbertas() {
     }
 }
 
+function definirTelaVisivel(el, visivel) {
+    if (!el) return;
+    if (visivel) {
+        el.classList.remove('oculto');
+        el.removeAttribute('hidden');
+        el.removeAttribute('aria-hidden');
+    } else {
+        el.classList.add('oculto');
+        el.setAttribute('hidden', '');
+        el.setAttribute('aria-hidden', 'true');
+    }
+}
+
 async function navegarPara(idTela, opts = {}) {
     if (idTela !== 'minhasSolicitacoes' && estado.realtimeChannelOS) {
         supabase.removeChannel(estado.realtimeChannelOS);
         estado.realtimeChannelOS = null;
     }
     window.scrollTo(0, 0);
-    Object.values(telas).forEach(el => { if (el) el.classList.add('oculto'); });
+    Object.values(telas).forEach((el) => {
+        if (el) definirTelaVisivel(el, false);
+    });
 
     const telaAlvo = telas[idTela];
     if (telaAlvo) {
-        telaAlvo.classList.remove('oculto');
-        lucide.createIcons();
+        definirTelaVisivel(telaAlvo, true);
+    } else {
+        console.warn('navegarPara: tela desconhecida', idTela);
+        definirTelaVisivel(telas.login, true);
     }
+    lucide.createIcons();
 
     if (cabecalho) {
         if (idTela === 'login' || idTela === 'cadastro' || idTela === 'cadastroOperacao') cabecalho.classList.add('oculto');
@@ -3180,6 +3198,64 @@ document.getElementById('btn-download-os-abertas')?.addEventListener('click', as
     Toast.fire({ icon: 'success', title: 'Download concluído!' });
 });
 
+document.getElementById('btn-download-avaliacoes')?.addEventListener('click', async () => {
+    Swal.fire({
+        title: 'Gerando planilha de avaliações…',
+        didOpen: () => Swal.showLoading()
+    });
+    const { data: ordens, error } = await supabase
+        .from('ordens_servico')
+        .select('*')
+        .not('avaliacao_solicitante', 'is', null)
+        .order('avaliacao_solicitante_em', { ascending: false });
+    Swal.close();
+    if (error) {
+        const msg = String(error.message || '');
+        mostrarErro(
+            'Erro',
+            msg.toLowerCase().includes('column') || msg.toLowerCase().includes('schema')
+                ? 'Colunas de avaliação ausentes. Execute supabase_add_setor_centro_avaliacao_os.sql no Supabase.'
+                : msg
+        );
+        return;
+    }
+    const arr = ordens || [];
+    const idsSol = [...new Set(arr.map((o) => o.id_solicitante).filter(Boolean))];
+    let nomePorId = {};
+    let emailPorId = {};
+    if (idsSol.length) {
+        const { data: perfis } = await supabase.from('perfis').select('id, nome_completo, email').in('id', idsSol);
+        (perfis || []).forEach((p) => {
+            nomePorId[p.id] = p.nome_completo || '';
+            emailPorId[p.id] = p.email || '';
+        });
+    }
+    const dadosFormatados = arr.length
+        ? arr.map((os) => ({
+              'Número OS': os.numero_solicitacao || '',
+              'Nota (1 a 5)': os.avaliacao_solicitante != null ? Number(os.avaliacao_solicitante) : '',
+              'Data/hora da avaliação': os.avaliacao_solicitante_em
+                  ? new Date(os.avaliacao_solicitante_em).toLocaleString('pt-BR')
+                  : '',
+              'Solicitante': nomePorId[os.id_solicitante] || '',
+              'E-mail solicitante': emailPorId[os.id_solicitante] || '',
+              'Setor / Unidade': os.setor || os.unidade || '',
+              'Setor (código MT)': os.setor_centro || '',
+              Equipamento: os.equipamento || '',
+              'Centro de trabalho': os.centro_trabalho || '',
+              Status: os.status || '',
+              Descrição: (os.descricao || os.titulo || '').replace(/\s+/g, ' ').trim(),
+              'OS criada em': os.criado_em ? new Date(os.criado_em).toLocaleString('pt-BR') : '',
+              'Última atualização': os.atualizado_em ? new Date(os.atualizado_em).toLocaleString('pt-BR') : ''
+          }))
+        : [{ Aviso: 'Nenhuma avaliação registrada até o momento' }];
+    const ws = XLSX.utils.json_to_sheet(dadosFormatados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Avaliacoes');
+    XLSX.writeFile(wb, `Relatorio_avaliacoes_OS_${new Date().toISOString().split('T')[0]}.xlsx`);
+    Toast.fire({ icon: 'success', title: 'Avaliações exportadas!' });
+});
+
 const DEPARTAMENTOS = ['Elétrica', 'Mecânica', 'Automação'];
 
 function numeroOsParaProgramacao(os, osId) {
@@ -4633,6 +4709,48 @@ function destruirChartCanvas(canvasId) {
     } catch (_) { /* noop */ }
 }
 
+function obterOpcoesGraficoRoscaDashboard() {
+    const narrow = typeof window !== 'undefined' && window.innerWidth <= 520;
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: narrow ? '52%' : '62%',
+        layout: { padding: narrow ? 6 : 14 },
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    boxWidth: narrow ? 7 : 9,
+                    padding: narrow ? 8 : 14,
+                    font: { size: narrow ? 10 : 12 }
+                }
+            }
+        }
+    };
+}
+
+function redimensionarChartsDashboardAtrasado() {
+    if (typeof Chart === 'undefined') return;
+    const ids = ['chart-status-mes', 'chart-admin-os-status'];
+    const rodar = () => {
+        ids.forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            try {
+                const ch = Chart.getChart(el);
+                if (ch) {
+                    ch.resize();
+                    ch.update('none');
+                }
+            } catch (_) { /* noop */ }
+        });
+    };
+    requestAnimationFrame(rodar);
+    setTimeout(rodar, 120);
+    setTimeout(rodar, 400);
+}
+
 function obterUltimos7DiasLabelsISO() {
     const labels = [];
     for (let i = 6; i >= 0; i--) {
@@ -4804,29 +4922,11 @@ async function renderizarChartsManutencao(uid) {
                     }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '62%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
-                }
-            }
+            options: obterOpcoesGraficoRoscaDashboard()
         });
     }
 
-    requestAnimationFrame(() => {
-        ['chart-status-mes'].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el && typeof Chart !== 'undefined') {
-                const ch = Chart.getChart(el);
-                if (ch) {
-                    ch.update('none');
-                    ch.resize();
-                }
-            }
-        });
-    });
+    redimensionarChartsDashboardAtrasado();
 }
 
 async function renderizarChartsAdmin() {
@@ -4869,29 +4969,11 @@ async function renderizarChartsAdmin() {
                     }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '58%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
-                }
-            }
+            options: obterOpcoesGraficoRoscaDashboard()
         });
     }
 
-    requestAnimationFrame(() => {
-        ['chart-admin-os-status'].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el && typeof Chart !== 'undefined') {
-                const ch = Chart.getChart(el);
-                if (ch) {
-                    ch.update('none');
-                    ch.resize();
-                }
-            }
-        });
-    });
+    redimensionarChartsDashboardAtrasado();
 }
 
 async function carregarDashboardInicio() {
@@ -4929,6 +5011,17 @@ async function carregarDashboardInicio() {
     } else {
         await preencherKpiManutencao(uid);
         await renderizarChartsManutencao(uid);
+    }
+    if (!window.__holambraDashboardResize) {
+        window.__holambraDashboardResize = true;
+        let rt;
+        window.addEventListener('resize', () => {
+            clearTimeout(rt);
+            rt = setTimeout(() => redimensionarChartsDashboardAtrasado(), 200);
+        });
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => redimensionarChartsDashboardAtrasado(), 350);
+        });
     }
     lucide.createIcons();
 }

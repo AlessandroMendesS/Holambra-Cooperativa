@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, viewport-fit=cover">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -75,7 +75,7 @@
             </div>
             <div class="header-usuario" style="display: flex; align-items: center; gap: 10px;">
                 <span id="header-nome-usuario" style="font-size: 0.9rem; font-weight: 600; color: var(--cor-primaria); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                <button id="alternar-menu" class="menu-btn">
+                <button type="button" id="alternar-menu" class="menu-btn" aria-label="Abrir menu">
                     <i data-lucide="menu" style="width: 28px; height: 28px;"></i>
                 </button>
             </div>
@@ -470,9 +470,11 @@
                         <h4 class="chart-title">Apontamentos — últimos 7 dias</h4>
                         <div id="dash-apontamentos-7d-simples" class="apt-bars-chart-root" aria-live="polite"></div>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card chart-card--doughnut">
                         <h4 class="chart-title">Status (mês atual)</h4>
-                        <canvas id="chart-status-mes" aria-label="Gráfico de status"></canvas>
+                        <div class="chart-canvas-wrap chart-canvas-wrap--doughnut">
+                            <canvas id="chart-status-mes" aria-label="Gráfico de status"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -481,9 +483,11 @@
                         <h4 class="chart-title">Apontamentos — últimos 7 dias (equipe)</h4>
                         <div id="dash-admin-apontamentos-7d-simples" class="apt-bars-chart-root" aria-live="polite"></div>
                     </div>
-                    <div class="chart-card">
+                    <div class="chart-card chart-card--doughnut">
                         <h4 class="chart-title">Ordens de serviço por status</h4>
-                        <canvas id="chart-admin-os-status" aria-label="Gráfico OS"></canvas>
+                        <div class="chart-canvas-wrap chart-canvas-wrap--doughnut">
+                            <canvas id="chart-admin-os-status" aria-label="Gráfico OS"></canvas>
+                        </div>
                     </div>
                 </div>
 
@@ -805,9 +809,17 @@
 
                 <div class="card">
                     <h3 style="font-size: 1.1rem; margin-bottom: 15px;">Relatórios</h3>
-                    <button id="btn-exportar-excel" class="btn btn-secundario">
-                        <i data-lucide="download"></i> Baixar Planilha Excel
-                    </button>
+                    <div style="display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
+                        <button id="btn-exportar-excel" class="btn btn-secundario" style="width: 100%; max-width: 320px;">
+                            <i data-lucide="download"></i> Baixar Planilha Excel
+                        </button>
+                        <button type="button" id="btn-download-avaliacoes" class="btn btn-secundario" style="width: 100%; max-width: 320px;">
+                            <i data-lucide="star"></i> Baixar todas as avaliações
+                        </button>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--cor-texto-suave); margin: 12px 0 0 0; max-width: 36rem;">
+                        A planilha de avaliações reúne as notas de 1 a 5 dadas pelos solicitantes às OS concluídas (colunas no Supabase: <code style="font-size:0.75rem;">avaliacao_solicitante</code>).
+                    </p>
                 </div>
 
                 <div class="card" style="margin-top: 1.5rem;">
