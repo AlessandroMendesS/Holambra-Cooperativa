@@ -26,6 +26,57 @@ function normalizarNumeroWhatsapp(valor) {
     return String(valor || '').replace(/\D/g, '');
 }
 
+function normalizarTextoBusca(valor) {
+    return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function mensagemErroCadastroAuth(error) {
+    const msg = String(error?.message || '').trim();
+    const low = msg.toLowerCase();
+    if (low.includes('already registered')) return 'Este e-mail já está cadastrado.';
+    if (low.includes('database error saving new user')) {
+        return 'Falha ao criar conta no banco (trigger/perfil). Tente novamente. Se persistir, ajuste a função de criação automática de perfil no Supabase.';
+    }
+    return msg || 'Não foi possível criar a conta.';
+}
+
+async function criarContaAuthComFallback(email, senha, metadata) {
+    const nome = String(metadata?.nome_completo || '').trim();
+    const tipoPerfil = String(metadata?.tipo_perfil || '').trim();
+    const tentativasMeta = [
+        metadata || {},
+        { nome_completo: nome, tipo_perfil: tipoPerfil || null },
+        { nome_completo: nome || null },
+        {}
+    ];
+
+    let ultimoErro = null;
+    for (const meta of tentativasMeta) {
+        const payload = {
+            email,
+            password: senha,
+            options: { data: meta }
+        };
+        const resp = await supabase.auth.signUp(payload);
+        if (!resp.error) return resp;
+        ultimoErro = resp.error;
+
+        const low = String(resp.error.message || '').toLowerCase();
+        const ehErroDeBanco = low.includes('database error saving new user');
+        const ehDuplicado = low.includes('already registered');
+        if (!ehErroDeBanco || ehDuplicado) {
+            return resp;
+        }
+    }
+
+    return { data: null, error: ultimoErro };
+}
+
 function emailTecnicoPorCpf(cpf) {
     const cpfNum = String(cpf || '').replace(/\D/g, '');
     if (!cpfNum) return '';
@@ -1079,7 +1130,8 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             const { data: listMail, error: errMail } = await supabase
                 .from('perfis')
                 .select('email, nome_completo, cpf')
-                .ilike('email', raw);
+                .ilike('email', raw)
+                .limit(2);
             if (errMail) {
                 mostrarErro('Falha no Login', 'Erro ao consultar o cadastro. Tente novamente.');
                 return;
@@ -1096,14 +1148,16 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             const { data: perfisData, error: perfilError } = await supabase
                 .from('perfis')
                 .select('email, nome_completo, cpf')
-                .ilike('nome_completo', `%${raw}%`);
+                .ilike('nome_completo', `%${raw}%`)
+                .limit(20);
 
             if (perfilError || !perfisData || perfisData.length === 0) {
                 mostrarErro('Falha no Login', 'Login não encontrado. Use o nome completo, e-mail ou número cadastrado.');
                 return;
             }
 
-            perfilData = perfisData.find((p) => p.nome_completo && p.nome_completo.toLowerCase() === raw.toLowerCase());
+            const rawNormalizado = normalizarTextoBusca(raw);
+            perfilData = perfisData.find((p) => normalizarTextoBusca(p.nome_completo) === rawNormalizado);
             if (!perfilData && perfisData.length === 1) {
                 perfilData = perfisData[0];
             } else if (!perfilData && perfisData.length > 1) {
@@ -1119,7 +1173,7 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             const { data: porNumero, error: errNumero } = await supabase
                 .from('perfis')
                 .select('email, nome_completo, cpf')
-                .eq('email', rawNumero)
+                .or(`telefone.eq.${rawNumero},email.eq.${rawNumero},cpf.eq.${rawNumero}`)
                 .maybeSingle();
             if (!errNumero && porNumero) {
                 perfilData = porNumero;
@@ -1266,18 +1320,24 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
     const whatsapp = normalizarNumeroWhatsapp(whatsappInput);
     const senha = document.getElementById('cad-senha').value;
     const cpf = document.getElementById('cad-cpf').value.replace(/\D/g, '');
-    const email = emailTecnicoPorCpf(cpf);
+    const email = document.getElementById('cad-email')?.value?.trim().toLowerCase();
     if (!whatsapp || whatsapp.length < 10) {
         mostrarErro('Cadastro', 'Informe um número de WhatsApp válido com DDD.');
         return;
     }
+    if (!email || !email.includes('@')) {
+        mostrarErro('Cadastro', 'Informe um e-mail válido para cadastro.');
+        return;
+    }
 
     const metaData = {
-        nome_completo: document.getElementById('cad-nome').value,
-        cpf: document.getElementById('cad-cpf').value,
+        nome_completo: document.getElementById('cad-nome').value.trim(),
+        cpf,
+        email,
         data_nascimento: document.getElementById('cad-nasc').value,
         tag: document.getElementById('cad-tag').value,
-        whatsapp: whatsapp,
+        whatsapp,
+        telefone: whatsapp,
         tipo_perfil: 'manutencao'
     };
 
@@ -1288,25 +1348,20 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
         didOpen: () => Swal.showLoading()
     });
 
-    const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: senha,
-        options: {
-            data: metaData
-        }
-    });
+    const { data, error } = await criarContaAuthComFallback(email, senha, metaData);
 
     Swal.close();
 
     if (error) {
-        let msg = error.message;
-        if (msg.includes('already registered')) msg = 'Este email já está cadastrado.';
-        mostrarErro('Erro no Cadastro', msg);
+        mostrarErro('Erro no Cadastro', mensagemErroCadastroAuth(error));
         return;
     }
 
     if (data.user) {
-        await supabase.from('perfis').update({ tipo_perfil: 'manutencao', email: whatsapp, telefone: whatsapp }).eq('id', data.user.id);
+        await supabase
+            .from('perfis')
+            .update({ tipo_perfil: 'manutencao', email, telefone: whatsapp, cpf })
+            .eq('id', data.user.id);
         const fotoEl = document.getElementById('cad-foto');
         if (data.session && fotoEl?.files?.length) {
             try {
@@ -1369,7 +1424,7 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
 
 document.getElementById('formulario-cadastro-operacao')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('cad-op-email').value.trim();
+    const email = document.getElementById('cad-op-email').value.trim().toLowerCase();
     const senha = document.getElementById('cad-op-senha').value;
     const nome = document.getElementById('cad-op-nome').value.trim();
     const telefone = document.getElementById('cad-op-telefone').value.trim();
@@ -1378,14 +1433,19 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
     const funcao_cargo = document.getElementById('cad-op-funcao').value.trim();
 
     Swal.fire({ title: 'Criando conta...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await criarContaAuthComFallback(email, senha, {
+        nome_completo: nome,
         email,
-        password: senha,
-        options: { data: { nome_completo: nome } }
+        telefone: telefone || null,
+        setor: setorUnidade || null,
+        unidade: setorUnidade || null,
+        funcao_cargo: funcao_cargo || null,
+        setor_centro_padrao: setorCentroPadrao,
+        tipo_perfil: 'operacao'
     });
     Swal.close();
     if (error) {
-        mostrarErro('Erro no Cadastro', error.message.includes('already') ? 'Este e-mail já está cadastrado.' : error.message);
+        mostrarErro('Erro no Cadastro', mensagemErroCadastroAuth(error));
         return;
     }
     if (data.user) {
