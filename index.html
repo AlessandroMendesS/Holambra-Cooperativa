@@ -6,7 +6,7 @@
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdn.sheetjs.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://cdn.sheetjs.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.ultramsg.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
     <title>Sistema de Gestão de Manutenção</title>
     
     <link rel="icon" type="image/png" href="images/favicon.png">
@@ -156,8 +156,8 @@
                             <input type="text" id="cad-cpf" class="input-campo" placeholder="000.000.000-00" required>
                         </div>
                         <div class="grupo-input">
-                            <label>Email Corporativo <span style="font-weight:400; color:#888;">(opcional)</span></label>
-                            <input type="email" id="cad-email" class="input-campo" placeholder="seu.email@holambra.com.br">
+                            <label>Número do WhatsApp <span style="font-weight:400; color:#888;">(com DDD)</span></label>
+                            <input type="tel" id="cad-whatsapp" class="input-campo" placeholder="(14) 99859-8003" required>
                         </div>
                         <div class="grupo-input">
                             <label>Senha de Acesso</label>
