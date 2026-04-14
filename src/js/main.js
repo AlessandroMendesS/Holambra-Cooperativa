@@ -16,6 +16,22 @@ const ADMIN_ACCOUNTS = [
     { email: 'tanielli.costa@holambra.com.br', senha: 'Holambra@2026', nome: 'Tanielli Costa' }
 ];
 
+const ULTRAMSG_CONFIG = {
+    instanceId: 'instance170085',
+    token: 'bulzhjv9i0i2k78a',
+    numeroTeste: '5514998598003'
+};
+
+function normalizarNumeroWhatsapp(valor) {
+    return String(valor || '').replace(/\D/g, '');
+}
+
+function emailTecnicoPorCpf(cpf) {
+    const cpfNum = String(cpf || '').replace(/\D/g, '');
+    if (!cpfNum) return '';
+    return `${cpfNum}@manutencao.holambra`;
+}
+
 function normalizarValorHoras(valor) {
     if (typeof valor === 'number' && Number.isFinite(valor)) return valor;
     const texto = String(valor ?? '').trim();
@@ -1010,7 +1026,7 @@ document.getElementById('btn-alternar-login-email')?.addEventListener('click', (
     const irParaEmail = hid.value !== 'email';
     hid.value = irParaEmail ? 'email' : 'nome';
     label.textContent = irParaEmail ? 'Login (cadastro operação)' : 'Login (manutenção)';
-    input.placeholder = irParaEmail ? 'Email cadastrado no perfil' : 'E-mail ou nome cadastrado no perfil';
+    input.placeholder = irParaEmail ? 'Email cadastrado no perfil' : 'Nome, e-mail ou número cadastrado no perfil';
     input.type = 'text';
     input.autocomplete = irParaEmail ? 'username' : 'username';
     btn.textContent = irParaEmail ? 'Entrar com login (manutenção)' : 'Entrar com login (operação)';
@@ -1039,23 +1055,30 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
         } else {
             const { data: porEmail, error: errEmail } = await supabase
                 .from('perfis')
-                .select('email')
+                .select('email, cpf')
                 .eq('email', inputLogin.trim())
                 .maybeSingle();
-            if (errEmail || !porEmail?.email) {
+            if (errEmail || !porEmail) {
                 mostrarErro('Falha no Login', 'Login não encontrado no cadastro de operação.');
                 return;
             }
-            email = porEmail.email;
+            email = porEmail.email && String(porEmail.email).includes('@')
+                ? porEmail.email
+                : emailTecnicoPorCpf(porEmail.cpf);
+            if (!email) {
+                mostrarErro('Falha no Login', 'Não foi possível identificar o e-mail técnico de acesso.');
+                return;
+            }
         }
     } else if (!isAdmin) {
         const raw = inputLogin.trim();
         let perfilData = null;
+        const rawNumero = normalizarNumeroWhatsapp(raw);
 
         if (raw.includes('@')) {
             const { data: listMail, error: errMail } = await supabase
                 .from('perfis')
-                .select('email, nome_completo')
+                .select('email, nome_completo, cpf')
                 .ilike('email', raw);
             if (errMail) {
                 mostrarErro('Falha no Login', 'Erro ao consultar o cadastro. Tente novamente.');
@@ -1072,11 +1095,11 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
         if (!perfilData) {
             const { data: perfisData, error: perfilError } = await supabase
                 .from('perfis')
-                .select('email, nome_completo')
+                .select('email, nome_completo, cpf')
                 .ilike('nome_completo', `%${raw}%`);
 
             if (perfilError || !perfisData || perfisData.length === 0) {
-                mostrarErro('Falha no Login', 'Login não encontrado. Use o e-mail ou o nome cadastrado no perfil.');
+                mostrarErro('Falha no Login', 'Login não encontrado. Use o nome completo, e-mail ou número cadastrado.');
                 return;
             }
 
@@ -1092,12 +1115,29 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             }
         }
 
-        if (!perfilData || !perfilData.email) {
-            mostrarErro('Falha no Login', 'E-mail de acesso não encontrado para este login.');
+        if (!perfilData && rawNumero) {
+            const { data: porNumero, error: errNumero } = await supabase
+                .from('perfis')
+                .select('email, nome_completo, cpf')
+                .eq('email', rawNumero)
+                .maybeSingle();
+            if (!errNumero && porNumero) {
+                perfilData = porNumero;
+            }
+        }
+
+        if (!perfilData) {
+            mostrarErro('Falha no Login', 'Login não encontrado. Use o nome completo, e-mail ou número cadastrado.');
             return;
         }
 
-        email = perfilData.email;
+        email = perfilData.email && String(perfilData.email).includes('@')
+            ? perfilData.email
+            : emailTecnicoPorCpf(perfilData.cpf);
+        if (!email) {
+            mostrarErro('Falha no Login', 'Não foi possível identificar o e-mail técnico de acesso.');
+            return;
+        }
     }
 
     let { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
@@ -1222,16 +1262,22 @@ function preencherSelectsCadastroOperacao() {
 document.getElementById('formulario-cadastro').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    let email = document.getElementById('cad-email').value.trim();
+    const whatsappInput = document.getElementById('cad-whatsapp').value.trim();
+    const whatsapp = normalizarNumeroWhatsapp(whatsappInput);
     const senha = document.getElementById('cad-senha').value;
     const cpf = document.getElementById('cad-cpf').value.replace(/\D/g, '');
-    if (!email) email = `${cpf}@manutencao.holambra`;
+    const email = emailTecnicoPorCpf(cpf);
+    if (!whatsapp || whatsapp.length < 10) {
+        mostrarErro('Cadastro', 'Informe um número de WhatsApp válido com DDD.');
+        return;
+    }
 
     const metaData = {
         nome_completo: document.getElementById('cad-nome').value,
         cpf: document.getElementById('cad-cpf').value,
         data_nascimento: document.getElementById('cad-nasc').value,
         tag: document.getElementById('cad-tag').value,
+        whatsapp: whatsapp,
         tipo_perfil: 'manutencao'
     };
 
@@ -1260,7 +1306,7 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
     }
 
     if (data.user) {
-        await supabase.from('perfis').update({ tipo_perfil: 'manutencao', email: email }).eq('id', data.user.id);
+        await supabase.from('perfis').update({ tipo_perfil: 'manutencao', email: whatsapp, telefone: whatsapp }).eq('id', data.user.id);
         const fotoEl = document.getElementById('cad-foto');
         if (data.session && fotoEl?.files?.length) {
             try {
@@ -2886,7 +2932,7 @@ async function carregarDadosAdmin() {
 
     const { data: usuariosData, error: usuariosError } = await supabase
         .from('perfis')
-        .select('id, nome_completo, email, tag, funcao, criado_em, foto_url')
+        .select('id, nome_completo, email, telefone, cpf, tag, funcao, criado_em, foto_url')
         .order('nome_completo');
 
     if (usuariosData) {
@@ -2920,7 +2966,7 @@ async function carregarDadosAdmin() {
                         <div style="padding-top: 1rem;">
                             <p style="font-size:0.85rem; color:#666; margin-bottom:4px;">
                                 <i data-lucide="mail" style="width:14px; height:14px; vertical-align:middle;"></i> 
-                                <strong>Email:</strong> ${user.email || 'N/A'}
+                                <strong>Contato (e-mail/WhatsApp):</strong> ${user.email || user.telefone || 'N/A'}
                             </p>
                             ${user.tag ? `<p style="font-size:0.85rem; color:#666; margin-bottom:4px;">
                                 <i data-lucide="briefcase" style="width:14px; height:14px; vertical-align:middle;"></i> 
@@ -2931,6 +2977,9 @@ async function carregarDadosAdmin() {
                                 <strong>Cadastrado em:</strong> ${dataCadastro}
                             </p>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem;">
+                                <button class="btn btn-outline" style="font-size: 0.85rem; padding: 0.5rem; height: auto; grid-column: 1 / -1;" onclick="trocarContatoPorNumero('${user.id}', '${String(user.email || '').replace(/'/g, '&#39;')}')">
+                                    <i data-lucide="smartphone" style="width:14px; height:14px;"></i> Trocar e-mail por número
+                                </button>
                                 <button class="btn btn-secundario" style="font-size: 0.85rem; padding: 0.5rem; height: auto;" onclick="editarBancoHoras('${user.id}')">
                                     <i data-lucide="clock" style="width:14px; height:14px;"></i> Banco de Horas
                                 </button>
@@ -3494,6 +3543,37 @@ async function carregarProgramacoesAdmin() {
 
 document.getElementById('prog-admin-os-select')?.addEventListener('change', atualizarProgAdminCheckboxesDesabilitados);
 
+async function enviarWhatsappUltraMsg(numeroDestino, mensagem) {
+    const numero = normalizarNumeroWhatsapp(numeroDestino);
+    if (!numero) throw new Error('Número de WhatsApp inválido.');
+    if (!ULTRAMSG_CONFIG.instanceId || !ULTRAMSG_CONFIG.token) {
+        throw new Error('Configure ULTRAMSG_CONFIG.instanceId e ULTRAMSG_CONFIG.token no arquivo main.js.');
+    }
+
+    const url = `https://api.ultramsg.com/${encodeURIComponent(ULTRAMSG_CONFIG.instanceId)}/messages/chat`;
+    const body = new URLSearchParams({
+        token: ULTRAMSG_CONFIG.token,
+        to: numero,
+        body: mensagem
+    });
+
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok || (data && data.sent === false)) {
+        throw new Error(data?.message || `Falha no envio (${resp.status}).`);
+    }
+    return data;
+}
+
+function mensagemProgramacaoWhatsapp(nomeAdmin) {
+    const nome = String(nomeAdmin || 'Admin').trim();
+    return `Você recebeu uma nova programação atribuída por ${nome}. Entre no sistema para ver mais detalhes.`;
+}
+
 document.getElementById('prog-admin-btn-programar')?.addEventListener('click', async () => {
     if (estado.perfil?.funcao !== 'admin') return;
     const osId = document.getElementById('prog-admin-os-select')?.value || '';
@@ -3567,16 +3647,48 @@ document.getElementById('prog-admin-btn-programar')?.addEventListener('click', a
             throw e3;
         }
 
+        const nomeAdmin = (estado.perfil?.nome_completo || 'Admin').trim();
+        const mensagemWhatsapp = mensagemProgramacaoWhatsapp(nomeAdmin);
+        const contatosPorId = new Map();
+        try {
+            const { data: perfisContato } = await supabase
+                .from('perfis')
+                .select('id, email, telefone')
+                .in('id', toAdd);
+            (perfisContato || []).forEach((p) => {
+                const contatoBruto = p?.telefone || p?.email || '';
+                const numero = normalizarNumeroWhatsapp(contatoBruto);
+                if (numero) contatosPorId.set(p.id, numero);
+            });
+        } catch (_) {
+            // Mantem programação mesmo se falhar busca de contatos.
+        }
+
+        const envios = await Promise.allSettled(
+            toAdd
+                .map((cid) => contatosPorId.get(cid))
+                .filter(Boolean)
+                .map((numero) => enviarWhatsappUltraMsg(numero, mensagemWhatsapp))
+        );
+        const totalFalhasWhatsapp = envios.filter((r) => r.status === 'rejected').length;
+
         const n = toAdd.length;
-        mostrarSucesso(
-            jaProgramada
+        const msgBase = jaProgramada
                 ? n > 1
                     ? `${n} colaboradores adicionados à mesma OS na programação diária.`
                     : 'Colaborador adicionado à mesma OS na programação diária.'
                 : n > 1
                   ? `OS programada para ${n} colaboradores! Todos verão na programação diária e no apontamento.`
-                  : 'OS programada! O colaborador verá na Programação diária e no apontamento.'
-        );
+                  : 'OS programada! O colaborador verá na Programação diária e no apontamento.';
+
+        if (totalFalhasWhatsapp > 0) {
+            Toast.fire({
+                icon: 'warning',
+                title: `${msgBase} WhatsApp enviado com ${totalFalhasWhatsapp} falha(s).`
+            });
+        } else {
+            mostrarSucesso(msgBase);
+        }
         const sel = document.getElementById('prog-admin-os-select');
         if (sel) sel.value = '';
         document.querySelectorAll('.prog-admin-colab-cb').forEach((cb) => {
@@ -3721,6 +3833,22 @@ document.getElementById('btn-nova-programacao')?.addEventListener('click', async
                 problema: form.problema
             }]);
             if (error) throw error;
+            try {
+                const { data: perfilDestino } = await supabase
+                    .from('perfis')
+                    .select('email, telefone')
+                    .eq('id', form.id_colaborador)
+                    .maybeSingle();
+                const numeroDestino = normalizarNumeroWhatsapp(perfilDestino?.telefone || perfilDestino?.email || '');
+                if (numeroDestino) {
+                    await enviarWhatsappUltraMsg(
+                        numeroDestino,
+                        mensagemProgramacaoWhatsapp(estado.perfil?.nome_completo || 'Admin')
+                    );
+                }
+            } catch (_) {
+                // Nao impede a programacao manual caso falhe o envio do WhatsApp.
+            }
             mostrarSucesso('Programação criada!');
             carregarProgramacoesAdmin();
         } catch (e) {
@@ -4505,6 +4633,42 @@ async function salvarHorasUsuario(userId, dados) {
 
     return data;
 }
+
+window.trocarContatoPorNumero = async function (userId, contatoAtual = '') {
+    if (estado.perfil?.funcao !== 'admin') {
+        mostrarErro('Acesso Restrito', 'Apenas administradores podem alterar contato de usuário.');
+        return;
+    }
+
+    const numeroSugerido = normalizarNumeroWhatsapp(contatoAtual || '');
+    const { value: valor } = await Swal.fire({
+        title: 'Trocar e-mail por número',
+        input: 'text',
+        inputLabel: 'Número de WhatsApp (com DDD)',
+        inputValue: numeroSugerido,
+        inputPlaceholder: '5514998598003',
+        showCancelButton: true,
+        confirmButtonText: 'Salvar',
+        cancelButtonText: 'Cancelar',
+        inputValidator: (v) => {
+            const n = normalizarNumeroWhatsapp(v);
+            if (!n || n.length < 10) return 'Informe um número válido com DDD.';
+            return null;
+        }
+    });
+
+    if (!valor) return;
+    const numero = normalizarNumeroWhatsapp(valor);
+    const payload = { email: numero, telefone: numero };
+
+    const { error } = await supabase.from('perfis').update(payload).eq('id', userId);
+    if (error) {
+        mostrarErro('Contato', error.message || 'Não foi possível atualizar o número.');
+        return;
+    }
+    mostrarSucesso('Contato atualizado para WhatsApp!');
+    await carregarDadosAdmin();
+};
 
 window.editarBancoHoras = async function (userId) {
     if (estado.perfil?.funcao !== 'admin') {
