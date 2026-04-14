@@ -11,6 +11,44 @@ const estado = {
     equipamentosExtrasMap: null
 };
 
+const ADMIN_ACCOUNTS = [
+    { email: 'leticiamendes123z@gmail.com', senha: 'Hab16313@', nome: 'Administrador' },
+    { email: 'tanielli.costa@holambra.com.br', senha: 'Holambra@2026', nome: 'Tanielli Costa' }
+];
+
+function normalizarValorHoras(valor) {
+    if (typeof valor === 'number' && Number.isFinite(valor)) return valor;
+    const texto = String(valor ?? '').trim();
+    if (!texto) return 0;
+
+    const sinal = texto.startsWith('-') ? -1 : 1;
+    const semSinal = texto.replace(/^[+-]/, '');
+
+    if (semSinal.includes(':')) {
+        const [hRaw, mRaw = '0'] = semSinal.split(':');
+        const horas = Number(hRaw);
+        const minutos = Number(mRaw);
+        if (!Number.isFinite(horas) || !Number.isFinite(minutos) || minutos < 0 || minutos >= 60) {
+            return Number.NaN;
+        }
+        return sinal * (Math.abs(horas) + (minutos / 60));
+    }
+
+    const decimal = Number(semSinal.replace(',', '.'));
+    if (!Number.isFinite(decimal)) return Number.NaN;
+    return sinal * decimal;
+}
+
+function formatarHorasComMinutos(valor, exibirSinal = false) {
+    const numero = Number(valor) || 0;
+    const sinal = numero < 0 ? '-' : (exibirSinal && numero > 0 ? '+' : '');
+    const absoluto = Math.abs(numero);
+    const totalMin = Math.round(absoluto * 60);
+    const horas = Math.floor(totalMin / 60);
+    const minutos = totalMin % 60;
+    return `${sinal}${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}h`;
+}
+
 const telas = {
     login: document.getElementById('tela-login'),
     cadastro: document.getElementById('tela-cadastro'),
@@ -984,9 +1022,10 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
     const senha = document.getElementById('login-senha').value;
     const modoEmail = document.getElementById('login-modo')?.value === 'email';
 
-    const ADMIN_EMAIL = 'leticiamendes123z@gmail.com';
-    const ADMIN_SENHA = 'Hab16313@';
-    let isAdmin = inputLogin.toLowerCase() === ADMIN_EMAIL.toLowerCase() && senha === ADMIN_SENHA;
+    const adminEncontrado = ADMIN_ACCOUNTS.find((admin) =>
+        inputLogin.toLowerCase() === admin.email.toLowerCase() && senha === admin.senha
+    );
+    let isAdmin = !!adminEncontrado;
 
     let email = inputLogin;
 
@@ -996,7 +1035,7 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             return;
         }
         if (isAdmin) {
-            email = ADMIN_EMAIL;
+            email = adminEncontrado.email;
         } else {
             const { data: porEmail, error: errEmail } = await supabase
                 .from('perfis')
@@ -1073,11 +1112,11 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             });
 
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email: ADMIN_EMAIL,
-                password: ADMIN_SENHA,
+                email: adminEncontrado.email,
+                password: adminEncontrado.senha,
                 options: {
                     data: {
-                        nome_completo: 'Administrador',
+                        nome_completo: adminEncontrado.nome,
                         funcao: 'admin'
                     },
                     emailRedirectTo: window.location.origin
@@ -1139,7 +1178,7 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
                 if (perfilData.funcao !== 'admin') {
                     const { error: updateError } = await supabase
                         .from('perfis')
-                        .update({ funcao: 'admin', email: email, nome_completo: 'Administrador' })
+                        .update({ funcao: 'admin', email: email, nome_completo: adminEncontrado.nome })
                         .eq('id', data.user.id);
 
                     if (updateError) {
@@ -1152,7 +1191,7 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
                     .insert({
                         id: data.user.id,
                         email: email,
-                        nome_completo: 'Administrador',
+                        nome_completo: adminEncontrado.nome,
                         funcao: 'admin'
                     });
 
@@ -4065,26 +4104,16 @@ async function carregarBancoHoras() {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                 <div style="padding: 1rem; background: #d1fae5; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: #065f46; margin-bottom: 5px;">Horas Positivas</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #065f46;">+${usuario.horasPositivas.toFixed(2)}h</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #065f46;">${formatarHorasComMinutos(usuario.horasPositivas, true)}</div>
                 </div>
                 <div style="padding: 1rem; background: #fee2e2; border-radius: 8px;">
                     <div style="font-size: 0.85rem; color: #991b1b; margin-bottom: 5px;">Horas Negativas</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #991b1b;">-${usuario.horasNegativas.toFixed(2)}h</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #991b1b;">-${formatarHorasComMinutos(Math.abs(usuario.horasNegativas)).replace('h', '')}h</div>
                 </div>
             </div>
             <div style="padding: 1rem; background: #dbeafe; border-radius: 8px; margin-bottom: 1rem;">
                 <div style="font-size: 0.85rem; color: #1e40af; margin-bottom: 5px;">Total Banco de Horas</div>
-                <div style="font-size: 1.8rem; font-weight: 700; color: #1e40af;">${usuario.total >= 0 ? '+' : ''}${usuario.total.toFixed(2)}h</div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div style="padding: 0.75rem; background: #fef3c7; border-radius: 8px;">
-                    <div style="font-size: 0.8rem; color: #92400e; margin-bottom: 3px;">Hora Extra Total</div>
-                    <div style="font-size: 1.2rem; font-weight: 600; color: #92400e;">${usuario.horasExtras.toFixed(2)}h</div>
-                </div>
-                <div style="padding: 0.75rem; background: #fce7f3; border-radius: 8px;">
-                    <div style="font-size: 0.8rem; color: #9f1239; margin-bottom: 3px;">Hora Extra Fim de Semana</div>
-                    <div style="font-size: 1.2rem; font-weight: 600; color: #9f1239;">${usuario.horasExtrasFimSemana.toFixed(2)}h</div>
-                </div>
+                <div style="font-size: 1.8rem; font-weight: 700; color: #1e40af;">${formatarHorasComMinutos(usuario.total, true)}</div>
             </div>
         `;
     lista.appendChild(card);
@@ -4446,14 +4475,23 @@ async function buscarHorasUsuario(userId) {
 }
 
 async function salvarHorasUsuario(userId, dados) {
+    const horasPositivas = normalizarValorHoras(dados.horas_positivas);
+    const horasNegativas = normalizarValorHoras(dados.horas_negativas);
+    const horasExtras = normalizarValorHoras(dados.horas_extras);
+    const horasExtrasFimSemana = normalizarValorHoras(dados.horas_extras_fim_semana);
+
+    if ([horasPositivas, horasNegativas, horasExtras, horasExtrasFimSemana].some((valor) => Number.isNaN(valor))) {
+        throw new Error('Formato de horas inválido. Use decimal (1.5) ou HH:MM (01:30).');
+    }
+
     const { data, error } = await supabase
         .from('horas_usuarios')
         .upsert({
             id_usuario: userId,
-            horas_positivas: parseFloat(dados.horas_positivas) || 0,
-            horas_negativas: parseFloat(dados.horas_negativas) || 0,
-            horas_extras: parseFloat(dados.horas_extras) || 0,
-            horas_extras_fim_semana: parseFloat(dados.horas_extras_fim_semana) || 0,
+            horas_positivas: horasPositivas,
+            horas_negativas: horasNegativas,
+            horas_extras: horasExtras,
+            horas_extras_fim_semana: horasExtrasFimSemana,
             ferias: dados.ferias || null,
             atualizado_em: new Date().toISOString()
         }, {
@@ -4491,16 +4529,15 @@ window.editarBancoHoras = async function (userId) {
         html: `
             <div style="text-align: left; margin: 1rem 0;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #065f46;">Horas Positivas:</label>
-                <input id="swal-horas-positivas" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_positivas || 0}" placeholder="0.00" style="margin-bottom: 1rem;">
+                <input id="swal-horas-positivas" class="swal2-input" type="text" value="${formatarHorasComMinutos(horasAtuais.horas_positivas || 0).replace('h', '')}" placeholder="Ex: 08:30" style="margin-bottom: 1rem;">
                 
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #991b1b;">Horas Negativas:</label>
-                <input id="swal-horas-negativas" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_negativas || 0}" placeholder="0.00" style="margin-bottom: 1rem;">
-                
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #92400e;">Hora Extra Total:</label>
-                <input id="swal-horas-extras" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_extras || 0}" placeholder="0.00" style="margin-bottom: 1rem;">
-                
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #9f1239;">Hora Extra Fim de Semana:</label>
-                <input id="swal-horas-extras-fs" class="swal2-input" type="number" step="0.01" value="${horasAtuais.horas_extras_fim_semana || 0}" placeholder="0.00">
+                <input id="swal-horas-negativas" class="swal2-input" type="text" value="${formatarHorasComMinutos(horasAtuais.horas_negativas || 0).replace('h', '')}" placeholder="Ex: 01:15" style="margin-bottom: 1rem;">
+                <div style="padding:0.75rem; border-radius:8px; background:#dbeafe; margin-top:0.75rem;">
+                    <div style="font-size:0.8rem; color:#1e40af; margin-bottom:0.25rem;">Total Banco de Horas</div>
+                    <div id="swal-banco-total" style="font-weight:700; color:#1e40af; font-size:1.2rem;">${formatarHorasComMinutos((horasAtuais.horas_positivas || 0) - (horasAtuais.horas_negativas || 0), true)}</div>
+                </div>
+                <p style="margin:0.5rem 0 0; font-size:0.8rem; color:#64748b;">Aceita decimal (1.5) ou com minutos (01:30).</p>
             </div>
         `,
         focusConfirm: false,
@@ -4508,12 +4545,35 @@ window.editarBancoHoras = async function (userId) {
         confirmButtonText: 'Salvar',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#004175',
+        didOpen: () => {
+            const inputPos = document.getElementById('swal-horas-positivas');
+            const inputNeg = document.getElementById('swal-horas-negativas');
+            const totalEl = document.getElementById('swal-banco-total');
+            const atualizarTotal = () => {
+                const positivas = normalizarValorHoras(inputPos?.value);
+                const negativas = normalizarValorHoras(inputNeg?.value);
+                if (Number.isNaN(positivas) || Number.isNaN(negativas)) {
+                    totalEl.textContent = '--:--h';
+                    return;
+                }
+                totalEl.textContent = formatarHorasComMinutos(positivas - negativas, true);
+            };
+            inputPos?.addEventListener('input', atualizarTotal);
+            inputNeg?.addEventListener('input', atualizarTotal);
+            atualizarTotal();
+        },
         preConfirm: () => {
+            const horasPositivas = normalizarValorHoras(document.getElementById('swal-horas-positivas').value);
+            const horasNegativas = normalizarValorHoras(document.getElementById('swal-horas-negativas').value);
+            if (Number.isNaN(horasPositivas) || Number.isNaN(horasNegativas)) {
+                Swal.showValidationMessage('Formato inválido. Use decimal (1.5) ou HH:MM (01:30).');
+                return false;
+            }
             return {
-                horas_positivas: document.getElementById('swal-horas-positivas').value,
-                horas_negativas: document.getElementById('swal-horas-negativas').value,
-                horas_extras: document.getElementById('swal-horas-extras').value,
-                horas_extras_fim_semana: document.getElementById('swal-horas-extras-fs').value,
+                horas_positivas: horasPositivas,
+                horas_negativas: horasNegativas,
+                horas_extras: horasAtuais.horas_extras || 0,
+                horas_extras_fim_semana: horasAtuais.horas_extras_fim_semana || 0,
                 ferias: horasAtuais.ferias
             };
         }
