@@ -3495,13 +3495,15 @@ async function carregarProgramacoesAdmin() {
                     const num = String(os.numero_solicitacao || os.id?.slice(0, 8) || '—').replace(/</g, '&lt;');
                     const st = os.status === 'programada' ? ' <span class="prog-admin-badge-prog">Prog.</span>' : '';
                     const un = String(os.setor || os.unidade || '—').replace(/</g, '&lt;');
+                    const centroTrab = String(os.centro_trabalho || '').replace(/</g, '&lt;').trim();
+                    const centroTag = centroTrab ? ` · ${centroTrab}` : '';
                     const eq = os.equipamento ? ` · ${String(os.equipamento).replace(/</g, '&lt;')}` : '';
                     const desc = String(os.descricao || os.titulo || '—')
                         .replace(/</g, '&lt;')
                         .replace(/\s+/g, ' ')
                         .trim();
                     const curto = desc.length > 160 ? `${desc.slice(0, 160)}…` : desc;
-                    return `<div class="prog-admin-os-aberta-item" data-os-id="${oid}" role="button" tabindex="0" title="Usar esta OS no formulário"><strong>#${num}</strong>${st} — ${un}${eq}<br><span class="prog-admin-os-desc-preview">${curto}</span></div>`;
+                    return `<div class="prog-admin-os-aberta-item" data-os-id="${oid}" role="button" tabindex="0" title="Usar esta OS no formulário"><strong>#${num}</strong>${st} — ${un}${centroTag}${eq}<br><span class="prog-admin-os-desc-preview">${curto}</span></div>`;
                 })
                 .join('');
             listaOs.querySelectorAll('.prog-admin-os-aberta-item[data-os-id]').forEach((el) => {
@@ -3531,7 +3533,8 @@ async function carregarProgramacoesAdmin() {
             opt.value = os.id;
             const num = String(os.numero_solicitacao || os.id?.slice(0, 8) || '—');
             const un = String(os.setor || os.unidade || '').replace(/\s+/g, ' ').trim() || '—';
-            let texto = `#${num} — ${un}`;
+            const centroTrab = String(os.centro_trabalho || '').replace(/\s+/g, ' ').trim();
+            let texto = `#${num} — ${un}${centroTrab ? ` · ${centroTrab}` : ''}`;
             if (texto.length > 96) texto = `${texto.slice(0, 93)}…`;
             opt.textContent = texto;
             selOs.appendChild(opt);
