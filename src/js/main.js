@@ -8,7 +8,13 @@ const estado = {
     programacoesUsuario: [],
     realtimeChannelOS: null,
     /** @type {Map<string, { id: string, nome: string }[]> | null} */
-    equipamentosExtrasMap: null
+    equipamentosExtrasMap: null,
+    /** @type {Map<string, { id: string, nome: string, id_solicitante: string, created_at?: string }[]> | null} */
+    equipamentosPendentesMap: null,
+    /** @type {string | null} */
+    equipOpUnidadePreselect: null,
+    /** @type {Record<string, unknown>[] | null} */
+    adminPerfisLista: null
 };
 
 const ADMIN_ACCOUNTS = [
@@ -309,6 +315,52 @@ async function carregarEquipamentosExtrasSupabase() {
     estado.equipamentosExtrasMap = m;
 }
 
+async function carregarEquipamentosPendentesSupabase() {
+    const m = new Map();
+    if (!estado.usuario) {
+        estado.equipamentosPendentesMap = m;
+        return;
+    }
+    const { data, error } = await supabase
+        .from('equipamentos_extras_solicitacoes')
+        .select('id, unidade_chave, nome, id_solicitante, created_at')
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false });
+    if (error) {
+        estado.equipamentosPendentesMap = m;
+        const msg = String(error.message || '');
+        if (!msg.includes('does not exist') && !msg.includes('schema cache') && error.code !== 'PGRST116') {
+            console.warn('equipamentos_extras_solicitacoes:', error);
+        }
+        return;
+    }
+    for (const row of data || []) {
+        const k = row.unidade_chave;
+        if (!m.has(k)) m.set(k, []);
+        m.get(k).push({
+            id: row.id,
+            nome: row.nome,
+            id_solicitante: row.id_solicitante,
+            created_at: row.created_at
+        });
+    }
+    estado.equipamentosPendentesMap = m;
+}
+
+function obterLinhasPendentesUnidade(unidadeRaw) {
+    const k = chaveStorageEquipamentosExtras(unidadeRaw);
+    if (!k || !estado.equipamentosPendentesMap) return [];
+    return estado.equipamentosPendentesMap.get(k) || [];
+}
+
+function rotuloUnidadePorChaveEquipamento(chave) {
+    if (!chave) return '—';
+    if (chave === '__MATRIZ__') return 'Matriz (UBA / UBC / UBS / Holambra)';
+    if (chave === '__TAKAOKA__') return 'Takaoka (TAK 1 / TAK 2)';
+    const u = UNIDADES_OPERACAO.find((x) => chaveStorageEquipamentosExtras(x) === chave);
+    return u || chave;
+}
+
 function obterLinhasExtrasUnidade(unidadeRaw) {
     const k = chaveStorageEquipamentosExtras(unidadeRaw);
     if (!k || !estado.equipamentosExtrasMap) return [];
@@ -340,30 +392,101 @@ async function adicionarEquipamentoExtraNaUnidade(unidadeRaw, nomeEquipamento) {
     if (!k) return { ok: false, msg: 'Selecione uma unidade.' };
     if (!estado.usuario?.id) return { ok: false, msg: 'Faça login novamente.' };
     await carregarEquipamentosExtrasSupabase();
+    await carregarEquipamentosPendentesSupabase();
     const lower = nome.toLowerCase();
     const listaCompleta = obterListaEquipamentosParaUnidade(unidadeRaw);
     if (listaCompleta.some((x) => String(x).trim().toLowerCase() === lower)) {
         return { ok: false, msg: 'Este equipamento já está na lista (padrão ou já cadastrado).' };
     }
-    const { error } = await supabase.from('equipamentos_extras').insert({
+    const pendLower = obterLinhasPendentesUnidade(unidadeRaw).map((r) => String(r.nome).trim().toLowerCase());
+    if (pendLower.includes(lower)) {
+        return { ok: false, msg: 'Já existe uma solicitação pendente com este nome para esta unidade.' };
+    }
+    const ehAdmin = estado.perfil?.funcao === 'admin';
+    if (ehAdmin) {
+        const { error } = await supabase.from('equipamentos_extras').insert({
+            unidade_chave: k,
+            nome,
+            id_criador: estado.usuario.id
+        });
+        if (error) {
+            if (error.code === '23505') {
+                return { ok: false, msg: 'Este equipamento já existe para esta unidade.' };
+            }
+            if (String(error.message || '').includes('does not exist')) {
+                return {
+                    ok: false,
+                    msg: 'Tabela não encontrada. Execute supabase_setup_equipamentos_extras.sql no Supabase.'
+                };
+            }
+            return { ok: false, msg: error.message || 'Não foi possível salvar.' };
+        }
+        await carregarEquipamentosExtrasSupabase();
+        return { ok: true, modo: 'direto' };
+    }
+    const { error } = await supabase.from('equipamentos_extras_solicitacoes').insert({
         unidade_chave: k,
         nome,
-        id_criador: estado.usuario.id
+        id_solicitante: estado.usuario.id,
+        status: 'pendente'
     });
     if (error) {
         if (error.code === '23505') {
-            return { ok: false, msg: 'Este equipamento já existe para esta unidade.' };
+            return { ok: false, msg: 'Já existe solicitação pendente ou nome duplicado para esta unidade.' };
         }
         if (String(error.message || '').includes('does not exist')) {
             return {
                 ok: false,
-                msg: 'Tabela não encontrada. Execute supabase_setup_equipamentos_extras.sql no Supabase.'
+                msg: 'Tabela de solicitações não encontrada. Execute supabase_setup_equipamentos_extras_solicitacoes.sql no Supabase.'
             };
         }
-        return { ok: false, msg: error.message || 'Não foi possível salvar.' };
+        return { ok: false, msg: error.message || 'Não foi possível enviar a solicitação.' };
+    }
+    await carregarEquipamentosPendentesSupabase();
+    return { ok: true, modo: 'pendente' };
+}
+
+async function cancelarSolicitacaoEquipPorId(id) {
+    const { error } = await supabase.from('equipamentos_extras_solicitacoes').delete().eq('id', id);
+    if (error) {
+        mostrarErro('Cancelar solicitação', error.message || 'Não foi possível cancelar.');
+        return false;
+    }
+    await carregarEquipamentosPendentesSupabase();
+    return true;
+}
+
+async function aprovarSolicitacaoEquipamentoAdmin(row) {
+    if (!row?.id || !row.unidade_chave || !row.nome) return false;
+    // id_criador deve ser auth.uid() do usuário logado: políticas RLS de equipamentos_extras
+    // costumam exigir que quem insere seja o criador (admin aprovando = sessão do admin).
+    const { error: insErr } = await supabase.from('equipamentos_extras').insert({
+        unidade_chave: row.unidade_chave,
+        nome: String(row.nome).trim(),
+        id_criador: estado.usuario.id
+    });
+    if (insErr && insErr.code !== '23505') {
+        mostrarErro('Aprovar equipamento', insErr.message || 'Falha ao gravar na lista aprovada.');
+        return false;
+    }
+    const { error: delErr } = await supabase.from('equipamentos_extras_solicitacoes').delete().eq('id', row.id);
+    if (delErr) {
+        mostrarErro('Aprovar equipamento', delErr.message || 'Gravou o item mas não removeu a solicitação.');
+        return false;
     }
     await carregarEquipamentosExtrasSupabase();
-    return { ok: true };
+    await carregarEquipamentosPendentesSupabase();
+    return true;
+}
+
+async function rejeitarSolicitacaoEquipamentoAdmin(id) {
+    const { error } = await supabase.from('equipamentos_extras_solicitacoes').delete().eq('id', id);
+    if (error) {
+        mostrarErro('Recusar solicitação', error.message || 'Falha ao recusar.');
+        return false;
+    }
+    await carregarEquipamentosPendentesSupabase();
+    return true;
 }
 
 async function excluirEquipamentoExtraPorId(id) {
@@ -902,6 +1025,9 @@ document.getElementById('nav-sair').addEventListener('click', async () => {
     estado.usuario = null;
     estado.perfil = null;
     estado.equipamentosExtrasMap = null;
+    estado.equipamentosPendentesMap = null;
+    estado.equipOpUnidadePreselect = null;
+    estado.adminPerfisLista = null;
     document.getElementById('nav-admin')?.classList.add('oculto');
     document.getElementById('nav-ordens-servico')?.classList.add('oculto');
     document.getElementById('nav-hora-extra')?.classList.add('oculto');
@@ -1036,6 +1162,7 @@ async function verificarUsuario() {
         if (perfilEncontrado) {
             estado.perfil = perfilEncontrado;
             void carregarEquipamentosExtrasSupabase();
+            void carregarEquipamentosPendentesSupabase();
             const navAdmin = document.getElementById('nav-admin');
             const navHoraExtra = document.getElementById('nav-hora-extra');
             const navProgramar = document.getElementById('nav-programar');
@@ -1613,6 +1740,14 @@ async function preencherNumeroOrdemApontamentoAutomatico() {
     manualInput.readOnly = true;
 }
 
+function adicionarOpcaoEquipamentoNaoNaListaAbrirOS(equipamentoSel) {
+    const opt = document.createElement('option');
+    opt.value = VALOR_OS_EQUIP_NAO_NA_LISTA;
+    opt.textContent = 'Não se encontra nesta lista';
+    opt.className = 'os-equip-opcao-nao-listado';
+    equipamentoSel.appendChild(opt);
+}
+
 async function atualizarEquipamentosAbrirOS(unidade) {
     await carregarEquipamentosExtrasSupabase();
     const equipamentoSel = document.getElementById('os-equipamento');
@@ -1625,12 +1760,6 @@ async function atualizarEquipamentosAbrirOS(unidade) {
         equipamentoSel.innerHTML = '<option value="">Selecione primeiro a unidade</option>';
         return;
     }
-    if (lista.length === 0) {
-        equipamentoSel.disabled = true;
-        equipamentoSel.required = false;
-        equipamentoSel.innerHTML = '<option value="">Nenhum equipamento cadastrado para esta unidade</option>';
-        return;
-    }
     equipamentoSel.disabled = false;
     equipamentoSel.required = true;
     equipamentoSel.innerHTML = '<option value="">Selecione o equipamento</option>';
@@ -1640,6 +1769,7 @@ async function atualizarEquipamentosAbrirOS(unidade) {
         opt.textContent = eq;
         equipamentoSel.appendChild(opt);
     });
+    adicionarOpcaoEquipamentoNaoNaListaAbrirOS(equipamentoSel);
 }
 
 async function preencherSelectsAbrirOS() {
@@ -1681,6 +1811,14 @@ async function preencherTelaEquipamentosOperacao() {
         });
     }
 
+    const optionValues = () => [...sel.options].map((o) => o.value).filter(Boolean);
+    if (estado.equipOpUnidadePreselect && optionValues().includes(estado.equipOpUnidadePreselect)) {
+        sel.value = estado.equipOpUnidadePreselect;
+        estado.equipOpUnidadePreselect = null;
+    } else if (estado.perfil?.setor && optionValues().includes(estado.perfil.setor)) {
+        sel.value = estado.perfil.setor;
+    }
+
     const sincronizarSelectsOutrasTelas = async (u) => {
         const osSetor = document.getElementById('os-setor')?.value;
         if (osSetor && u === osSetor) await atualizarEquipamentosAbrirOS(osSetor);
@@ -1690,33 +1828,57 @@ async function preencherTelaEquipamentosOperacao() {
 
     const render = async () => {
         lista.innerHTML = '<p class="equip-op-vazio">Carregando lista…</p>';
-        await carregarEquipamentosExtrasSupabase();
         const u = sel.value;
-        const itens = obterListaEquipamentosParaUnidade(u);
         if (!u) {
             lista.innerHTML = '<p class="equip-op-vazio">Selecione uma unidade.</p>';
             return;
         }
-        if (itens.length === 0) {
-            lista.innerHTML =
-                '<p class="equip-op-vazio">Nenhum equipamento na lista padrão para esta unidade. Use o campo abaixo para incluir o primeiro.</p>';
-            return;
-        }
+        await carregarEquipamentosExtrasSupabase();
+        await carregarEquipamentosPendentesSupabase();
+        const itens = obterListaEquipamentosParaUnidade(u);
         const idPorNomeLower = new Map(
             obterLinhasExtrasUnidade(u).map((L) => [String(L.nome).trim().toLowerCase(), L.id])
         );
-        lista.innerHTML = `<ul class="equip-op-ul">${itens
-            .map((i) => {
-                const esc = String(i).replace(/</g, '&lt;');
-                const idEx = idPorNomeLower.get(String(i).trim().toLowerCase());
-                const isExtra = Boolean(idEx);
-                const tag = isExtra ? ' <span class="equip-op-tag-extra">cadastro extra</span>' : '';
-                const btnEx = idEx
-                    ? `<button type="button" class="equip-op-btn-excluir btn btn-outline btn-sm" data-id="${String(idEx).replace(/"/g, '')}" title="Remover do banco (todos os usuários)">Excluir</button>`
-                    : '';
-                return `<li class="equip-op-li equip-op-li-linha${isExtra ? ' equip-op-li--extra' : ''}"><span class="equip-op-li-texto">${esc}${tag}</span>${btnEx}</li>`;
-            })
-            .join('')}</ul>`;
+        const nomesItensLower = new Set(itens.map((x) => String(x).trim().toLowerCase()));
+        const linhasPend = obterLinhasPendentesUnidade(u);
+        const pendentesSozinhos = linhasPend.filter((p) => !nomesItensLower.has(String(p.nome).trim().toLowerCase()));
+        const ehAdmin = estado.perfil?.funcao === 'admin';
+        const uid = estado.usuario?.id;
+
+        let blocoPrincipal = '';
+        if (itens.length === 0) {
+            blocoPrincipal =
+                '<p class="equip-op-vazio">Nenhum equipamento na lista padrão para esta unidade. Envie o nome abaixo; após aprovação do administrador, o item passa a aparecer aqui e em <strong>Abrir OS</strong>.</p>';
+        } else {
+            blocoPrincipal = `<ul class="equip-op-ul">${itens
+                .map((i) => {
+                    const esc = String(i).replace(/</g, '&lt;');
+                    const idEx = idPorNomeLower.get(String(i).trim().toLowerCase());
+                    const isExtra = Boolean(idEx);
+                    const tagExtra = isExtra ? ' <span class="equip-op-tag-extra">cadastro extra</span>' : '';
+                    const btnEx = idEx
+                        ? `<button type="button" class="equip-op-btn-excluir btn btn-outline btn-sm" data-id="${String(idEx).replace(/"/g, '')}" title="Remover do banco (todos os usuários)">Excluir</button>`
+                        : '';
+                    return `<li class="equip-op-li equip-op-li-linha${isExtra ? ' equip-op-li--extra' : ''}"><span class="equip-op-li-texto">${esc}${tagExtra}</span>${btnEx}</li>`;
+                })
+                .join('')}</ul>`;
+        }
+
+        let blocoPend = '';
+        if (pendentesSozinhos.length > 0) {
+            blocoPend = `<p class="equip-op-subtitulo-pend"><i data-lucide="clock"></i> Aguardando aprovação do administrador</p><ul class="equip-op-ul equip-op-ul--pend">${pendentesSozinhos
+                .map((p) => {
+                    const esc = String(p.nome).replace(/</g, '&lt;');
+                    const podeCancelar = ehAdmin || (uid && p.id_solicitante === uid);
+                    const btnCanc = podeCancelar
+                        ? `<button type="button" class="equip-op-btn-cancelar-sol btn btn-outline btn-sm" data-pend-id="${String(p.id).replace(/"/g, '')}" title="Cancelar solicitação" style="color:#b45309;border-color:#fed7aa;">Cancelar pedido</button>`
+                        : '';
+                    return `<li class="equip-op-li equip-op-li-linha equip-op-li--pendente"><span class="equip-op-li-texto">${esc} <span class="equip-op-tag-pendente">pendente</span></span>${btnCanc}</li>`;
+                })
+                .join('')}</ul>`;
+        }
+
+        lista.innerHTML = blocoPrincipal + blocoPend;
 
         lista.querySelectorAll('.equip-op-btn-excluir').forEach((btn) => {
             btn.addEventListener('click', async () => {
@@ -1739,12 +1901,34 @@ async function preencherTelaEquipamentosOperacao() {
                 lucide.createIcons();
             });
         });
+
+        lista.querySelectorAll('.equip-op-btn-cancelar-sol').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-pend-id');
+                const { isConfirmed } = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Cancelar solicitação?',
+                    text: 'O pedido de inclusão será retirado da fila do administrador.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, cancelar',
+                    cancelButtonText: 'Voltar',
+                    confirmButtonColor: '#b91c1c'
+                });
+                if (!isConfirmed || !id) return;
+                const ok = await cancelarSolicitacaoEquipPorId(id);
+                if (!ok) return;
+                mostrarSucesso('Solicitação cancelada.');
+                await render();
+                await sincronizarSelectsOutrasTelas(sel.value);
+                lucide.createIcons();
+            });
+        });
+        lucide.createIcons();
     };
 
     sel.onchange = () => {
         void render();
     };
-    if (estado.perfil?.setor) sel.value = estado.perfil.setor;
     await render();
 
     const aoIncluir = async () => {
@@ -1756,7 +1940,11 @@ async function preencherTelaEquipamentosOperacao() {
             return;
         }
         if (inpNovo) inpNovo.value = '';
-        mostrarSucesso('Equipamento salvo no banco para esta unidade.');
+        if (r.modo === 'pendente') {
+            mostrarSucesso('Solicitação enviada ao administrador.');
+        } else {
+            mostrarSucesso('Equipamento salvo no banco para esta unidade.');
+        }
         await render();
         await sincronizarSelectsOutrasTelas(u);
         lucide.createIcons();
@@ -1780,6 +1968,10 @@ document.getElementById('btn-operacao-equipamentos')?.addEventListener('click', 
 document.getElementById('btn-voltar-equipamentos-operacao')?.addEventListener('click', () => navegarPara('menuOperacao'));
 
 const VALOR_SEM_EQUIPAMENTO_APONTAMENTO = 'Sem equipamento';
+
+/** Valor interno do select Abrir OS; no banco grava-se TEXTO_OS_EQUIP_GRAVADO_NAO_LISTADO. */
+const VALOR_OS_EQUIP_NAO_NA_LISTA = '__os_equip_nao_na_lista__';
+const TEXTO_OS_EQUIP_GRAVADO_NAO_LISTADO = 'Não se encontra nesta lista';
 
 async function atualizarEquipamentosApontamento(unidade) {
     await carregarEquipamentosExtrasSupabase();
@@ -1844,7 +2036,9 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
     const descricao = document.getElementById('os-descricao').value.trim();
     const setorUnidade = document.getElementById('os-setor').value;
     const setorCentro = document.getElementById('os-setor-centro')?.value?.trim() || '';
-    const equipamentoOs = document.getElementById('os-equipamento')?.value?.trim() || '';
+    const rawEquip = document.getElementById('os-equipamento')?.value?.trim() || '';
+    const equipamentoOs =
+        rawEquip === VALOR_OS_EQUIP_NAO_NA_LISTA ? TEXTO_OS_EQUIP_GRAVADO_NAO_LISTADO : rawEquip;
     const centroTrabalho = document.getElementById('os-centro-trabalho').value;
     const dataNecessidade = document.getElementById('os-data-necessidade').value || null;
     const destinoServico = document.getElementById('os-destino').value || null;
@@ -1853,7 +2047,7 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
     const anexoInput = document.getElementById('os-anexo');
     if (!setorUnidade) { mostrarErro('Campos obrigatórios', 'Selecione a unidade.'); return; }
     if (!setorCentro) { mostrarErro('Campos obrigatórios', 'Selecione o setor (código / centro MT).'); return; }
-    if (!equipamentoOs) { mostrarErro('Campos obrigatórios', 'Selecione o equipamento da unidade.'); return; }
+    if (!rawEquip) { mostrarErro('Campos obrigatórios', 'Selecione o equipamento.'); return; }
     if (!numeroSolicitacao) { mostrarErro('Campos obrigatórios', 'Número da OS não gerado. Aguarde ou reabra a tela.'); return; }
     if (!descricao || !descricao.trim()) { mostrarErro('Campos obrigatórios', 'Preencha a descrição do serviço.'); return; }
     let anexoUrl = null;
@@ -2983,6 +3177,61 @@ let filtrosAdmin = {
     dataFim: ''
 };
 
+async function renderAdminEquipamentosSolicitacoes(usuariosData) {
+    const el = document.getElementById('admin-equip-solicitacoes-list');
+    if (!el) return;
+    if (estado.perfil?.funcao !== 'admin') {
+        el.innerHTML = '';
+        return;
+    }
+    el.innerHTML = '<p class="admin-equip-sol-carregando">Carregando solicitações…</p>';
+    const nomePorId = new Map(
+        (usuariosData || []).map((u) => [u.id, String(u.nome_completo || u.email || 'Usuário').trim() || 'Usuário'])
+    );
+    const { data, error } = await supabase
+        .from('equipamentos_extras_solicitacoes')
+        .select('id, unidade_chave, nome, id_solicitante, created_at')
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false });
+    if (error) {
+        if (String(error.message || '').includes('does not exist')) {
+            el.innerHTML =
+                '<p class="admin-equip-sol-vazio">Execute o script <strong>supabase_setup_equipamentos_extras_solicitacoes.sql</strong> no Supabase para habilitar a fila de aprovação de equipamentos.</p>';
+        } else {
+            el.innerHTML = `<p class="admin-equip-sol-vazio">${escaparHtmlBasico(error.message || 'Erro ao carregar.')}</p>`;
+        }
+        return;
+    }
+    const rows = data || [];
+    if (rows.length === 0) {
+        el.innerHTML = '<p class="admin-equip-sol-vazio">Nenhuma solicitação de equipamento pendente.</p>';
+        return;
+    }
+    el.innerHTML = rows
+        .map((r) => {
+            const unidadeTxt = escaparHtmlBasico(rotuloUnidadePorChaveEquipamento(r.unidade_chave));
+            const nomeEq = escaparHtmlBasico(String(r.nome || ''));
+            const sol = escaparHtmlBasico(nomePorId.get(r.id_solicitante) || 'Solicitante');
+            const rid = String(r.id || '').replace(/"/g, '');
+            const quando = r.created_at
+                ? new Date(r.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '';
+            return `<div class="admin-equip-sol-item" data-sol-id="${rid}">
+                <div class="admin-equip-sol-item-corpo">
+                    <strong class="admin-equip-sol-nome">${nomeEq}</strong>
+                    <p class="admin-equip-sol-meta">${unidadeTxt}${quando ? ` · ${escaparHtmlBasico(quando)}` : ''}</p>
+                    <p class="admin-equip-sol-meta">Solicitante: ${sol}</p>
+                </div>
+                <div class="admin-equip-sol-acoes">
+                    <button type="button" class="btn btn-primario btn-sm admin-equip-sol-btn-aprovar" data-sol-id="${rid}" style="text-transform:none;">Aprovar</button>
+                    <button type="button" class="btn btn-outline btn-sm admin-equip-sol-btn-recusar" data-sol-id="${rid}" style="text-transform:none;color:#b91c1c;border-color:#fecaca;">Recusar</button>
+                </div>
+            </div>`;
+        })
+        .join('');
+    lucide.createIcons();
+}
+
 async function carregarDadosAdmin() {
     const lista = document.getElementById('lista-admin');
     const listaUsuarios = document.getElementById('lista-usuarios-admin');
@@ -2994,6 +3243,9 @@ async function carregarDadosAdmin() {
         .from('perfis')
         .select('id, nome_completo, email, telefone, cpf, tag, funcao, criado_em, foto_url')
         .order('nome_completo');
+
+    estado.adminPerfisLista = usuariosData || [];
+    await renderAdminEquipamentosSolicitacoes(estado.adminPerfisLista);
 
     if (usuariosData) {
         listaUsuarios.innerHTML = '';
@@ -3105,6 +3357,54 @@ document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
     document.getElementById('filtro-data-inicio').value = '';
     document.getElementById('filtro-data-fim').value = '';
     carregarDadosAdmin();
+});
+
+document.getElementById('admin-equip-solicitacoes-wrap')?.addEventListener('click', async (e) => {
+    const btnA = e.target.closest('.admin-equip-sol-btn-aprovar');
+    const btnR = e.target.closest('.admin-equip-sol-btn-recusar');
+    if (!btnA && !btnR) return;
+    if (estado.perfil?.funcao !== 'admin') return;
+    const id = (btnA || btnR).getAttribute('data-sol-id');
+    if (!id) return;
+    if (btnR) {
+        const { isConfirmed } = await Swal.fire({
+            icon: 'warning',
+            title: 'Recusar solicitação?',
+            text: 'O equipamento não será incluído na lista das unidades.',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, recusar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#b91c1c'
+        });
+        if (!isConfirmed) return;
+        const ok = await rejeitarSolicitacaoEquipamentoAdmin(id);
+        if (!ok) return;
+        mostrarSucesso('Solicitação recusada.');
+    } else {
+        const { data: row, error } = await supabase
+            .from('equipamentos_extras_solicitacoes')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error || !row) {
+            mostrarErro('Aprovar', 'Registro não encontrado ou já processado.');
+            return;
+        }
+        const ok = await aprovarSolicitacaoEquipamentoAdmin(row);
+        if (!ok) return;
+        mostrarSucesso('Equipamento aprovado e liberado na lista.');
+    }
+    await renderAdminEquipamentosSolicitacoes(estado.adminPerfisLista || []);
+});
+
+document.getElementById('btn-os-nao-encontrei-equipamento')?.addEventListener('click', () => {
+    const u = document.getElementById('os-setor')?.value?.trim() || '';
+    if (!u) {
+        mostrarErro('Unidade', 'Selecione primeiro a unidade para solicitar um equipamento.');
+        return;
+    }
+    estado.equipOpUnidadePreselect = u;
+    navegarPara('equipamentosOperacao');
 });
 
 function renderizarLogs(logs, conteiner, isAdmin = false) {

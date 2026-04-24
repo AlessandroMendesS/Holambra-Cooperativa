@@ -290,7 +290,7 @@
                 </div>
                 <div class="card op-equip-extra-card">
                     <p class="op-equip-extra-titulo"><i data-lucide="plus-square"></i> Equipamento fora da lista?</p>
-                    <p class="op-equip-extra-texto">Inclua nomes que não aparecem ao abrir OS.                 </p>
+                    <p class="op-equip-extra-texto">Peça inclusão de nomes que não aparecem ao abrir OS (o administrador aprova antes de liberar na lista).</p>
                     <button type="button" class="btn btn-outline" id="btn-operacao-ir-incluir-equip" style="width: 100%;">
                         Incluir novo equipamento
                     </button>
@@ -314,7 +314,7 @@
                             <input type="text" id="equip-op-novo-nome" class="input-campo" placeholder="Nome do equipamento" maxlength="200" autocomplete="off">
                             <button type="button" class="btn btn-primario" id="equip-op-btn-adicionar">Adicionar</button>
                         </div>
-                        <p class="equip-op-adicionar-hint">Gravado no banco (Supabase); aparece em <strong>Abrir OS</strong> e em <strong>Apontamento</strong> para a mesma unidade. Quem cadastrou ou um <strong>admin</strong> pode excluir.</p>
+                        <p class="equip-op-adicionar-hint">Para perfis de <strong>operação</strong>, o nome vai para o <strong>administrador aprovar</strong>; depois aparece em <strong>Abrir OS</strong> e em <strong>Apontamento</strong> na mesma unidade. O administrador pode incluir direto na lista. Itens aprovados (cadastro extra) podem ser excluídos conforme permissões no banco.</p>
                     </div>
                 </div>
             </section>
@@ -337,11 +337,15 @@
                                 <option value="">Carregando setores…</option>
                             </select>
                         </div>
-                        <div class="grupo-input">
+                        <div class="grupo-input grupo-equipamento-os">
                             <label>Equipamento <span style="color:#b91c1c;">*</span></label>
                             <select id="os-equipamento" class="select-campo" required disabled>
                                 <option value="">Selecione primeiro a unidade</option>
                             </select>
+                            <button type="button" class="btn-os-nao-encontrei-equip" id="btn-os-nao-encontrei-equipamento" title="Abre a tela para pedir inclusão na lista da unidade">
+                                <span class="btn-os-nao-encontrei-equip__icon" aria-hidden="true"><i data-lucide="wrench"></i></span>
+                                <span class="btn-os-nao-encontrei-equip__texto">Não encontrei o equipamento</span>
+                            </button>
                         </div>
                         <div class="grupo-input">
                             <label>Número da OS (gerado automaticamente)</label>
@@ -874,6 +878,11 @@
                     <button id="btn-limpar-filtros" class="btn btn-outline" style="margin-top: 10px;">
                         Limpar Filtros
                     </button>
+                </div>
+
+                <div class="card admin-equip-sol-card admin-equip-sol-card--compacto" id="admin-equip-solicitacoes-wrap" style="margin-top: 1.5rem;">
+                    <h3 class="admin-equip-sol-titulo-simples">Equipamentos - Aprovação (administrador - manutenção)</h3>
+                    <div id="admin-equip-solicitacoes-list" class="admin-equip-sol-lista-wrap"></div>
                 </div>
 
                 <div class="card" style="margin-top: 1.5rem;">

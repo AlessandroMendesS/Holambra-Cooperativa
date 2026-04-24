@@ -1389,6 +1389,167 @@ h2 {
     line-height: 1.35;
 }
 
+.grupo-equipamento-os .select-campo {
+    margin-bottom: 0.5rem;
+}
+
+.btn-os-nao-encontrei-equip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.01em;
+    color: var(--cor-primaria, #004175);
+    background: linear-gradient(180deg, #ffffff 0%, #f0f7fc 100%);
+    border: 1.5px solid rgba(0, 65, 117, 0.22);
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 41, 77, 0.06);
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-os-nao-encontrei-equip:hover {
+    border-color: var(--cor-primaria, #004175);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 65, 117, 0.12);
+}
+
+.btn-os-nao-encontrei-equip:active {
+    box-shadow: 0 1px 2px rgba(0, 41, 77, 0.08);
+}
+
+.btn-os-nao-encontrei-equip__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    background: rgba(0, 65, 117, 0.08);
+    color: var(--cor-primaria, #004175);
+    flex-shrink: 0;
+}
+
+.btn-os-nao-encontrei-equip__icon i {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.btn-os-nao-encontrei-equip__texto {
+    text-align: left;
+    line-height: 1.25;
+}
+
+.equip-op-subtitulo-pend {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #b45309;
+    margin: 1rem 0 0.4rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.equip-op-ul--pend {
+    border-left: 3px solid #fb923c;
+    padding-left: 1rem;
+    margin-left: 0.15rem;
+}
+
+.equip-op-li--pendente {
+    list-style-type: square;
+}
+
+.equip-op-tag-pendente {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #c2410c;
+    margin-left: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.admin-equip-sol-card {
+    border-left: 4px solid #6366f1;
+}
+
+.admin-equip-sol-titulo-simples {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 12px 0;
+    padding: 0;
+    line-height: 1.35;
+    color: var(--azul-800, #0f172a);
+}
+
+.admin-equip-sol-card--compacto .admin-equip-sol-lista-wrap {
+    margin-top: 0;
+}
+
+.admin-equip-sol-lista-wrap {
+    margin-top: 0.25rem;
+}
+
+select.select-campo option.os-equip-opcao-nao-listado {
+    font-weight: 600;
+    color: #1d4ed8;
+}
+
+.admin-equip-sol-carregando,
+.admin-equip-sol-vazio {
+    font-size: 0.875rem;
+    color: var(--neutro-500);
+    margin: 0;
+    line-height: 1.45;
+}
+
+.admin-equip-sol-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--borda);
+}
+
+.admin-equip-sol-item:last-child {
+    border-bottom: none;
+}
+
+.admin-equip-sol-nome {
+    font-size: 1rem;
+    color: var(--azul-800, #0f172a);
+}
+
+.admin-equip-sol-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0.2rem 0 0 0;
+}
+
+.admin-equip-sol-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.admin-equip-sol-acoes .btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    min-height: 0;
+    height: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
