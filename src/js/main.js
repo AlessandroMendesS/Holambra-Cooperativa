@@ -17,6 +17,9 @@ const estado = {
     adminPerfisLista: null
 };
 
+let calendarioColabMesRef = new Date();
+let calendarioAdminEditandoId = null;
+
 const ADMIN_ACCOUNTS = [
     { email: 'leticiamendes123z@gmail.com', senha: 'Hab16313@', nome: 'Administrador' },
     { email: 'tanielli.costa@holambra.com.br', senha: 'Holambra@2026', nome: 'Tanielli Costa' }
@@ -138,6 +141,9 @@ const telas = {
     veiculos: document.getElementById('tela-veiculos'),
     programar: document.getElementById('tela-programar'),
     programacao: document.getElementById('tela-programacao'),
+    calendario: document.getElementById('tela-calendario'),
+    calendarioAdmin: document.getElementById('tela-calendario-admin'),
+    quemNaoApontou: document.getElementById('tela-quem-nao-apontou'),
     ferias: document.getElementById('tela-ferias'),
     gestaoOs: document.getElementById('tela-gestao-os'),
     equipamentosOperacao: document.getElementById('tela-equipamentos-operacao'),
@@ -745,6 +751,9 @@ async function navegarPara(idTela, opts = {}) {
         const navHistorico = document.getElementById('nav-historico');
         const navVeiculos = document.getElementById('nav-veiculos');
         const navProgramacao = document.getElementById('nav-programacao');
+        const navCalendario = document.getElementById('nav-calendario');
+        const navProgramarCalendario = document.getElementById('nav-programar-calendario');
+        const navQuemNaoApontou = document.getElementById('nav-quem-nao-apontou');
         const navOperacaoInicio = document.getElementById('nav-operacao-inicio');
         const navAbrirOs = document.getElementById('nav-abrir-os');
         const navMinhasSolicitacoes = document.getElementById('nav-minhas-solicitacoes');
@@ -765,8 +774,11 @@ async function navegarPara(idTela, opts = {}) {
             if (navHistorico) navHistorico.classList.remove('oculto');
             if (navVeiculos) navVeiculos.classList.remove('oculto');
             if (navProgramacao) navProgramacao.classList.remove('oculto');
+            if (navCalendario) navCalendario.classList.remove('oculto');
             if (navOrdensServico) navOrdensServico.classList.remove('oculto');
             if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.remove('oculto');
+            if (navProgramarCalendario) navProgramarCalendario.classList.remove('oculto');
+            if (navQuemNaoApontou) navQuemNaoApontou.classList.remove('oculto');
             if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
@@ -781,8 +793,11 @@ async function navegarPara(idTela, opts = {}) {
             if (navHistorico) navHistorico.classList.add('oculto');
             if (navVeiculos) navVeiculos.classList.add('oculto');
             if (navProgramacao) navProgramacao.classList.add('oculto');
+            if (navCalendario) navCalendario.classList.add('oculto');
             if (navOrdensServico) navOrdensServico.classList.add('oculto');
             if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.add('oculto');
+            if (navProgramarCalendario) navProgramarCalendario.classList.add('oculto');
+            if (navQuemNaoApontou) navQuemNaoApontou.classList.add('oculto');
             if (navOperacaoInicio) navOperacaoInicio.classList.remove('oculto');
             if (navAbrirOs) navAbrirOs.classList.remove('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.remove('oculto');
@@ -797,12 +812,15 @@ async function navegarPara(idTela, opts = {}) {
             if (navHistorico) navHistorico.classList.remove('oculto');
             if (navVeiculos) navVeiculos.classList.remove('oculto');
             if (navProgramacao) navProgramacao.classList.remove('oculto');
+            if (navCalendario) navCalendario.classList.remove('oculto');
             if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
             if (navAbrirOs) navAbrirOs.classList.add('oculto');
             if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
             if (navEquipamentosOp) navEquipamentosOp.classList.add('oculto');
             if (navOrdensServico) navOrdensServico.classList.add('oculto');
             if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.add('oculto');
+            if (navProgramarCalendario) navProgramarCalendario.classList.add('oculto');
+            if (navQuemNaoApontou) navQuemNaoApontou.classList.add('oculto');
             if (menuUsuario) menuUsuario.classList.remove('oculto');
             if (menuAdmin) menuAdmin.classList.add('oculto');
         }
@@ -859,6 +877,9 @@ async function navegarPara(idTela, opts = {}) {
     }
     if (idTela === 'programar') carregarProgramacoesAdmin();
     if (idTela === 'programacao') carregarProgramacaoDiaria();
+    if (idTela === 'calendario') carregarCalendarioColaborador();
+    if (idTela === 'calendarioAdmin') carregarCalendarioAdmin();
+    if (idTela === 'quemNaoApontou') carregarQuemNaoApontou();
     if (idTela === 'dashboard') carregarProgramacoesParaApontamento();
     if (idTela === 'moinhoIdeias') {
         fecharFormularioMoinhoIdeias();
@@ -1019,7 +1040,10 @@ document.getElementById('nav-ordens-servico')?.addEventListener('click', () => n
 document.getElementById('nav-hora-extra')?.addEventListener('click', () => navegarPara('horaExtra'));
 document.getElementById('nav-veiculos')?.addEventListener('click', () => navegarPara('veiculos'));
 document.getElementById('nav-programacao')?.addEventListener('click', () => navegarPara('programacao'));
+document.getElementById('nav-calendario')?.addEventListener('click', () => navegarPara('calendario'));
 document.getElementById('nav-programar')?.addEventListener('click', () => navegarPara('programar'));
+document.getElementById('nav-programar-calendario')?.addEventListener('click', () => navegarPara('calendarioAdmin'));
+document.getElementById('nav-quem-nao-apontou')?.addEventListener('click', () => navegarPara('quemNaoApontou'));
 document.getElementById('nav-sair').addEventListener('click', async () => {
     await supabase.auth.signOut();
     estado.usuario = null;
@@ -1032,6 +1056,8 @@ document.getElementById('nav-sair').addEventListener('click', async () => {
     document.getElementById('nav-ordens-servico')?.classList.add('oculto');
     document.getElementById('nav-hora-extra')?.classList.add('oculto');
     document.getElementById('nav-programar')?.classList.add('oculto');
+    document.getElementById('nav-programar-calendario')?.classList.add('oculto');
+    document.getElementById('nav-quem-nao-apontou')?.classList.add('oculto');
     document.getElementById('menu-usuario').classList.remove('oculto');
     document.getElementById('menu-admin').classList.add('oculto');
     navegarPara('login');
@@ -1117,7 +1143,10 @@ document.getElementById('btn-menu-veiculos-admin')?.addEventListener('click', ()
     navegarPara('veiculos');
 });
 document.getElementById('btn-menu-programacao')?.addEventListener('click', () => navegarPara('programacao'));
+document.getElementById('btn-menu-calendario')?.addEventListener('click', () => navegarPara('calendario'));
 document.getElementById('btn-menu-programar-admin')?.addEventListener('click', () => navegarPara('programar'));
+document.getElementById('btn-menu-programar-calendario-admin')?.addEventListener('click', () => navegarPara('calendarioAdmin'));
+document.getElementById('btn-menu-quem-nao-apontou')?.addEventListener('click', () => navegarPara('quemNaoApontou'));
 document.getElementById('btn-voltar-menu').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-bh').addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-he').addEventListener('click', () => navegarPara('menu'));
@@ -1125,6 +1154,9 @@ document.getElementById('btn-voltar-menu-ferias').addEventListener('click', () =
 document.getElementById('btn-voltar-menu-veiculos')?.addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-programar')?.addEventListener('click', () => navegarPara('menu'));
 document.getElementById('btn-voltar-menu-programacao')?.addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-calendario')?.addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-calendario-admin')?.addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-menu-quem-nao-apontou')?.addEventListener('click', () => navegarPara('menu'));
 
 document.getElementById('btn-voltar-gestao-os')?.addEventListener('click', () => navegarPara('admin'));
 document.getElementById('nav-operacao-inicio')?.addEventListener('click', () => navegarPara('menuOperacao'));
@@ -1166,16 +1198,22 @@ async function verificarUsuario() {
             const navAdmin = document.getElementById('nav-admin');
             const navHoraExtra = document.getElementById('nav-hora-extra');
             const navProgramar = document.getElementById('nav-programar');
+            const navProgramarCalendario = document.getElementById('nav-programar-calendario');
+            const navQuemNaoApontou = document.getElementById('nav-quem-nao-apontou');
             if (estado.perfil.funcao === 'admin') {
                 if (navAdmin) navAdmin.classList.remove('oculto');
                 if (navHoraExtra) navHoraExtra.classList.remove('oculto');
                 if (navProgramar) navProgramar.classList.remove('oculto');
+                if (navProgramarCalendario) navProgramarCalendario.classList.remove('oculto');
+                if (navQuemNaoApontou) navQuemNaoApontou.classList.remove('oculto');
                 document.getElementById('menu-usuario').classList.add('oculto');
                 document.getElementById('menu-admin').classList.remove('oculto');
             } else {
                 if (navAdmin) navAdmin.classList.add('oculto');
                 if (navHoraExtra) navHoraExtra.classList.add('oculto');
                 if (navProgramar) navProgramar.classList.add('oculto');
+                if (navProgramarCalendario) navProgramarCalendario.classList.add('oculto');
+                if (navQuemNaoApontou) navQuemNaoApontou.classList.add('oculto');
                 document.getElementById('menu-usuario').classList.remove('oculto');
                 document.getElementById('menu-admin').classList.add('oculto');
             }
@@ -2354,14 +2392,24 @@ document.getElementById('btn-encaminhar-os')?.addEventListener('click', async ()
 document.getElementById('filtro-os-setor-unidade')?.addEventListener('change', () => carregarOrdensPendentes());
 
 const STATUS_OS_OPCOES = [
+    { value: 'planejada', label: 'Planejada', cor: '#7c3aed' },
     { value: 'programada', label: 'Programada', cor: '#eab308' },
     { value: 'em_andamento', label: 'Em Andamento', cor: '#2563eb' },
     { value: 'concluida', label: 'Concluída', cor: '#16a34a' },
+    { value: 'encerrada', label: 'Encerrada', cor: '#0f766e' },
     { value: 'cancelada', label: 'Cancelada', cor: '#dc2626' }
 ];
-const STATUS_OS_COR = { aberta: '#94a3b8', programada: '#eab308', em_andamento: '#2563eb', concluida: '#16a34a', cancelada: '#dc2626' };
-const STATUS_OS_LABEL = { aberta: 'Aberta', programada: 'Programada', em_andamento: 'Em Andamento', concluida: 'Concluída', cancelada: 'Cancelada' };
-const STATUS_OS_BADGE_CLASS = { aberta: 'badge-wait', programada: 'badge-programada', em_andamento: 'badge-andamento', concluida: 'badge-concluida', cancelada: 'badge-cancelada' };
+const STATUS_OS_COR = { aberta: '#94a3b8', planejada: '#7c3aed', programada: '#eab308', em_andamento: '#2563eb', concluida: '#16a34a', encerrada: '#0f766e', cancelada: '#dc2626' };
+const STATUS_OS_LABEL = { aberta: 'Aberta', planejada: 'Planejada', programada: 'Programada', em_andamento: 'Em Andamento', concluida: 'Concluída', encerrada: 'Encerrada', cancelada: 'Cancelada' };
+const STATUS_OS_BADGE_CLASS = { aberta: 'badge-wait', planejada: 'badge-programada', programada: 'badge-programada', em_andamento: 'badge-andamento', concluida: 'badge-concluida', encerrada: 'badge-ok', cancelada: 'badge-cancelada' };
+
+const CALENDARIO_STATUS = {
+    ferias: { label: 'Férias', classe: 'cal-status-ferias' },
+    banco_horas: { label: 'Banco de horas', classe: 'cal-status-banco_horas' },
+    atividade_programada: { label: 'Atividade programada', classe: 'cal-status-atividade_programada' },
+    sem_atividade: { label: 'Sem atividade', classe: 'cal-status-sem_atividade' },
+    atividade_externa: { label: 'Atividade externa', classe: 'cal-status-atividade_externa' }
+};
 
 function preencherFiltrosGestaoOS() {
     const sel = document.getElementById('gestao-filtro-setor');
@@ -2386,6 +2434,8 @@ async function carregarGestaoOS() {
     if (centro) query = query.eq('centro_trabalho', centro);
     const prioridade = document.getElementById('gestao-filtro-prioridade')?.value;
     if (prioridade) query = query.eq('prioridade', prioridade);
+    const statusSelecionado = document.getElementById('gestao-filtro-status')?.value || '';
+    if (statusSelecionado) query = query.eq('status', statusSelecionado);
     const dataInicio = document.getElementById('gestao-filtro-data-inicio')?.value;
     if (dataInicio) query = query.gte('criado_em', dataInicio + 'T00:00:00');
     const dataFim = document.getElementById('gestao-filtro-data-fim')?.value;
@@ -2476,10 +2526,297 @@ document.getElementById('gestao-btn-limpar')?.addEventListener('click', () => {
     document.getElementById('gestao-filtro-setor').value = '';
     document.getElementById('gestao-filtro-centro').value = '';
     document.getElementById('gestao-filtro-prioridade').value = '';
+    const statusSel = document.getElementById('gestao-filtro-status');
+    if (statusSel) statusSel.value = '';
     document.getElementById('gestao-filtro-data-inicio').value = '';
     document.getElementById('gestao-filtro-data-fim').value = '';
     carregarGestaoOS();
 });
+
+function intervaloMes(dataRef) {
+    const dt = new Date(dataRef.getFullYear(), dataRef.getMonth(), 1);
+    const inicio = new Date(dt.getFullYear(), dt.getMonth(), 1);
+    const fim = new Date(dt.getFullYear(), dt.getMonth() + 1, 0);
+    return {
+        inicio: inicio.toISOString().slice(0, 10),
+        fim: fim.toISOString().slice(0, 10),
+        label: dt.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    };
+}
+
+function montarLegendaCalendario(el) {
+    if (!el) return;
+    el.innerHTML = Object.entries(CALENDARIO_STATUS).map(([key, cfg]) => `
+        <span class="cal-legenda-item">
+            <span class="cal-legenda-cor ${cfg.classe}" aria-hidden="true"></span>${cfg.label}
+        </span>
+    `).join('');
+}
+
+function statusCalendarioInfo(status) {
+    return CALENDARIO_STATUS[status] || CALENDARIO_STATUS.sem_atividade;
+}
+
+async function carregarCalendarioColaborador() {
+    const titulo = document.getElementById('cal-colab-titulo');
+    const grid = document.getElementById('cal-colab-grid');
+    const legenda = document.getElementById('cal-colab-legenda');
+    if (!grid || !estado.usuario?.id) return;
+    montarLegendaCalendario(legenda);
+    const mes = intervaloMes(calendarioColabMesRef);
+    if (titulo) titulo.textContent = mes.label;
+    grid.innerHTML = '<div class="centro" style="grid-column:1/-1;padding:1rem;">Carregando...</div>';
+
+    const { data, error } = await supabase
+        .from('calendario_colaboradores')
+        .select('data_referencia, status')
+        .eq('id_colaborador', estado.usuario.id)
+        .gte('data_referencia', mes.inicio)
+        .lte('data_referencia', mes.fim);
+
+    if (error && !String(error.message || '').includes('does not exist')) {
+        grid.innerHTML = `<div class="card centro" style="grid-column:1/-1;color:#991b1b;">${error.message}</div>`;
+        return;
+    }
+
+    const mapa = new Map((data || []).map((d) => [String(d.data_referencia), String(d.status || 'sem_atividade')]));
+    const ini = new Date(mes.inicio + 'T12:00:00');
+    const fim = new Date(mes.fim + 'T12:00:00');
+    const offset = (ini.getDay() + 6) % 7;
+
+    const cab = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    grid.innerHTML = cab.map((d) => `<div class="cal-dia-semana">${d}</div>`).join('');
+    for (let i = 0; i < offset; i++) grid.innerHTML += '<div class="cal-dia cal-dia-vazio"></div>';
+    for (let d = 1; d <= fim.getDate(); d++) {
+        const chave = `${mes.inicio.slice(0, 8)}${String(d).padStart(2, '0')}`;
+        const status = mapa.get(chave) || 'sem_atividade';
+        const info = statusCalendarioInfo(status);
+        grid.innerHTML += `<div class="cal-dia"><span class="cal-dia-num">${d}</span><span class="cal-dia-status cal-dia-status--compact-mobile ${info.classe}" title="${info.label}">${info.label}</span></div>`;
+    }
+    lucide.createIcons();
+}
+
+async function carregarColaboradoresCalendarioAdmin() {
+    const sel = document.getElementById('cal-admin-colaborador');
+    if (!sel) return;
+    await carregarUsuarios();
+    const todos = estado.usuarios || [];
+    sel.innerHTML = '<option value="">Selecione...</option>' + todos.map((u) => `<option value="${u.id}">${u.nome_completo || '—'}</option>`).join('');
+}
+
+async function renderListaCalendarioAdmin() {
+    const lista = document.getElementById('cal-admin-lista');
+    const colab = document.getElementById('cal-admin-colaborador')?.value;
+    const mesAno = document.getElementById('cal-admin-mesano')?.value;
+    if (!lista) return;
+    if (!colab || !mesAno) {
+        lista.innerHTML = '<p style="color:#64748b;">Selecione colaborador e mês para visualizar.</p>';
+        return;
+    }
+    const [ano, mes] = mesAno.split('-').map(Number);
+    const ref = new Date(ano, (mes || 1) - 1, 1);
+    const intervalo = intervaloMes(ref);
+    const { data, error } = await supabase
+        .from('calendario_colaboradores')
+        .select('*')
+        .eq('id_colaborador', colab)
+        .gte('data_referencia', intervalo.inicio)
+        .lte('data_referencia', intervalo.fim)
+        .order('data_referencia', { ascending: true });
+    if (error) {
+        lista.innerHTML = `<p style="color:#991b1b;">${error.message?.includes('does not exist') ? 'Execute o script SQL para criar calendario_colaboradores.' : error.message}</p>`;
+        return;
+    }
+    if (!data || data.length === 0) {
+        lista.innerHTML = '<p style="color:#64748b;">Nenhuma programação salva no período.</p>';
+        return;
+    }
+    lista.innerHTML = data.map((item) => {
+        const info = statusCalendarioInfo(item.status);
+        return `<div class="cal-admin-item">
+            <div>
+                <strong>${new Date(item.data_referencia + 'T12:00:00').toLocaleDateString('pt-BR')}</strong><br>
+                <span class="cal-dia-status ${info.classe}">${info.label}</span>
+                ${item.observacao ? `<p style="margin:0.4rem 0 0;color:#64748b;font-size:0.82rem;">${String(item.observacao).replace(/</g, '&lt;')}</p>` : ''}
+            </div>
+            <div style="display:flex;gap:0.4rem;">
+                <button type="button" class="btn btn-outline btn-sm cal-admin-editar" data-id="${item.id}" data-data="${item.data_referencia}" data-status="${item.status}" data-observacao="${String(item.observacao || '').replace(/"/g, '&quot;')}"><i data-lucide="pencil"></i></button>
+                <button type="button" class="btn btn-outline btn-sm cal-admin-excluir" data-id="${item.id}" style="color:#b91c1c;border-color:#fecaca;"><i data-lucide="trash-2"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+    lista.querySelectorAll('.cal-admin-editar').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            calendarioAdminEditandoId = btn.dataset.id;
+            const dataInicio = document.getElementById('cal-admin-data-inicio');
+            const dataFim = document.getElementById('cal-admin-data-fim');
+            const status = document.getElementById('cal-admin-status');
+            const obs = document.getElementById('cal-admin-observacao');
+            if (dataInicio) dataInicio.value = btn.dataset.data || '';
+            if (dataFim) dataFim.value = btn.dataset.data || '';
+            if (status) status.value = btn.dataset.status || '';
+            if (obs) obs.value = btn.dataset.observacao || '';
+        });
+    });
+    lista.querySelectorAll('.cal-admin-excluir').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const { error: delErr } = await supabase.from('calendario_colaboradores').delete().eq('id', btn.dataset.id);
+            if (delErr) {
+                mostrarErro('Erro', delErr.message || 'Não foi possível excluir.');
+                return;
+            }
+            await renderListaCalendarioAdmin();
+            mostrarSucesso('Programação removida.');
+        });
+    });
+    lucide.createIcons();
+}
+
+async function carregarCalendarioAdmin() {
+    if (estado.perfil?.funcao !== 'admin') return;
+    await carregarColaboradoresCalendarioAdmin();
+    const mesAno = document.getElementById('cal-admin-mesano');
+    if (mesAno && !mesAno.value) mesAno.value = new Date().toISOString().slice(0, 7);
+    await renderListaCalendarioAdmin();
+}
+
+document.getElementById('cal-colab-prev')?.addEventListener('click', () => {
+    calendarioColabMesRef = new Date(calendarioColabMesRef.getFullYear(), calendarioColabMesRef.getMonth() - 1, 1);
+    carregarCalendarioColaborador();
+});
+document.getElementById('cal-colab-next')?.addEventListener('click', () => {
+    calendarioColabMesRef = new Date(calendarioColabMesRef.getFullYear(), calendarioColabMesRef.getMonth() + 1, 1);
+    carregarCalendarioColaborador();
+});
+
+document.getElementById('cal-admin-colaborador')?.addEventListener('change', renderListaCalendarioAdmin);
+document.getElementById('cal-admin-mesano')?.addEventListener('change', renderListaCalendarioAdmin);
+document.getElementById('cal-admin-salvar')?.addEventListener('click', async () => {
+    if (estado.perfil?.funcao !== 'admin') return;
+    const colab = document.getElementById('cal-admin-colaborador')?.value;
+    const dataInicio = document.getElementById('cal-admin-data-inicio')?.value;
+    const dataFim = document.getElementById('cal-admin-data-fim')?.value || dataInicio;
+    const status = document.getElementById('cal-admin-status')?.value;
+    const observacao = document.getElementById('cal-admin-observacao')?.value?.trim() || null;
+    if (!colab || !dataInicio || !dataFim || !status) {
+        mostrarErro('Campos obrigatórios', 'Preencha colaborador, período e status.');
+        return;
+    }
+    if (dataFim < dataInicio) {
+        mostrarErro('Período inválido', 'A data final não pode ser menor que a data inicial.');
+        return;
+    }
+    const datas = [];
+    let cursor = new Date(dataInicio + 'T12:00:00');
+    const fim = new Date(dataFim + 'T12:00:00');
+    while (cursor <= fim) {
+        datas.push(cursor.toISOString().slice(0, 10));
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    try {
+        if (calendarioAdminEditandoId) {
+            const { error } = await supabase
+                .from('calendario_colaboradores')
+                .update({ data_referencia: dataInicio, status, observacao, atualizado_por: estado.usuario.id })
+                .eq('id', calendarioAdminEditandoId);
+            if (error) throw error;
+            calendarioAdminEditandoId = null;
+        } else {
+            const { data: conflitos } = await supabase
+                .from('calendario_colaboradores')
+                .select('data_referencia')
+                .eq('id_colaborador', colab)
+                .in('data_referencia', datas);
+            if ((conflitos || []).length > 0) {
+                mostrarErro('Conflito de programação', `Já existe programação em ${(conflitos || []).length} dia(s) no período.`);
+                return;
+            }
+            const linhas = datas.map((dataRef) => ({
+                id_colaborador: colab,
+                data_referencia: dataRef,
+                status,
+                observacao,
+                criado_por: estado.usuario.id
+            }));
+            const { error } = await supabase.from('calendario_colaboradores').insert(linhas);
+            if (error) throw error;
+        }
+        mostrarSucesso('Programação de calendário salva.');
+        await renderListaCalendarioAdmin();
+    } catch (e) {
+        mostrarErro('Erro', String(e.message || '').includes('does not exist')
+            ? 'Tabela de calendário não encontrada. Crie calendario_colaboradores no Supabase.'
+            : (e.message || 'Não foi possível salvar.'));
+    }
+});
+
+function inferirPerfilColaborador(user) {
+    const tag = normalizarTextoBusca(user?.tag || '');
+    if (tag.includes('eletric')) return 'eletricista';
+    if (tag.includes('mecan')) return 'mecanico';
+    return 'outros';
+}
+
+async function carregarQuemNaoApontou() {
+    if (estado.perfil?.funcao !== 'admin') return;
+    await carregarUsuarios();
+    const filtroData = document.getElementById('qna-filtro-data');
+    const filtroColab = document.getElementById('qna-filtro-colaborador');
+    if (filtroData && !filtroData.value) filtroData.value = new Date().toISOString().slice(0, 10);
+    if (filtroColab && filtroColab.options.length <= 1) {
+        filtroColab.innerHTML = '<option value="">Todos</option>' + (estado.usuarios || []).map((u) => `<option value="${u.id}">${u.nome_completo || '—'}</option>`).join('');
+    }
+    await atualizarTabelaQuemNaoApontou();
+}
+
+async function atualizarTabelaQuemNaoApontou() {
+    const body = document.getElementById('qna-tabela-body');
+    if (!body) return;
+    const dataRef = document.getElementById('qna-filtro-data')?.value || new Date().toISOString().slice(0, 10);
+    const filtroColab = document.getElementById('qna-filtro-colaborador')?.value || '';
+    const filtroPerfil = document.getElementById('qna-filtro-perfil')?.value || '';
+    const filtroStatus = document.getElementById('qna-filtro-status')?.value || '';
+    const somentePendentes = !!document.getElementById('qna-somente-pendentes')?.checked;
+    const colaboradores = (estado.usuarios || []).filter((u) => !filtroColab || u.id === filtroColab);
+    const ids = colaboradores.map((c) => c.id);
+    if (ids.length === 0) {
+        body.innerHTML = '<tr><td colspan="6">Nenhum colaborador encontrado.</td></tr>';
+        return;
+    }
+    const { data: apont } = await supabase
+        .from('apontamentos')
+        .select('id_manutentor')
+        .eq('data_servico', dataRef)
+        .in('id_manutentor', ids);
+    const apontSet = new Set((apont || []).map((a) => a.id_manutentor));
+
+    const linhas = colaboradores.map((c) => {
+        const perfil = inferirPerfilColaborador(c);
+        const apontou = apontSet.has(c.id);
+        return { c, perfil, apontou };
+    }).filter((r) => {
+        if (filtroPerfil && r.perfil !== filtroPerfil) return false;
+        if (somentePendentes && r.apontou) return false;
+        if (filtroStatus === 'apontou' && !r.apontou) return false;
+        if (filtroStatus === 'nao_apontou' && r.apontou) return false;
+        return true;
+    });
+    if (linhas.length === 0) {
+        body.innerHTML = '<tr><td colspan="5">Nenhum resultado para os filtros.</td></tr>';
+        return;
+    }
+    body.innerHTML = linhas.map(({ c, perfil, apontou }) => `
+        <tr>
+            <td>${new Date(dataRef + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+            <td>${String(c.nome_completo || '—').replace(/</g, '&lt;')}</td>
+            <td>${perfil === 'eletricista' ? 'Eletricista' : perfil === 'mecanico' ? 'Mecânico' : 'Outros'}</td>
+            <td>${apontou ? '✓ Apontou' : 'X Não apontou'}</td>
+            <td>${apontou ? 'Apontamento registrado no dia' : 'Pendente de apontamento'}</td>
+        </tr>
+    `).join('');
+}
+
+document.getElementById('qna-filtrar')?.addEventListener('click', atualizarTabelaQuemNaoApontou);
 
 async function carregarProgramacoesParaApontamento() {
     const selectOS = document.getElementById('apt-ordem-select');

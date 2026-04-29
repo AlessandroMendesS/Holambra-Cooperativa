@@ -1556,6 +1556,124 @@ input[type="file"] {
     border: 1px solid rgba(0, 65, 117, 0.12);
     box-shadow: var(--sombra-card-suave);
 }
+
+.cal-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.cal-toolbar h3 {
+    margin: 0;
+    min-width: 200px;
+    text-align: center;
+}
+
+.cal-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.cal-legenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: #475569;
+}
+
+.cal-legenda-cor {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.cal-dia-semana {
+    font-size: 0.75rem;
+    text-align: center;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.cal-dia {
+    min-height: 78px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0.45rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    background: #fff;
+}
+
+.cal-dia-num {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.cal-dia-status {
+    font-size: 0.73rem;
+    border-radius: 999px;
+    padding: 0.2rem 0.45rem;
+    color: #1e293b;
+    font-weight: 600;
+    align-self: flex-start;
+}
+
+.cal-dia-status--dot-only {
+    min-width: 26px;
+    min-height: 14px;
+    padding: 0;
+}
+
+@media (max-width: 720px) {
+    /* Em mobile: não exibir textos no calendário (só cor). */
+    .cal-dia-status--compact-mobile {
+        color: transparent;
+        font-size: 0;
+        padding: 0;
+        min-width: 26px;
+        min-height: 14px;
+    }
+}
+
+.cal-dia-vazio {
+    background: #f8fafc;
+    border-style: dashed;
+}
+
+.cal-status-ferias { background: #bae6fd; }
+.cal-status-banco_horas { background: #ddd6fe; }
+.cal-status-atividade_programada { background: #bbf7d0; }
+.cal-status-sem_atividade { background: #e2e8f0; }
+.cal-status-atividade_externa { background: #fed7aa; }
+
+
+.cal-admin-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.7rem;
+    margin-bottom: 0.6rem;
+}
+
+.cal-admin-item strong {
+    color: #0f172a;
+}
 .admin-tab {
     flex: 1;
     display: flex;

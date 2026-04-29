@@ -59,7 +59,10 @@
                     <button class="btn btn-secundario oculto" id="nav-hora-extra" style="justify-content: flex-start;"><i data-lucide="timer"></i> Hora Extra - Escala</button>
                 <button class="btn btn-secundario" id="nav-veiculos" style="justify-content: flex-start;"><i data-lucide="car"></i> Veículos</button>
                 <button class="btn btn-secundario" id="nav-programacao" style="justify-content: flex-start;"><i data-lucide="clipboard-check"></i> Programação Diária</button>
+                <button class="btn btn-secundario" id="nav-calendario" style="justify-content: flex-start;"><i data-lucide="calendar-days"></i> Calendário</button>
                 <button class="btn btn-secundario oculto" id="nav-programar" style="justify-content: flex-start;"><i data-lucide="calendar-plus"></i> Programar</button>
+                <button class="btn btn-secundario oculto" id="nav-programar-calendario" style="justify-content: flex-start;"><i data-lucide="calendar-cog"></i> Programar Calendário</button>
+                <button class="btn btn-secundario oculto" id="nav-quem-nao-apontou" style="justify-content: flex-start;"><i data-lucide="user-x"></i> Quem não apontou</button>
                 
                 <div style="margin-top:auto"></div>
                 <button class="btn btn-danger" id="nav-sair"><i data-lucide="log-out"></i> Sair do Sistema</button>
@@ -573,6 +576,13 @@
                         <h3>Veículos</h3>
                         <p>Visualizar frota de veículos</p>
                     </button>
+                    <button class="menu-card" id="btn-menu-calendario">
+                        <div class="menu-card-icon">
+                            <i data-lucide="calendar-days"></i>
+                        </div>
+                        <h3>Calendário</h3>
+                        <p>Visualizar programação mensal</p>
+                    </button>
                 </div>
 
                 
@@ -619,6 +629,20 @@
                         </div>
                         <h3>Programar</h3>
                         <p>Criar programação para colaboradores</p>
+                    </button>
+                    <button class="menu-card" id="btn-menu-programar-calendario-admin">
+                        <div class="menu-card-icon">
+                            <i data-lucide="calendar-cog"></i>
+                        </div>
+                        <h3>Programar Calendário</h3>
+                        <p>Definir status mensal dos colaboradores</p>
+                    </button>
+                    <button class="menu-card" id="btn-menu-quem-nao-apontou">
+                        <div class="menu-card-icon">
+                            <i data-lucide="user-x"></i>
+                        </div>
+                        <h3>Quem não apontou</h3>
+                        <p>Controle diário de pendências</p>
                     </button>
                 </div>
             </section>
@@ -957,6 +981,19 @@
                             </select>
                         </div>
                     </div>
+                    <div class="grupo-input">
+                        <label>Status da OS</label>
+                        <select id="gestao-filtro-status" class="select-campo">
+                            <option value="">Todos</option>
+                            <option value="aberta">Aberta</option>
+                            <option value="programada">Programada</option>
+                            <option value="planejada">Planejada</option>
+                            <option value="em_andamento">Em andamento</option>
+                            <option value="concluida">Concluída</option>
+                            <option value="encerrada">Encerrada</option>
+                            <option value="cancelada">Cancelada</option>
+                        </select>
+                    </div>
                     <div class="grid-duplo">
                         <div class="grupo-input">
                             <label>Data Início</label>
@@ -971,6 +1008,127 @@
                     <button type="button" id="gestao-btn-limpar" class="btn btn-outline" style="margin-top: 10px; width: auto;">Limpar</button>
                 </div>
                 <div id="lista-gestao-os"></div>
+            </section>
+
+            <section id="tela-calendario" class="tela oculto">
+                <div class="page-toolbar">
+                    <h2>Calendário</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-menu-calendario" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
+                </div>
+                <div class="card">
+                    <div class="cal-toolbar">
+                        <button type="button" id="cal-colab-prev" class="btn btn-outline" style="width:auto;padding:0 0.9rem;height:38px;">&lt;</button>
+                        <h3 id="cal-colab-titulo">Mês atual</h3>
+                        <button type="button" id="cal-colab-next" class="btn btn-outline" style="width:auto;padding:0 0.9rem;height:38px;">&gt;</button>
+                    </div>
+                    <div id="cal-colab-legenda" class="cal-legenda"></div>
+                    <div id="cal-colab-grid" class="cal-grid"></div>
+                </div>
+            </section>
+
+            <section id="tela-calendario-admin" class="tela oculto">
+                <div class="page-toolbar">
+                    <h2>Programar Calendário</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-menu-calendario-admin" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
+                </div>
+                <div class="card">
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Selecionar colaborador</label>
+                            <select id="cal-admin-colaborador" class="select-campo"></select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Mês/Ano</label>
+                            <input type="month" id="cal-admin-mesano" class="input-campo">
+                        </div>
+                    </div>
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Data início</label>
+                            <input type="date" id="cal-admin-data-inicio" class="input-campo">
+                        </div>
+                        <div class="grupo-input">
+                            <label>Data fim</label>
+                            <input type="date" id="cal-admin-data-fim" class="input-campo">
+                        </div>
+                    </div>
+                    <div class="grupo-input">
+                        <label>Status do calendário</label>
+                        <select id="cal-admin-status" class="select-campo">
+                            <option value="">Selecione...</option>
+                            <option value="ferias">Férias</option>
+                            <option value="banco_horas">Banco de horas</option>
+                            <option value="atividade_programada">Atividade programada</option>
+                            <option value="sem_atividade">Sem atividade</option>
+                            <option value="atividade_externa">Atividade externa</option>
+                        </select>
+                    </div>
+                    <div class="grupo-input">
+                        <label>Observação opcional</label>
+                        <textarea id="cal-admin-observacao" class="textarea-campo" placeholder="Unidade de destino, descrição da atividade, motivo..."></textarea>
+                    </div>
+                    <button type="button" id="cal-admin-salvar" class="btn btn-primario"><i data-lucide="save"></i> Salvar programação</button>
+                </div>
+                <div class="card" style="margin-top:1rem;">
+                    <h3 style="margin-bottom:1rem;">Programações salvas</h3>
+                    <div id="cal-admin-lista" class="lista-cal-admin"></div>
+                </div>
+            </section>
+
+            <section id="tela-quem-nao-apontou" class="tela oculto">
+                <div class="page-toolbar">
+                    <h2>Quem não apontou</h2>
+                    <button type="button" class="btn btn-outline" id="btn-voltar-menu-quem-nao-apontou" style="width: auto; padding: 0 1rem; height: 40px;"><i data-lucide="arrow-left"></i> Voltar</button>
+                </div>
+                <div class="card">
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Data</label>
+                            <input type="date" id="qna-filtro-data" class="input-campo">
+                        </div>
+                        <div class="grupo-input">
+                            <label>Colaborador</label>
+                            <select id="qna-filtro-colaborador" class="select-campo"></select>
+                        </div>
+                    </div>
+                    <div class="grid-duplo">
+                        <div class="grupo-input">
+                            <label>Perfil</label>
+                            <select id="qna-filtro-perfil" class="select-campo">
+                                <option value="">Todos</option>
+                                <option value="eletricista">Eletricista</option>
+                                <option value="mecanico">Mecânico</option>
+                            </select>
+                        </div>
+                        <div class="grupo-input">
+                            <label>Status</label>
+                            <select id="qna-filtro-status" class="select-campo">
+                                <option value="">Todos</option>
+                                <option value="apontou">Apontou</option>
+                                <option value="nao_apontou">Não apontou</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+                        <input type="checkbox" id="qna-somente-pendentes">
+                        Visualizar somente pendentes
+                    </label>
+                    <button type="button" id="qna-filtrar" class="btn btn-primario"><i data-lucide="filter"></i> Atualizar tabela</button>
+                </div>
+                <div class="card" style="margin-top:1rem;overflow-x:auto;">
+                    <table class="tabela-escala">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Colaborador</th>
+                                <th>Perfil/Função</th>
+                                <th>Status do apontamento</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qna-tabela-body"></tbody>
+                    </table>
+                </div>
             </section>
 
             
