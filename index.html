@@ -345,10 +345,6 @@
                             <select id="os-equipamento" class="select-campo" required disabled>
                                 <option value="">Selecione primeiro a unidade</option>
                             </select>
-                            <button type="button" class="btn-os-nao-encontrei-equip" id="btn-os-nao-encontrei-equipamento" title="Abre a tela para pedir inclusão na lista da unidade">
-                                <span class="btn-os-nao-encontrei-equip__icon" aria-hidden="true"><i data-lucide="wrench"></i></span>
-                                <span class="btn-os-nao-encontrei-equip__texto">Não encontrei o equipamento</span>
-                            </button>
                         </div>
                         <div class="grupo-input">
                             <label>Número da OS (gerado automaticamente)</label>
@@ -1068,6 +1064,15 @@
                         <textarea id="cal-admin-observacao" class="textarea-campo" placeholder="Unidade de destino, descrição da atividade, motivo..."></textarea>
                     </div>
                     <button type="button" id="cal-admin-salvar" class="btn btn-primario"><i data-lucide="save"></i> Salvar programação</button>
+                </div>
+                <div class="card" style="margin-top:1rem;">
+                    <div class="cal-toolbar">
+                        <button type="button" id="cal-admin-prev" class="btn btn-outline" style="width:auto;padding:0 0.9rem;height:38px;">&lt;</button>
+                        <h3 id="cal-admin-titulo">Calendário do colaborador</h3>
+                        <button type="button" id="cal-admin-next" class="btn btn-outline" style="width:auto;padding:0 0.9rem;height:38px;">&gt;</button>
+                    </div>
+                    <div id="cal-admin-legenda" class="cal-legenda"></div>
+                    <div id="cal-admin-grid" class="cal-grid"></div>
                 </div>
                 <div class="card" style="margin-top:1rem;">
                     <h3 style="margin-bottom:1rem;">Programações salvas</h3>

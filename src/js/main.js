@@ -2557,6 +2557,72 @@ function statusCalendarioInfo(status) {
     return CALENDARIO_STATUS[status] || CALENDARIO_STATUS.sem_atividade;
 }
 
+async function renderGridCalendarioAdmin() {
+    const titulo = document.getElementById('cal-admin-titulo');
+    const grid = document.getElementById('cal-admin-grid');
+    const legenda = document.getElementById('cal-admin-legenda');
+    const colabSel = document.getElementById('cal-admin-colaborador');
+    const colab = colabSel?.value || '';
+    const mesAno = document.getElementById('cal-admin-mesano')?.value || '';
+    if (!grid) return;
+
+    montarLegendaCalendario(legenda);
+
+    if (!colab || !mesAno) {
+        if (titulo) titulo.textContent = 'Calendário do colaborador';
+        grid.innerHTML = '<div class="centro" style="grid-column:1/-1;padding:1rem;color:#64748b;">Selecione colaborador e mês para visualizar o calendário.</div>';
+        return;
+    }
+
+    const [ano, mes] = mesAno.split('-').map(Number);
+    const ref = new Date(ano, (mes || 1) - 1, 1);
+    const intervalo = intervaloMes(ref);
+    const nomeColab = colabSel?.selectedOptions?.[0]?.textContent?.trim() || '—';
+    if (titulo) titulo.textContent = `${nomeColab} — ${intervalo.label}`;
+
+    grid.innerHTML = '<div class="centro" style="grid-column:1/-1;padding:1rem;">Carregando...</div>';
+
+    const { data, error } = await supabase
+        .from('calendario_colaboradores')
+        .select('data_referencia, status, observacao')
+        .eq('id_colaborador', colab)
+        .gte('data_referencia', intervalo.inicio)
+        .lte('data_referencia', intervalo.fim);
+
+    if (error && !String(error.message || '').includes('does not exist')) {
+        grid.innerHTML = `<div class="card centro" style="grid-column:1/-1;color:#991b1b;">${error.message}</div>`;
+        return;
+    }
+
+    const mapa = new Map((data || []).map((d) => {
+        const obs = d.observacao ? String(d.observacao) : '';
+        return [String(d.data_referencia), { status: String(d.status || 'sem_atividade'), obs }];
+    }));
+
+    const ini = new Date(intervalo.inicio + 'T12:00:00');
+    const fim = new Date(intervalo.fim + 'T12:00:00');
+    const offset = (ini.getDay() + 6) % 7;
+
+    const cab = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    grid.innerHTML = cab.map((d) => `<div class="cal-dia-semana">${d}</div>`).join('');
+    for (let i = 0; i < offset; i++) grid.innerHTML += '<div class="cal-dia cal-dia-vazio"></div>';
+    for (let dia = 1; dia <= fim.getDate(); dia++) {
+        const chave = `${intervalo.inicio.slice(0, 8)}${String(dia).padStart(2, '0')}`;
+        const item = mapa.get(chave) || { status: 'sem_atividade', obs: '' };
+        const info = statusCalendarioInfo(item.status);
+        const tooltip = [info.label, item.obs].filter(Boolean).join(' — ').replace(/</g, '&lt;');
+        grid.innerHTML += `<div class="cal-dia" title="${tooltip}"><span class="cal-dia-num">${dia}</span><span class="cal-dia-status cal-dia-status--compact-mobile ${info.classe}">${info.label}</span></div>`;
+    }
+    lucide.createIcons();
+}
+
+async function renderCalendarioAdminViews() {
+    await Promise.all([
+        renderListaCalendarioAdmin(),
+        renderGridCalendarioAdmin()
+    ]);
+}
+
 async function carregarCalendarioColaborador() {
     const titulo = document.getElementById('cal-colab-titulo');
     const grid = document.getElementById('cal-colab-grid');
@@ -2677,7 +2743,7 @@ async function carregarCalendarioAdmin() {
     await carregarColaboradoresCalendarioAdmin();
     const mesAno = document.getElementById('cal-admin-mesano');
     if (mesAno && !mesAno.value) mesAno.value = new Date().toISOString().slice(0, 7);
-    await renderListaCalendarioAdmin();
+    await renderCalendarioAdminViews();
 }
 
 document.getElementById('cal-colab-prev')?.addEventListener('click', () => {
@@ -2689,8 +2755,24 @@ document.getElementById('cal-colab-next')?.addEventListener('click', () => {
     carregarCalendarioColaborador();
 });
 
-document.getElementById('cal-admin-colaborador')?.addEventListener('change', renderListaCalendarioAdmin);
-document.getElementById('cal-admin-mesano')?.addEventListener('change', renderListaCalendarioAdmin);
+document.getElementById('cal-admin-colaborador')?.addEventListener('change', renderCalendarioAdminViews);
+document.getElementById('cal-admin-mesano')?.addEventListener('change', renderCalendarioAdminViews);
+document.getElementById('cal-admin-prev')?.addEventListener('click', () => {
+    const mesAno = document.getElementById('cal-admin-mesano');
+    if (!mesAno?.value) return;
+    const [ano, mes] = mesAno.value.split('-').map(Number);
+    const ref = new Date(ano, (mes || 1) - 2, 1);
+    mesAno.value = ref.toISOString().slice(0, 7);
+    void renderCalendarioAdminViews();
+});
+document.getElementById('cal-admin-next')?.addEventListener('click', () => {
+    const mesAno = document.getElementById('cal-admin-mesano');
+    if (!mesAno?.value) return;
+    const [ano, mes] = mesAno.value.split('-').map(Number);
+    const ref = new Date(ano, (mes || 1), 1);
+    mesAno.value = ref.toISOString().slice(0, 7);
+    void renderCalendarioAdminViews();
+});
 document.getElementById('cal-admin-salvar')?.addEventListener('click', async () => {
     if (estado.perfil?.funcao !== 'admin') return;
     const colab = document.getElementById('cal-admin-colaborador')?.value;
@@ -3732,16 +3814,6 @@ document.getElementById('admin-equip-solicitacoes-wrap')?.addEventListener('clic
         mostrarSucesso('Equipamento aprovado e liberado na lista.');
     }
     await renderAdminEquipamentosSolicitacoes(estado.adminPerfisLista || []);
-});
-
-document.getElementById('btn-os-nao-encontrei-equipamento')?.addEventListener('click', () => {
-    const u = document.getElementById('os-setor')?.value?.trim() || '';
-    if (!u) {
-        mostrarErro('Unidade', 'Selecione primeiro a unidade para solicitar um equipamento.');
-        return;
-    }
-    estado.equipOpUnidadePreselect = u;
-    navegarPara('equipamentosOperacao');
 });
 
 function renderizarLogs(logs, conteiner, isAdmin = false) {
