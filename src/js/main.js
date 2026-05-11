@@ -54,6 +54,68 @@ function mensagemErroCadastroAuth(error) {
     return msg || 'Não foi possível criar a conta.';
 }
 
+async function aguardarPerfilDisponivel(userId, tentativas = 8, esperaMs = 350) {
+    for (let i = 0; i < tentativas; i++) {
+        const { data, error } = await supabase
+            .from('perfis')
+            .select('id')
+            .eq('id', userId)
+            .maybeSingle();
+        if (!error && data?.id) return true;
+        await new Promise((resolve) => setTimeout(resolve, esperaMs));
+    }
+    return false;
+}
+
+async function atualizarPerfilCadastro(userId, payload, camposOpcionais = []) {
+    const perfilDisponivel = await aguardarPerfilDisponivel(userId);
+    if (!perfilDisponivel) {
+        return { error: new Error('Perfil não foi criado no banco após o cadastro. Verifique trigger/policies da tabela perfis.') };
+    }
+
+    let tentativaPayload = { ...payload };
+    let { error } = await supabase.from('perfis').update(tentativaPayload).eq('id', userId);
+    if (!error) return { error: null };
+
+    for (const campo of camposOpcionais) {
+        const msg = String(error?.message || '').toLowerCase();
+        if (msg.includes(String(campo).toLowerCase())) {
+            const { [campo]: _omitido, ...restante } = tentativaPayload;
+            tentativaPayload = restante;
+            const retry = await supabase.from('perfis').update(tentativaPayload).eq('id', userId);
+            error = retry.error;
+            if (!error) return { error: null };
+        }
+    }
+
+    if (error) return { error };
+
+    const colunas = ['id', ...Object.keys(tentativaPayload)];
+    const { data: conferido, error: erroConferencia } = await supabase
+        .from('perfis')
+        .select(colunas.join(','))
+        .eq('id', userId)
+        .maybeSingle();
+    if (erroConferencia || !conferido) {
+        return { error: new Error('Perfil atualizado, mas não foi possível confirmar os dados salvos em perfis.') };
+    }
+
+    const divergentes = Object.keys(tentativaPayload).filter((k) => {
+        const esperado = tentativaPayload[k] ?? null;
+        const atual = conferido[k] ?? null;
+        return String(esperado ?? '') !== String(atual ?? '');
+    });
+    if (divergentes.length > 0) {
+        return {
+            error: new Error(
+                `Alguns campos não foram persistidos no perfil (${divergentes.join(', ')}). Verifique as políticas RLS de update/select da tabela perfis para auth.uid().`
+            )
+        };
+    }
+
+    return { error: null };
+}
+
 async function criarContaAuthComFallback(email, senha, metadata) {
     const nome = String(metadata?.nome_completo || '').trim();
     const tipoPerfil = String(metadata?.tipo_perfil || '').trim();
@@ -1523,10 +1585,16 @@ document.getElementById('formulario-cadastro').addEventListener('submit', async 
     }
 
     if (data.user) {
-        await supabase
-            .from('perfis')
-            .update({ tipo_perfil: 'manutencao', email, telefone: whatsapp, cpf })
-            .eq('id', data.user.id);
+        const { error: perfErr } = await atualizarPerfilCadastro(data.user.id, {
+            tipo_perfil: 'manutencao',
+            email,
+            telefone: whatsapp,
+            cpf
+        });
+        if (perfErr) {
+            mostrarErro('Perfil', perfErr.message || 'Não foi possível salvar CPF/e-mail no perfil.');
+            return;
+        }
         const fotoEl = document.getElementById('cad-foto');
         if (data.session && fotoEl?.files?.length) {
             try {
@@ -1624,15 +1692,7 @@ document.getElementById('formulario-cadastro-operacao')?.addEventListener('submi
             funcao_cargo: funcao_cargo || null,
             setor_centro_padrao: setorCentroPadrao
         };
-        let { error: perfErr } = await supabase.from('perfis').update(perfilUpd).eq('id', data.user.id);
-        if (perfErr && String(perfErr.message || '').toLowerCase().includes('setor_centro_padrao')) {
-            const { setor_centro_padrao: _a, ...rest } = perfilUpd;
-            const r2 = await supabase.from('perfis').update(rest).eq('id', data.user.id);
-            perfErr = r2.error;
-            if (!perfErr) {
-                await Swal.fire({ icon: 'info', title: 'Conta criada', text: 'Execute supabase_add_setor_centro_avaliacao_os.sql para gravar o setor MT padrão no perfil.' });
-            }
-        }
+        let { error: perfErr } = await atualizarPerfilCadastro(data.user.id, perfilUpd, ['setor_centro_padrao']);
         if (perfErr) {
             mostrarErro('Perfil', perfErr.message || 'Não foi possível atualizar o perfil.');
             return;
@@ -2100,7 +2160,7 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
     try {
         const payload = {
             numero_solicitacao: numeroSolicitacao,
-            titulo: numeroSolicitacao + ' - ' + (descricao.trim().substring(0, 80) || 'Solicitação'),
+            titulo: tituloSolicitacaoPadrao(numeroSolicitacao),
             id_solicitante: estado.usuario.id,
             descricao: descricao.trim(),
             setor: setorUnidade,
@@ -2179,6 +2239,28 @@ function secaoAvaliacaoMinhaOS(os) {
 
 function escaparHtmlBasico(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function tituloSolicitacaoPadrao(numeroSolicitacao) {
+    const numero = String(numeroSolicitacao || '').trim();
+    return numero ? `OS #${numero}` : 'Solicitação de manutenção';
+}
+
+function montarProblemaOS(titulo, descricao) {
+    const desc = String(descricao || '').trim();
+    if (desc) return desc;
+    return String(titulo || '').trim();
+}
+
+function optionsHtmlSelect(valores, selecionado) {
+    const atual = String(selecionado || '').trim();
+    return (valores || [])
+        .map((item) => {
+            const v = String(item || '').trim();
+            const sel = v === atual ? ' selected' : '';
+            return `<option value="${escaparHtmlBasico(v)}"${sel}>${escaparHtmlBasico(v)}</option>`;
+        })
+        .join('');
 }
 
 async function carregarMinhasSolicitacoes() {
@@ -2261,6 +2343,13 @@ async function carregarMinhasSolicitacoes() {
             <div class="minha-os-descricao">${descEscapada}</div>
             ${blocoDesignados}
             <div class="minha-os-meta">${metaBits.join(' · ')}</div>
+            ${(os.status === 'aberta' || os.status === 'programada')
+                ? `<div class="minha-os-acoes" style="margin-top:0.8rem;">
+                    <button type="button" class="btn btn-outline btn-editar-minha-os" data-os-id="${String(os.id || '').replace(/"/g, '')}" style="width:auto;min-height:36px;padding:0 0.9rem;">
+                        Editar solicitação
+                    </button>
+                </div>`
+                : ''}
             ${secaoAvaliacaoMinhaOS(os)}
         `;
         lista.appendChild(card);
@@ -2269,6 +2358,139 @@ async function carregarMinhasSolicitacoes() {
 }
 
 document.getElementById('lista-minhas-solicitacoes')?.addEventListener('click', async (e) => {
+    const btnEditar = e.target.closest('.btn-editar-minha-os');
+    if (btnEditar && estado.usuario?.id) {
+        e.preventDefault();
+        const osId = btnEditar.dataset.osId;
+        if (!osId) return;
+        try {
+            const { data: osAtual, error: erroBusca } = await supabase
+                .from('ordens_servico')
+                .select('id, numero_solicitacao, titulo, descricao, status, setor, unidade, setor_centro, equipamento, centro_trabalho, data_necessidade, destino_servico, tipo_manutencao, prioridade')
+                .eq('id', osId)
+                .eq('id_solicitante', estado.usuario.id)
+                .single();
+            if (erroBusca || !osAtual) throw new Error('Solicitação não encontrada.');
+            if (osAtual.status !== 'aberta' && osAtual.status !== 'programada') {
+                mostrarErro('Edição não permitida', 'Só é possível editar solicitações abertas ou programadas.');
+                return;
+            }
+
+            const unidadeAtual = String(osAtual.setor || osAtual.unidade || '').trim();
+            const unidadeOpc = [...UNIDADES_OPERACAO];
+            const unidadeInicial = unidadeOpc.includes(unidadeAtual) ? unidadeAtual : (unidadeOpc[0] || '');
+            const listaEquipInicial = obterListaEquipamentosParaUnidade(unidadeInicial);
+            const equipAtual = String(osAtual.equipamento || '').trim();
+            const equipInicial = listaEquipInicial.includes(equipAtual) ? equipAtual : '';
+            const centroAtual = String(osAtual.centro_trabalho || '').trim();
+            const destinoAtual = String(osAtual.destino_servico || '').trim();
+            const tipoAtual = String(osAtual.tipo_manutencao || '').trim();
+            const prioridadeAtual = String(osAtual.prioridade || '').trim();
+            const setorCentroAtual = String(osAtual.setor_centro || '').trim();
+            const dataNecAtual = osAtual.data_necessidade ? String(osAtual.data_necessidade).slice(0, 10) : '';
+
+            const { value: form, isConfirmed } = await Swal.fire({
+                title: 'Editar solicitação',
+                html: `
+                    <div style="text-align:left;display:grid;gap:0.7rem;">
+                        <label>Unidade</label>
+                        <select id="edit-os-unidade" class="swal2-input" style="margin:0;">${optionsHtmlSelect(unidadeOpc, unidadeInicial)}</select>
+                        <label>Setor (código / centro MT)</label>
+                        <select id="edit-os-setor-centro" class="swal2-input" style="margin:0;">${optionsHtmlSelect(SETORES, setorCentroAtual)}</select>
+                        <label>Equipamento</label>
+                        <select id="edit-os-equipamento" class="swal2-input" style="margin:0;">${optionsHtmlSelect(listaEquipInicial, equipInicial)}</select>
+                        <label>Centro de trabalho</label>
+                        <select id="edit-os-centro" class="swal2-input" style="margin:0;">${optionsHtmlSelect(['Elétrica', 'Mecânica'], centroAtual)}</select>
+                        <label>Data de necessidade</label>
+                        <input id="edit-os-data-necessidade" type="date" class="swal2-input" value="${escaparHtmlBasico(dataNecAtual)}" style="margin:0;">
+                        <label>Destino do serviço</label>
+                        <select id="edit-os-destino" class="swal2-input" style="margin:0;">${optionsHtmlSelect(['Manutenção', 'Frota', 'Operação', 'Projeto', 'Segurança', 'Automação'], destinoAtual)}</select>
+                        <label>Tipo de manutenção</label>
+                        <select id="edit-os-tipo" class="swal2-input" style="margin:0;">${optionsHtmlSelect(['Corretiva', 'Império', 'Melhoria'], tipoAtual)}</select>
+                        <label>Prioridade</label>
+                        <select id="edit-os-prioridade" class="swal2-input" style="margin:0;">${optionsHtmlSelect(['Urgente', 'Alta', 'Média', 'Baixa'], prioridadeAtual)}</select>
+                        <label>Descrição do serviço</label>
+                        <textarea id="edit-os-descricao" class="swal2-textarea" maxlength="3000" style="margin:0;min-height:120px;">${escaparHtmlBasico(String(osAtual.descricao || ''))}</textarea>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Salvar',
+                cancelButtonText: 'Cancelar',
+                didOpen: () => {
+                    const selUn = document.getElementById('edit-os-unidade');
+                    const selEq = document.getElementById('edit-os-equipamento');
+                    const atualizarEquip = () => {
+                        const unidade = selUn?.value || '';
+                        const listaEq = obterListaEquipamentosParaUnidade(unidade);
+                        if (!selEq) return;
+                        const atual = selEq.value;
+                        selEq.innerHTML = optionsHtmlSelect(listaEq, atual);
+                        if (!selEq.value && listaEq.length > 0) selEq.value = listaEq[0];
+                    };
+                    selUn?.addEventListener('change', atualizarEquip);
+                },
+                preConfirm: () => {
+                    const unidade = document.getElementById('edit-os-unidade')?.value?.trim() || '';
+                    const setorCentro = document.getElementById('edit-os-setor-centro')?.value?.trim() || '';
+                    const equipamento = document.getElementById('edit-os-equipamento')?.value?.trim() || '';
+                    const centroTrabalho = document.getElementById('edit-os-centro')?.value?.trim() || '';
+                    const dataNecessidade = document.getElementById('edit-os-data-necessidade')?.value || null;
+                    const destinoServico = document.getElementById('edit-os-destino')?.value?.trim() || '';
+                    const tipoManutencao = document.getElementById('edit-os-tipo')?.value?.trim() || '';
+                    const prioridade = document.getElementById('edit-os-prioridade')?.value?.trim() || '';
+                    const descricao = document.getElementById('edit-os-descricao')?.value?.trim() || '';
+                    if (!unidade) {
+                        Swal.showValidationMessage('Selecione a unidade.');
+                        return false;
+                    }
+                    if (!setorCentro) {
+                        Swal.showValidationMessage('Selecione o setor (código / centro MT).');
+                        return false;
+                    }
+                    if (!equipamento) {
+                        Swal.showValidationMessage('Selecione o equipamento.');
+                        return false;
+                    }
+                    if (!descricao) {
+                        Swal.showValidationMessage('A descrição não pode ficar vazia.');
+                        return false;
+                    }
+                    return { unidade, setorCentro, equipamento, centroTrabalho, dataNecessidade, destinoServico, tipoManutencao, prioridade, descricao };
+                }
+            });
+            if (!isConfirmed) return;
+            const descricaoFinal = String(form.descricao || '').trim();
+            const { error: erroUpdate } = await supabase
+                .from('ordens_servico')
+                .update({
+                    descricao: descricaoFinal,
+                    titulo: tituloSolicitacaoPadrao(osAtual.numero_solicitacao),
+                    setor: form.unidade,
+                    unidade: form.unidade,
+                    setor_centro: form.setorCentro,
+                    equipamento: form.equipamento,
+                    centro_trabalho: form.centroTrabalho || null,
+                    data_necessidade: form.dataNecessidade || null,
+                    destino_servico: form.destinoServico || null,
+                    tipo_manutencao: form.tipoManutencao || null,
+                    prioridade: form.prioridade || null,
+                    atualizado_em: new Date().toISOString()
+                })
+                .eq('id', osId)
+                .eq('id_solicitante', estado.usuario.id);
+            if (erroUpdate) throw erroUpdate;
+            mostrarSucesso('Solicitação atualizada!');
+            carregarMinhasSolicitacoes();
+            if (estado.perfil?.funcao === 'admin') {
+                carregarOrdensPendentes();
+                carregarGestaoOS();
+            }
+        } catch (err) {
+            mostrarErro('Erro', err.message || 'Não foi possível atualizar a solicitação.');
+        }
+        return;
+    }
+
     const btn = e.target.closest('.os-star-btn--salvar');
     if (!btn || !estado.usuario?.id) return;
     e.preventDefault();
@@ -2340,10 +2562,12 @@ async function carregarOrdensPendentes() {
         div.style.alignItems = 'flex-start';
         div.style.gap = '12px';
         const dataAbertura = os.criado_em ? new Date(os.criado_em).toLocaleDateString('pt-BR') : '—';
+        const numeroExibicao = os.numero_solicitacao || os.id?.slice(0, 8) || '—';
+        const tituloExibicao = tituloSolicitacaoPadrao(numeroExibicao);
         div.innerHTML = `
             <input type="checkbox" class="os-pendente-cb" data-id="${os.id}" style="margin-top:6px;">
             <div style="flex:1;">
-                <strong>${(os.titulo || '').replace(/</g, '&lt;')}</strong>
+                <strong>${tituloExibicao.replace(/</g, '&lt;')}</strong>
                 <p style="font-size:0.85rem;color:#666;margin:4px 0 0;">${(os.descricao || '').replace(/</g, '&lt;').substring(0, 80)}...</p>
                 <p style="font-size:0.8rem;color:#888;margin-top:4px;">${os.setor || os.unidade}${os.setor_centro ? ' · ' + String(os.setor_centro).replace(/</g, '&lt;') : ''} • ${dataAbertura}</p>
             </div>
@@ -2377,7 +2601,7 @@ document.getElementById('btn-encaminhar-os')?.addEventListener('click', async ()
                     id_colaborador: responsavel,
                     os_numero: numeroOs,
                     setor_unidade: `${os.unidade} - ${os.setor}${sufixoCentro}`,
-                    problema: os.titulo + (os.descricao ? '\n' + os.descricao : ''),
+                    problema: montarProblemaOS(os.titulo, os.descricao),
                     data_programada: new Date().toISOString().slice(0, 10)
                 }]);
             }
@@ -4389,7 +4613,7 @@ document.getElementById('prog-admin-btn-programar')?.addEventListener('click', a
 
         const sufixoCentro = os.setor_centro ? ` · ${os.setor_centro}` : '';
         const setorUnidade = `${os.unidade || ''} - ${os.setor || ''}${sufixoCentro}`.trim();
-        const problema = (os.titulo || '') + (os.descricao ? '\n' + os.descricao : '');
+        const problema = montarProblemaOS(os.titulo, os.descricao);
         const jaProgramada = os.status === 'programada';
         const idResponsavelPrincipal = toAdd[0];
 
