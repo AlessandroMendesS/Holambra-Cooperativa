@@ -4109,7 +4109,7 @@ function renderizarLogs(logs, conteiner, isAdmin = false) {
                     <p style="margin-bottom:4px;"><strong>${log.descricao}</strong></p>
                     <p style="font-size:0.85rem; color:#666;">
                         <i data-lucide="map-pin" style="width:14px; height:14px; vertical-align:middle;"></i> 
-                        ${log.unidade} • ${log.centro_trabalho}
+                        ${log.unidade || '—'}${log.setor_centro ? ' · ' + String(log.setor_centro).replace(/</g, '&lt;') : ''} • ${log.centro_trabalho || '—'}
                     </p>
                     <p style="font-size:0.85rem; color:#666; margin-top:4px;">
                         <i data-lucide="calendar" style="width:14px; height:14px; vertical-align:middle;"></i> 
@@ -4212,7 +4212,8 @@ document.getElementById('btn-exportar-excel').addEventListener('click', async ()
         const dadosFormatados = data.map(item => ({
             'Ordem': item.numero_ordem || '',
             'Descrição': item.descricao || '',
-            'Unidade': item.unidade || '',
+            'Setor / Unidade': item.unidade || '',
+            'Setor (código MT)': item.setor_centro || '',
             'Centro de Trabalho': item.centro_trabalho || '',
             'Manutentor': item.manutentor?.nome_completo || 'N/A',
             'Criado Por': item.usuario?.nome_completo || 'N/A',
