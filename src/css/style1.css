@@ -303,8 +303,10 @@ h2 {
 
 .login-card {
     border-radius: var(--raio-lg);
-    border: 1px solid rgba(255, 255, 255, 0.95);
-    box-shadow: var(--sombra-lg);
+    border: 1px solid var(--borda);
+    border-top: none;
+    box-shadow: var(--sombra-md);
+    background: var(--branco);
 }
 
 
@@ -400,73 +402,156 @@ h2 {
 }
 
 
-.dashboard-hero {
+/* ── Tela inicial (home) ── */
+.tela-home {
+    padding-top: 0;
+}
+
+.home-welcome {
     position: relative;
+    margin: 0 0 1.35rem;
+    padding: 1.35rem 1.2rem 1.45rem;
+    border-radius: 26px;
+    color: #fff;
     overflow: hidden;
-    border-radius: var(--raio-lg);
-    margin-bottom: 1.5rem;
-    padding: 0;
-    border: none;
-    min-height: 140px;
-    box-shadow: var(--sombra-md);
+    background: linear-gradient(135deg, #051525 0%, #0a3a5c 35%, #0d5a8c 68%, #1a8fc8 100%);
+    box-shadow:
+        0 20px 40px -14px rgba(0, 40, 80, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.dashboard-hero-bg {
+.home-welcome--operacao {
+    background: linear-gradient(135deg, #051525 0%, #0c3d5e 40%, #0f6b8a 72%, #22a3c4 100%);
+}
+
+.home-welcome-orbs {
     position: absolute;
     inset: 0;
-    background: var(--gradient-hero);
-    opacity: 1;
+    pointer-events: none;
+    overflow: hidden;
 }
 
-.dashboard-hero-bg::after {
-    content: '';
+.home-welcome-orb {
     position: absolute;
-    inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    opacity: 0.5;
+    border-radius: 50%;
+    filter: blur(42px);
+    animation: homeOrbDrift 9s ease-in-out infinite;
 }
 
-.dashboard-hero-inner {
+.home-welcome-orb--1 {
+    width: 130px;
+    height: 130px;
+    top: -36px;
+    right: -24px;
+    background: rgba(125, 211, 252, 0.55);
+}
+
+.home-welcome-orb--2 {
+    width: 100px;
+    height: 100px;
+    bottom: -28px;
+    left: 8%;
+    background: rgba(74, 142, 184, 0.45);
+    animation-delay: -4s;
+}
+
+@keyframes homeOrbDrift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(6px, -8px) scale(1.06); }
+}
+
+.home-welcome-content {
     position: relative;
     z-index: 1;
-    padding: 1.75rem 1.5rem;
-    color: #fff;
+    padding-right: 3.5rem;
 }
 
-.dashboard-eyebrow {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    margin: 0 0 0.35rem;
-    color: rgba(255, 255, 255, 0.88) !important;
+.home-welcome-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
 }
 
-.dashboard-title {
-    font-family: var(--fonte-display);
-    font-size: clamp(1.35rem, 4vw, 1.75rem);
-    font-weight: 700;
-    margin: 0 0 0.35rem;
-    letter-spacing: -0.03em;
-    
-    color: #ffffff !important;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.dashboard-hero .dashboard-title span,
-.dashboard-hero #dash-nome-usuario,
-.dashboard-hero #dash-op-nome {
-    color: #ffffff !important;
+.home-welcome-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.38rem 0.72rem;
+    border-radius: var(--raio-pill);
+    font-size: 0.625rem;
     font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
-.dashboard-sub {
-    margin: 0;
-    font-size: 0.875rem;
-    opacity: 0.92;
+.home-welcome-chip svg {
+    width: 12px;
+    height: 12px;
+    opacity: 0.95;
+}
+
+.home-welcome-time {
+    font-size: 0.6875rem;
     font-weight: 500;
-    
-    color: rgba(255, 255, 255, 0.95) !important;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.78);
+    text-align: right;
+    max-width: 52%;
+    text-transform: capitalize;
+}
+
+.home-welcome-greeting {
+    font-family: var(--fonte-display);
+    font-size: clamp(1.45rem, 5vw, 1.85rem);
+    font-weight: 700;
+    margin: 0 0 0.4rem;
+    letter-spacing: -0.03em;
+    line-height: 1.12;
+    font-style: normal;
+}
+
+.home-welcome-greeting em {
+    font-style: normal;
+    font-weight: 800;
+    color: #bae6fd;
+}
+
+.home-welcome-tagline {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.72);
+    line-height: 1.4;
+}
+
+.home-welcome-accent {
+    position: absolute;
+    right: 1.1rem;
+    bottom: 1.1rem;
+    z-index: 1;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0.9;
+}
+
+.home-welcome-accent svg {
+    width: 24px;
+    height: 24px;
+    color: rgba(255, 255, 255, 0.92);
 }
 
 
@@ -484,6 +569,10 @@ h2 {
     }
 }
 
+.dashboard-kpi-grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 .kpi-card {
     background: var(--branco);
     border: 1px solid var(--borda);
@@ -496,6 +585,38 @@ h2 {
 .kpi-card:hover {
     transform: translateY(-3px);
     box-shadow: var(--sombra-md);
+}
+
+.tela-home .kpi-card {
+    border-radius: 18px;
+    border: 1px solid rgba(0, 65, 117, 0.06);
+    background: #fff;
+    box-shadow: 0 6px 20px rgba(10, 22, 40, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.tela-home .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--azul-700), #38bdf8);
+    opacity: 0.9;
+}
+
+.tela-home .kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(0, 65, 117, 0.1);
+}
+
+.tela-home .kpi-value {
+    background: linear-gradient(135deg, var(--azul-800) 0%, var(--azul-500) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .kpi-label {
@@ -861,6 +982,22 @@ h2 {
     font-size: 0.875rem;
 }
 
+.tela-home .section-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--azul-800);
+    letter-spacing: 0.08em;
+    margin-bottom: 0.85rem;
+}
+
+.tela-home .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0, 65, 117, 0.18), transparent);
+}
+
 .section-heading {
     font-size: 0.6875rem;
     font-weight: 800;
@@ -871,87 +1008,123 @@ h2 {
 }
 
 
-.menu-opcoes {
-    gap: 14px;
+.tela-home .menu-opcoes--grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
 }
 
-.menu-card {
-    border: 1px solid var(--borda);
-    border-top: none;
-    border-radius: var(--raio-lg);
-    padding: 1.5rem 1.25rem;
-    background: var(--branco);
-    box-shadow: var(--sombra-sm);
-    align-items: flex-start;
-    text-align: left;
-    flex-direction: row;
-    gap: 1rem;
+@media (min-width: 640px) {
+    .tela-home .menu-opcoes--grid {
+        gap: 14px;
+    }
+}
+
+.tela-home .menu-card {
+    border-radius: 20px;
+    padding: 1.1rem 0.85rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid rgba(0, 65, 117, 0.07);
+    box-shadow: 0 6px 18px rgba(10, 22, 40, 0.05);
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    gap: 0.6rem;
     transition: transform var(--dur) var(--ease-out), box-shadow var(--dur), border-color var(--dur);
+    min-height: 106px;
+    overflow: hidden;
 }
 
-.menu-card:hover {
+.tela-home .menu-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--sombra-md);
+    box-shadow: 0 14px 30px rgba(0, 65, 117, 0.12);
+    border-color: rgba(0, 65, 117, 0.14);
+}
+
+.tela-home .menu-card:active {
+    transform: translateY(-1px);
+}
+
+.tela-home .menu-card--destaque {
+    background: linear-gradient(135deg, #e8f4fc 0%, #dbeafe 45%, #f0f9ff 100%);
     border-color: rgba(0, 65, 117, 0.12);
+    box-shadow: 0 10px 26px rgba(0, 65, 117, 0.1);
 }
 
-.menu-card-icon {
-    width: 52px;
-    height: 52px;
-    min-width: 52px;
+@media (max-width: 639px) {
+    .tela-home .menu-card--destaque {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        text-align: left;
+        padding: 1rem 1.1rem;
+        gap: 0.85rem;
+        min-height: auto;
+    }
+
+    .tela-home .menu-card--destaque h3 {
+        text-align: left;
+        font-size: 0.9375rem;
+    }
+
+    .tela-home .menu-card--destaque p {
+        display: block;
+        text-align: left;
+    }
+}
+
+.tela-home .menu-card-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
     border-radius: 14px;
-    box-shadow: 0 4px 14px rgba(0, 65, 117, 0.2);
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--icon-bg, #e0f2fe);
+    color: var(--icon-fg, #0369a1);
 }
 
-.menu-card-icon i {
-    width: 26px;
-    height: 26px;
+.tela-home .menu-card-icon i {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2.1px;
 }
 
-.menu-card h3 {
+.tela-home .menu-card h3 {
     font-family: var(--fonte);
-    font-size: 1.05rem;
-    font-weight: 700;
-    text-align: left;
-    margin: 0 0 0.25rem;
-}
-
-.menu-card p {
     font-size: 0.8125rem;
-    line-height: 1.45;
-    text-align: left;
+    font-weight: 800;
+    text-align: center;
+    margin: 0;
+    color: var(--neutro-900);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
 }
 
-.menu-card-programacao {
-    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
-    border: 1px solid rgba(34, 197, 94, 0.2);
+.tela-home .menu-card p {
+    display: none;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    text-align: center;
+    color: var(--neutro-500);
+    margin: 0;
 }
 
-.menu-card-programacao .menu-card-icon {
-    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
-}
-
-.menu-card-relatorio {
-    background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%);
-    border: 1px solid rgba(234, 88, 12, 0.18);
-}
-
-.menu-card-relatorio .menu-card-icon {
-    box-shadow: 0 4px 14px rgba(234, 88, 12, 0.22);
-}
-
-
-.dashboard-hero--compact {
-    min-height: auto;
-}
-
-.dashboard-hero--compact .dashboard-hero-inner {
-    padding: 1.35rem 1.35rem;
-}
-
-.dashboard-kpi-grid--2 {
-    grid-template-columns: repeat(2, 1fr);
-}
+.tela-home .menu-card--tone-blue { --icon-bg: #dbeafe; --icon-fg: #1d4ed8; }
+.tela-home .menu-card--tone-indigo { --icon-bg: #e0e7ff; --icon-fg: #4338ca; }
+.tela-home .menu-card--tone-amber { --icon-bg: #fef3c7; --icon-fg: #b45309; }
+.tela-home .menu-card--tone-emerald { --icon-bg: #d1fae5; --icon-fg: #047857; }
+.tela-home .menu-card--tone-slate { --icon-bg: #e2e8f0; --icon-fg: #475569; }
+.tela-home .menu-card--tone-violet { --icon-bg: #ede9fe; --icon-fg: #6d28d9; }
+.tela-home .menu-card--tone-orange { --icon-bg: #ffedd5; --icon-fg: #c2410c; }
+.tela-home .menu-card--tone-sky { --icon-bg: #e0f2fe; --icon-fg: #0284c7; }
+.tela-home .menu-card--tone-cyan { --icon-bg: #cffafe; --icon-fg: #0e7490; }
+.tela-home .menu-card--tone-teal { --icon-bg: #ccfbf1; --icon-fg: #0f766e; }
+.tela-home .menu-card--tone-rose { --icon-bg: #ffe4e6; --icon-fg: #be123c; }
 
 
 .badge {
@@ -991,12 +1164,14 @@ h2 {
 }
 
 
-#tela-login .login-card {
-    border: 1px solid rgba(255, 255, 255, 0.95);
+.tela-home .chart-card {
+    border-radius: 20px;
+    box-shadow: 0 6px 22px rgba(10, 22, 40, 0.06);
+    overflow: hidden;
 }
 
-.login-hero-visual {
-    border-radius: 0 0 var(--raio-lg) var(--raio-lg);
+.tela-home .op-equip-extra-card {
+    border-radius: var(--raio-lg);
 }
 
 
@@ -1104,15 +1279,32 @@ h2 {
 }
 
 
-@media (max-width: 480px) {
-    .menu-card {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
+@media (min-width: 720px) {
+    .tela-home .menu-card {
+        min-height: 128px;
+        padding: 1.35rem 1rem;
     }
-    .menu-card h3,
-    .menu-card p {
-        text-align: center;
+    .tela-home .menu-card h3 {
+        font-size: 0.875rem;
+    }
+    .tela-home .menu-card p {
+        display: block;
+    }
+}
+
+@media (max-width: 480px) {
+    .tela-home .menu-card h3 {
+        font-size: 0.75rem;
+    }
+    .tela-home .menu-card-icon {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        border-radius: 12px;
+    }
+    .tela-home .menu-card-icon i {
+        width: 22px;
+        height: 22px;
     }
 }
 

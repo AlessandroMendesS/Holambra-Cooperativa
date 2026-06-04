@@ -797,8 +797,9 @@ async function navegarPara(idTela, opts = {}) {
     lucide.createIcons();
 
     if (cabecalho) {
-        if (idTela === 'login' || idTela === 'cadastro' || idTela === 'cadastroOperacao') cabecalho.classList.add('oculto');
-        else {
+        if (idTela === 'login' || idTela === 'cadastro' || idTela === 'cadastroOperacao') {
+            cabecalho.classList.add('oculto');
+        } else {
             cabecalho.classList.remove('oculto');
             atualizarNomeUsuario();
         }
@@ -6246,12 +6247,15 @@ async function carregarDashboardInicio() {
     const dataEl = document.getElementById('dash-data-extenso');
     if (nomeEl) nomeEl.textContent = primeiroNome;
     if (dataEl) {
-        dataEl.textContent = new Date().toLocaleDateString('pt-BR', {
+        const agora = new Date();
+        const dataTxt = agora.toLocaleDateString('pt-BR', {
             weekday: 'long',
             day: 'numeric',
             month: 'long',
             year: 'numeric'
         });
+        const horaTxt = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        dataEl.textContent = `${dataTxt} · ${horaTxt}`;
     }
 
     document.getElementById('dashboard-kpi-manutencao')?.classList.toggle('oculto', isAdmin);
@@ -6288,6 +6292,19 @@ async function carregarDashboardOperacao() {
     const primeiroNome = nome.split(/\s+/).filter(Boolean)[0] || '—';
     const el = document.getElementById('dash-op-nome');
     if (el) el.textContent = primeiroNome;
+
+    const dataOpEl = document.getElementById('dash-op-datetime');
+    if (dataOpEl) {
+        const agora = new Date();
+        const dataTxt = agora.toLocaleDateString('pt-BR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        const horaTxt = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        dataOpEl.textContent = `${dataTxt} · ${horaTxt}`;
+    }
 
     const { data: todas, error } = await supabase
         .from('ordens_servico')

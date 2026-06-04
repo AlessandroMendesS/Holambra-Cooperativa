@@ -88,7 +88,6 @@
             
             
             <section id="tela-login" class="tela">
-                <div class="login-hero-visual" aria-hidden="true"></div>
                 <div class="card login-card">
                     
                     <div class="banner-container">
@@ -250,15 +249,22 @@
             </section>
 
             
-            <section id="tela-menu-operacao" class="tela oculto">
-                <div class="dashboard-hero dashboard-hero--compact card-hero">
-                    <div class="dashboard-hero-bg" aria-hidden="true"></div>
-                    <div class="dashboard-hero-inner">
-                        <p class="dashboard-eyebrow">Operação</p>
-                        <h2 class="dashboard-title">Olá, <span id="dash-op-nome">—</span></h2>
-                        <p class="dashboard-sub">Acompanhe e solicite ordens de serviço com agilidade.</p>
+            <section id="tela-menu-operacao" class="tela oculto tela-home">
+                <header class="home-welcome home-welcome--operacao">
+                    <div class="home-welcome-orbs" aria-hidden="true">
+                        <span class="home-welcome-orb home-welcome-orb--1"></span>
+                        <span class="home-welcome-orb home-welcome-orb--2"></span>
                     </div>
-                </div>
+                    <div class="home-welcome-content">
+                        <div class="home-welcome-row">
+                            <span class="home-welcome-chip"><i data-lucide="factory"></i> Operação</span>
+                            <time class="home-welcome-time" id="dash-op-datetime"></time>
+                        </div>
+                        <h1 class="home-welcome-greeting">Olá, <em id="dash-op-nome">—</em></h1>
+                        <p class="home-welcome-tagline">Solicite e acompanhe ordens de serviço</p>
+                    </div>
+                    <div class="home-welcome-accent" aria-hidden="true"><i data-lucide="clipboard-list"></i></div>
+                </header>
                 <div class="dashboard-kpi-grid dashboard-kpi-grid--2">
                     <div class="kpi-card">
                         <p class="kpi-label">Minhas solicitações</p>
@@ -274,21 +280,21 @@
                     <div id="dash-op-status-simples" class="dash-op-status-simples" aria-label="Resumo por status das solicitações"></div>
                 </div>
                 <h3 class="section-heading">Ações</h3>
-                <div class="menu-opcoes">
-                    <button class="menu-card" id="btn-operacao-abrir-os">
+                <div class="menu-opcoes menu-opcoes--grid">
+                    <button class="menu-card menu-card--destaque menu-card--tone-blue" id="btn-operacao-abrir-os">
                         <div class="menu-card-icon"><i data-lucide="plus-circle"></i></div>
                         <h3>Abrir Nova OS</h3>
                         <p>Solicitar ordem de serviço</p>
                     </button>
-                    <button class="menu-card" id="btn-operacao-minhas-solicitacoes">
+                    <button class="menu-card menu-card--tone-indigo" id="btn-operacao-minhas-solicitacoes">
                         <div class="menu-card-icon"><i data-lucide="list"></i></div>
                         <h3>Minhas Solicitações</h3>
                         <p>Histórico e status</p>
                     </button>
-                    <button class="menu-card" id="btn-operacao-equipamentos">
+                    <button class="menu-card menu-card--tone-teal" id="btn-operacao-equipamentos">
                         <div class="menu-card-icon"><i data-lucide="wrench"></i></div>
-                        <h3>Equipamentos por unidade</h3>
-                        <p>Consultar lista e incluir equipamento que faltar</p>
+                        <h3>Equipamentos</h3>
+                        <p>Lista por unidade</p>
                     </button>
                 </div>
                 <div class="card op-equip-extra-card">
@@ -416,15 +422,22 @@
             </section>
 
             
-            <section id="tela-menu" class="tela oculto">
-                <div class="dashboard-hero card-hero">
-                    <div class="dashboard-hero-bg" aria-hidden="true"></div>
-                    <div class="dashboard-hero-inner">
-                        <p class="dashboard-eyebrow">Painel</p>
-                        <h2 class="dashboard-title">Olá, <span id="dash-nome-usuario">—</span></h2>
-                        <p class="dashboard-sub" id="dash-data-extenso"></p>
+            <section id="tela-menu" class="tela oculto tela-home">
+                <header class="home-welcome">
+                    <div class="home-welcome-orbs" aria-hidden="true">
+                        <span class="home-welcome-orb home-welcome-orb--1"></span>
+                        <span class="home-welcome-orb home-welcome-orb--2"></span>
                     </div>
-                </div>
+                    <div class="home-welcome-content">
+                        <div class="home-welcome-row">
+                            <span class="home-welcome-chip"><i data-lucide="sparkles"></i> Manutenção</span>
+                            <time class="home-welcome-time" id="dash-data-extenso"></time>
+                        </div>
+                        <h1 class="home-welcome-greeting">Olá, <em id="dash-nome-usuario">—</em></h1>
+                        <p class="home-welcome-tagline">Holambra · Cooperativa Agroindustrial</p>
+                    </div>
+                    <div class="home-welcome-accent" aria-hidden="true"><i data-lucide="wrench"></i></div>
+                </header>
 
                 <div id="dashboard-kpi-manutencao" class="dashboard-kpi-grid">
                     <div class="kpi-card">
@@ -501,144 +514,144 @@
                 <h3 class="section-heading">Acesso rápido</h3>
                 
                 
-                <div class="menu-opcoes" id="menu-usuario">
-                    <button class="menu-card menu-card-programacao" id="btn-menu-programacao">
+                <div class="menu-opcoes menu-opcoes--grid" id="menu-usuario">
+                    <button class="menu-card menu-card--destaque menu-card--tone-blue" id="btn-menu-programacao">
                         <div class="menu-card-icon">
                             <i data-lucide="clipboard-check"></i>
                         </div>
-                        <h3>Programação Diária</h3>
-                        <p>Ver OS programadas para você</p>
+                        <h3>Programação</h3>
+                        <p>OS do dia</p>
                     </button>
-                    <button class="menu-card" id="btn-menu-apontamentos">
+                    <button class="menu-card menu-card--tone-indigo" id="btn-menu-apontamentos">
                         <div class="menu-card-icon">
-                            <i data-lucide="clipboard-list"></i>
+                            <i data-lucide="pen-line"></i>
                         </div>
-                        <h3>Meus Apontamentos</h3>
-                        <p>Registrar horas e situação da OS (programada ou automática)</p>
+                        <h3>Apontamentos</h3>
+                        <p>Registrar horas</p>
                     </button>
 
-                    <button class="menu-card" id="btn-menu-moinho-ideias">
+                    <button class="menu-card menu-card--tone-amber" id="btn-menu-moinho-ideias">
                         <div class="menu-card-icon">
                             <i data-lucide="lightbulb"></i>
                         </div>
                         <h3>Moinho de Ideias</h3>
-                        <p>Registrar melhorias, antes/depois e ganhos</p>
+                        <p>Melhorias</p>
                     </button>
 
-                    <button class="menu-card" id="btn-menu-preventivas">
+                    <button class="menu-card menu-card--tone-emerald" id="btn-menu-preventivas">
                         <div class="menu-card-icon">
                             <i data-lucide="shield-check"></i>
                         </div>
                         <h3>Preventivas</h3>
-                        <p>Manutenções preventivas</p>
+                        <p>Plano preventivo</p>
                     </button>
                     
-                    <button class="menu-card" id="btn-menu-historico">
+                    <button class="menu-card menu-card--tone-slate" id="btn-menu-historico">
                         <div class="menu-card-icon">
                             <i data-lucide="history"></i>
                         </div>
                         <h3>Histórico</h3>
-                        <p>Ver meus apontamentos</p>
+                        <p>Meus registros</p>
                     </button>
                     
-                    <button class="menu-card" id="btn-menu-banco-horas">
+                    <button class="menu-card menu-card--tone-violet" id="btn-menu-banco-horas">
                         <div class="menu-card-icon">
                             <i data-lucide="clock"></i>
                         </div>
                         <h3>Banco de Horas</h3>
-                        <p>Visualizar horas trabalhadas</p>
+                        <p>Saldo de horas</p>
                     </button>
                     
-                    <button class="menu-card" id="btn-menu-hora-extra">
+                    <button class="menu-card menu-card--tone-orange" id="btn-menu-hora-extra">
                         <div class="menu-card-icon">
                             <i data-lucide="timer"></i>
                         </div>
                         <h3>Hora Extra</h3>
-                        <p>Visualizar horas extras</p>
+                        <p>Consultar extras</p>
                     </button>
                     
-                    <button class="menu-card" id="btn-menu-ferias">
+                    <button class="menu-card menu-card--tone-sky" id="btn-menu-ferias">
                         <div class="menu-card-icon">
-                            <i data-lucide="calendar"></i>
+                            <i data-lucide="sun"></i>
                         </div>
                         <h3>Férias</h3>
-                        <p>Visualizar férias</p>
+                        <p>Períodos</p>
                     </button>
                     
-                    <button class="menu-card" id="btn-menu-veiculos">
+                    <button class="menu-card menu-card--tone-cyan" id="btn-menu-veiculos">
                         <div class="menu-card-icon">
-                            <i data-lucide="car"></i>
+                            <i data-lucide="truck"></i>
                         </div>
                         <h3>Veículos</h3>
-                        <p>Visualizar frota de veículos</p>
+                        <p>Frota</p>
                     </button>
-                    <button class="menu-card" id="btn-menu-calendario">
+                    <button class="menu-card menu-card--tone-teal" id="btn-menu-calendario">
                         <div class="menu-card-icon">
                             <i data-lucide="calendar-days"></i>
                         </div>
                         <h3>Calendário</h3>
-                        <p>Visualizar programação mensal</p>
+                        <p>Mensal</p>
                     </button>
                 </div>
 
                 
-                <div class="menu-opcoes oculto" id="menu-admin">
-                    <button class="menu-card" id="btn-menu-admin">
+                <div class="menu-opcoes menu-opcoes--grid oculto" id="menu-admin">
+                    <button class="menu-card menu-card--tone-blue" id="btn-menu-admin">
                         <div class="menu-card-icon">
-                            <i data-lucide="shield"></i>
+                            <i data-lucide="layout-dashboard"></i>
                         </div>
                         <h3>Administração</h3>
-                        <p>Acessar painel administrativo</p>
+                        <p>Painel geral</p>
                     </button>
-                    <button class="menu-card" id="btn-menu-ordens-servico">
+                    <button class="menu-card menu-card--tone-indigo" id="btn-menu-ordens-servico">
                         <div class="menu-card-icon">
                             <i data-lucide="clipboard-list"></i>
                         </div>
                         <h3>Ordens de Serviço</h3>
-                        <p>Histórico e controle de status das OS</p>
+                        <p>Status das OS</p>
                     </button>
-                    <button class="menu-card menu-card-relatorio" id="btn-menu-relatorio-os-abertas">
+                    <button class="menu-card menu-card--tone-amber" id="btn-menu-relatorio-os-abertas">
                         <div class="menu-card-icon">
-                            <i data-lucide="table"></i>
+                            <i data-lucide="table-2"></i>
                         </div>
-                        <h3>Relatório OS abertas</h3>
-                        <p>Baixar planilha de OS em aberto</p>
+                        <h3>OS abertas</h3>
+                        <p>Planilha Excel</p>
                     </button>
-                    <button class="menu-card" id="btn-menu-hora-extra-admin">
+                    <button class="menu-card menu-card--tone-orange" id="btn-menu-hora-extra-admin">
                         <div class="menu-card-icon">
                             <i data-lucide="timer"></i>
                         </div>
-                        <h3>Hora Extra - Escala</h3>
-                        <p>Editar tabela de escala (admin)</p>
+                        <h3>Hora Extra</h3>
+                        <p>Escala admin</p>
                     </button>
-                    <button class="menu-card" id="btn-menu-veiculos-admin">
+                    <button class="menu-card menu-card--tone-cyan" id="btn-menu-veiculos-admin">
                         <div class="menu-card-icon">
-                            <i data-lucide="car"></i>
+                            <i data-lucide="truck"></i>
                         </div>
                         <h3>Veículos</h3>
-                        <p>Gerenciar frota de veículos</p>
+                        <p>Gerenciar frota</p>
                     </button>
 
-                    <button class="menu-card" id="btn-menu-programar-admin">
+                    <button class="menu-card menu-card--tone-emerald" id="btn-menu-programar-admin">
                         <div class="menu-card-icon">
                             <i data-lucide="calendar-plus"></i>
                         </div>
                         <h3>Programar</h3>
-                        <p>Criar programação para colaboradores</p>
+                        <p>Colaboradores</p>
                     </button>
-                    <button class="menu-card" id="btn-menu-programar-calendario-admin">
+                    <button class="menu-card menu-card--tone-violet" id="btn-menu-programar-calendario-admin">
                         <div class="menu-card-icon">
                             <i data-lucide="calendar-cog"></i>
                         </div>
-                        <h3>Programar Calendário</h3>
-                        <p>Definir status mensal dos colaboradores</p>
+                        <h3>Calendário</h3>
+                        <p>Status mensal</p>
                     </button>
-                    <button class="menu-card" id="btn-menu-quem-nao-apontou">
+                    <button class="menu-card menu-card--tone-rose" id="btn-menu-quem-nao-apontou">
                         <div class="menu-card-icon">
                             <i data-lucide="user-x"></i>
                         </div>
-                        <h3>Quem não apontou</h3>
-                        <p>Controle diário de pendências</p>
+                        <h3>Não apontou</h3>
+                        <p>Pendências</p>
                     </button>
                 </div>
             </section>

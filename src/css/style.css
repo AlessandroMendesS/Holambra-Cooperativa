@@ -970,7 +970,7 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
 #tela-login {
     background: transparent;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #tela-login.oculto,
@@ -980,36 +980,16 @@ p { font-size: 0.95rem; line-height: 1.5; color: var(--cor-texto-suave); }
     pointer-events: none;
 }
 
-#tela-login .conteiner {
-    background: transparent;
-}
-
-/* Evita 100vw no mobile (barra de endereço / overflow lateral) */
-.login-hero-visual {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    transform: none;
-    width: 100%;
-    max-width: 100%;
-    height: min(42vw, 220px);
-    background:
-        linear-gradient(180deg, rgba(0, 65, 117, 0.12) 0%, transparent 65%),
-        url('https://images.unsplash.com/photo-1581092160562-40aa08c7880a?auto=format&fit=crop&w=1200&q=70') center/cover no-repeat;
-    border-radius: 0 0 28px 28px;
-    z-index: 0;
-    pointer-events: none;
-}
-
 #tela-login .login-card {
     position: relative;
     z-index: 1;
-    margin-top: clamp(3.5rem, 20vw, 8rem);
-    border: 1px solid rgba(255, 255, 255, 0.85);
-    box-shadow: 0 20px 50px rgba(0, 65, 117, 0.15), 0 4px 20px rgba(0, 0, 0, 0.06);
-    backdrop-filter: blur(8px);
-    background: rgba(255, 255, 255, 0.94);
+    margin-top: 0;
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    border-top: none;
+    border-radius: var(--raio-lg, 22px);
+    box-shadow: var(--sombra-card);
+    background: var(--branco);
+    overflow: hidden;
 }
 
 
