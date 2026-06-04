@@ -777,6 +777,108 @@ function definirTelaVisivel(el, visivel) {
     }
 }
 
+function obterTelaInicio() {
+    if ((estado.perfil?.tipo_perfil || '') === 'operacao') return 'menuOperacao';
+    return 'menu';
+}
+
+async function navegarParaInicio() {
+    await navegarPara(obterTelaInicio());
+}
+
+function registrarVoltarInicio(...ids) {
+    ids.forEach((id) => {
+        document.getElementById(id)?.addEventListener('click', () => {
+            navegarParaInicio();
+        });
+    });
+}
+
+function atualizarMenuLateralNav() {
+    if (!estado.usuario || !estado.perfil) return;
+
+    const navAdmin = document.getElementById('nav-admin');
+    const navHoraExtra = document.getElementById('nav-hora-extra');
+    const navProgramar = document.getElementById('nav-programar');
+    const navInicio = document.getElementById('nav-inicio');
+    const navHistorico = document.getElementById('nav-historico');
+    const navVeiculos = document.getElementById('nav-veiculos');
+    const navProgramacao = document.getElementById('nav-programacao');
+    const navCalendario = document.getElementById('nav-calendario');
+    const navProgramarCalendario = document.getElementById('nav-programar-calendario');
+    const navQuemNaoApontou = document.getElementById('nav-quem-nao-apontou');
+    const navOperacaoInicio = document.getElementById('nav-operacao-inicio');
+    const navAbrirOs = document.getElementById('nav-abrir-os');
+    const navMinhasSolicitacoes = document.getElementById('nav-minhas-solicitacoes');
+    const navEquipamentosOp = document.getElementById('nav-equipamentos-operacao');
+    const navOrdensServico = document.getElementById('nav-ordens-servico');
+    const navRelatorioOsAbertas = document.getElementById('nav-relatorio-os-abertas');
+    const menuUsuario = document.getElementById('menu-usuario');
+    const menuAdmin = document.getElementById('menu-admin');
+
+    const isOperacao = estado.perfil.tipo_perfil === 'operacao';
+    const isAdmin = estado.perfil.funcao === 'admin';
+
+    if (isAdmin) {
+        navAdmin?.classList.remove('oculto');
+        navHoraExtra?.classList.remove('oculto');
+        navProgramar?.classList.remove('oculto');
+        navInicio?.classList.remove('oculto');
+        navHistorico?.classList.remove('oculto');
+        navVeiculos?.classList.remove('oculto');
+        navProgramacao?.classList.remove('oculto');
+        navCalendario?.classList.remove('oculto');
+        navOrdensServico?.classList.remove('oculto');
+        navRelatorioOsAbertas?.classList.remove('oculto');
+        navProgramarCalendario?.classList.remove('oculto');
+        navQuemNaoApontou?.classList.remove('oculto');
+        navOperacaoInicio?.classList.add('oculto');
+        navAbrirOs?.classList.add('oculto');
+        navMinhasSolicitacoes?.classList.add('oculto');
+        navEquipamentosOp?.classList.add('oculto');
+        menuUsuario?.classList.add('oculto');
+        menuAdmin?.classList.remove('oculto');
+    } else if (isOperacao) {
+        navAdmin?.classList.add('oculto');
+        navHoraExtra?.classList.add('oculto');
+        navProgramar?.classList.add('oculto');
+        navInicio?.classList.add('oculto');
+        navHistorico?.classList.add('oculto');
+        navVeiculos?.classList.add('oculto');
+        navProgramacao?.classList.add('oculto');
+        navCalendario?.classList.add('oculto');
+        navOrdensServico?.classList.add('oculto');
+        navRelatorioOsAbertas?.classList.add('oculto');
+        navProgramarCalendario?.classList.add('oculto');
+        navQuemNaoApontou?.classList.add('oculto');
+        navOperacaoInicio?.classList.remove('oculto');
+        navAbrirOs?.classList.remove('oculto');
+        navMinhasSolicitacoes?.classList.remove('oculto');
+        navEquipamentosOp?.classList.remove('oculto');
+        menuUsuario?.classList.add('oculto');
+        menuAdmin?.classList.add('oculto');
+    } else {
+        navAdmin?.classList.add('oculto');
+        navHoraExtra?.classList.add('oculto');
+        navProgramar?.classList.add('oculto');
+        navInicio?.classList.remove('oculto');
+        navHistorico?.classList.remove('oculto');
+        navVeiculos?.classList.remove('oculto');
+        navProgramacao?.classList.remove('oculto');
+        navCalendario?.classList.remove('oculto');
+        navOperacaoInicio?.classList.add('oculto');
+        navAbrirOs?.classList.add('oculto');
+        navMinhasSolicitacoes?.classList.add('oculto');
+        navEquipamentosOp?.classList.add('oculto');
+        navOrdensServico?.classList.add('oculto');
+        navRelatorioOsAbertas?.classList.add('oculto');
+        navProgramarCalendario?.classList.add('oculto');
+        navQuemNaoApontou?.classList.add('oculto');
+        menuUsuario?.classList.remove('oculto');
+        menuAdmin?.classList.add('oculto');
+    }
+}
+
 async function navegarPara(idTela, opts = {}) {
     if (idTela !== 'minhasSolicitacoes' && estado.realtimeChannelOS) {
         supabase.removeChannel(estado.realtimeChannelOS);
@@ -806,88 +908,10 @@ async function navegarPara(idTela, opts = {}) {
     }
     if (menuMobile) menuMobile.classList.add('oculto');
 
-    if (idTela === 'menu' || idTela === 'menuOperacao' || idTela === 'equipamentosOperacao' || idTela === 'abrirOs' || idTela === 'minhasSolicitacoes') {
-        const navAdmin = document.getElementById('nav-admin');
-        const navHoraExtra = document.getElementById('nav-hora-extra');
-        const navProgramar = document.getElementById('nav-programar');
-        const navInicio = document.getElementById('nav-inicio');
-        const navHistorico = document.getElementById('nav-historico');
-        const navVeiculos = document.getElementById('nav-veiculos');
-        const navProgramacao = document.getElementById('nav-programacao');
-        const navCalendario = document.getElementById('nav-calendario');
-        const navProgramarCalendario = document.getElementById('nav-programar-calendario');
-        const navQuemNaoApontou = document.getElementById('nav-quem-nao-apontou');
-        const navOperacaoInicio = document.getElementById('nav-operacao-inicio');
-        const navAbrirOs = document.getElementById('nav-abrir-os');
-        const navMinhasSolicitacoes = document.getElementById('nav-minhas-solicitacoes');
-        const navEquipamentosOp = document.getElementById('nav-equipamentos-operacao');
-        const navOrdensServico = document.getElementById('nav-ordens-servico');
-        const navRelatorioOsAbertas = document.getElementById('nav-relatorio-os-abertas');
-        const menuUsuario = document.getElementById('menu-usuario');
-        const menuAdmin = document.getElementById('menu-admin');
-
-        const isOperacao = estado.perfil?.tipo_perfil === 'operacao';
-        const isAdmin = estado.perfil?.funcao === 'admin';
-
-        if (isAdmin) {
-            if (navAdmin) navAdmin.classList.remove('oculto');
-            if (navHoraExtra) navHoraExtra.classList.remove('oculto');
-            if (navProgramar) navProgramar.classList.remove('oculto');
-            if (navInicio) navInicio.classList.remove('oculto');
-            if (navHistorico) navHistorico.classList.remove('oculto');
-            if (navVeiculos) navVeiculos.classList.remove('oculto');
-            if (navProgramacao) navProgramacao.classList.remove('oculto');
-            if (navCalendario) navCalendario.classList.remove('oculto');
-            if (navOrdensServico) navOrdensServico.classList.remove('oculto');
-            if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.remove('oculto');
-            if (navProgramarCalendario) navProgramarCalendario.classList.remove('oculto');
-            if (navQuemNaoApontou) navQuemNaoApontou.classList.remove('oculto');
-            if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
-            if (navAbrirOs) navAbrirOs.classList.add('oculto');
-            if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
-            if (navEquipamentosOp) navEquipamentosOp.classList.add('oculto');
-            if (menuUsuario) menuUsuario.classList.add('oculto');
-            if (menuAdmin) menuAdmin.classList.remove('oculto');
-        } else if (isOperacao) {
-            if (navAdmin) navAdmin.classList.add('oculto');
-            if (navHoraExtra) navHoraExtra.classList.add('oculto');
-            if (navProgramar) navProgramar.classList.add('oculto');
-            if (navInicio) navInicio.classList.add('oculto');
-            if (navHistorico) navHistorico.classList.add('oculto');
-            if (navVeiculos) navVeiculos.classList.add('oculto');
-            if (navProgramacao) navProgramacao.classList.add('oculto');
-            if (navCalendario) navCalendario.classList.add('oculto');
-            if (navOrdensServico) navOrdensServico.classList.add('oculto');
-            if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.add('oculto');
-            if (navProgramarCalendario) navProgramarCalendario.classList.add('oculto');
-            if (navQuemNaoApontou) navQuemNaoApontou.classList.add('oculto');
-            if (navOperacaoInicio) navOperacaoInicio.classList.remove('oculto');
-            if (navAbrirOs) navAbrirOs.classList.remove('oculto');
-            if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.remove('oculto');
-            if (navEquipamentosOp) navEquipamentosOp.classList.remove('oculto');
-            if (menuUsuario) menuUsuario.classList.add('oculto');
-            if (menuAdmin) menuAdmin.classList.add('oculto');
-        } else {
-            if (navAdmin) navAdmin.classList.add('oculto');
-            if (navHoraExtra) navHoraExtra.classList.add('oculto');
-            if (navProgramar) navProgramar.classList.add('oculto');
-            if (navInicio) navInicio.classList.remove('oculto');
-            if (navHistorico) navHistorico.classList.remove('oculto');
-            if (navVeiculos) navVeiculos.classList.remove('oculto');
-            if (navProgramacao) navProgramacao.classList.remove('oculto');
-            if (navCalendario) navCalendario.classList.remove('oculto');
-            if (navOperacaoInicio) navOperacaoInicio.classList.add('oculto');
-            if (navAbrirOs) navAbrirOs.classList.add('oculto');
-            if (navMinhasSolicitacoes) navMinhasSolicitacoes.classList.add('oculto');
-            if (navEquipamentosOp) navEquipamentosOp.classList.add('oculto');
-            if (navOrdensServico) navOrdensServico.classList.add('oculto');
-            if (navRelatorioOsAbertas) navRelatorioOsAbertas.classList.add('oculto');
-            if (navProgramarCalendario) navProgramarCalendario.classList.add('oculto');
-            if (navQuemNaoApontou) navQuemNaoApontou.classList.add('oculto');
-            if (menuUsuario) menuUsuario.classList.remove('oculto');
-            if (menuAdmin) menuAdmin.classList.add('oculto');
-        }
+    if (!['login', 'cadastro', 'cadastroOperacao'].includes(idTela)) {
+        atualizarMenuLateralNav();
     }
+
     if (idTela === 'menu') {
         await carregarDashboardInicio();
     }
@@ -1089,7 +1113,8 @@ document.getElementById('alternar-menu').addEventListener('click', () => {
 });
 document.getElementById('fechar-menu').addEventListener('click', () => menuMobile.classList.add('oculto'));
 
-document.getElementById('nav-inicio').addEventListener('click', () => navegarPara('menu'));
+document.getElementById('nav-inicio')?.addEventListener('click', () => navegarParaInicio());
+document.getElementById('nav-operacao-inicio')?.addEventListener('click', () => navegarParaInicio());
 document.getElementById('nav-historico').addEventListener('click', () => navegarPara('historico'));
 document.getElementById('nav-admin').addEventListener('click', () => navegarPara('admin'));
 document.getElementById('admin-tab-painel')?.addEventListener('click', () => setAdminTab('painel'));
@@ -1180,7 +1205,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
     navegarPara('dashboard');
 });
 document.getElementById('btn-menu-historico').addEventListener('click', () => navegarPara('historico'));
-document.getElementById('btn-voltar-historico').addEventListener('click', () => navegarPara('menu'));
+document.getElementById('btn-voltar-historico')?.addEventListener('click', () => navegarParaInicio());
 document.getElementById('btn-menu-admin').addEventListener('click', () => navegarPara('admin'));
 document.getElementById('btn-menu-ordens-servico')?.addEventListener('click', () => navegarPara('gestaoOs'));
 document.getElementById('btn-menu-banco-horas').addEventListener('click', () => {
@@ -1210,25 +1235,31 @@ document.getElementById('btn-menu-calendario')?.addEventListener('click', () => 
 document.getElementById('btn-menu-programar-admin')?.addEventListener('click', () => navegarPara('programar'));
 document.getElementById('btn-menu-programar-calendario-admin')?.addEventListener('click', () => navegarPara('calendarioAdmin'));
 document.getElementById('btn-menu-quem-nao-apontou')?.addEventListener('click', () => navegarPara('quemNaoApontou'));
-document.getElementById('btn-voltar-menu').addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-bh').addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-he').addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-ferias').addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-veiculos')?.addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-programar')?.addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-programacao')?.addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-calendario')?.addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-calendario-admin')?.addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-quem-nao-apontou')?.addEventListener('click', () => navegarPara('menu'));
 
-document.getElementById('btn-voltar-gestao-os')?.addEventListener('click', () => navegarPara('admin'));
-document.getElementById('nav-operacao-inicio')?.addEventListener('click', () => navegarPara('menuOperacao'));
+registrarVoltarInicio(
+    'btn-voltar-menu',
+    'btn-voltar-menu-bh',
+    'btn-voltar-menu-he',
+    'btn-voltar-menu-ferias',
+    'btn-voltar-menu-veiculos',
+    'btn-voltar-menu-programar',
+    'btn-voltar-menu-programacao',
+    'btn-voltar-menu-calendario',
+    'btn-voltar-menu-calendario-admin',
+    'btn-voltar-menu-quem-nao-apontou',
+    'btn-voltar-gestao-os',
+    'btn-voltar-admin',
+    'btn-voltar-menu-operacao',
+    'btn-voltar-menu-solicitacoes',
+    'btn-voltar-equipamentos-operacao',
+    'btn-voltar-menu-moinho',
+    'btn-voltar-menu-preventivas'
+);
+
 document.getElementById('nav-abrir-os')?.addEventListener('click', () => navegarPara('abrirOs'));
 document.getElementById('nav-minhas-solicitacoes')?.addEventListener('click', () => navegarPara('minhasSolicitacoes'));
 document.getElementById('btn-operacao-abrir-os')?.addEventListener('click', () => navegarPara('abrirOs'));
 document.getElementById('btn-operacao-minhas-solicitacoes')?.addEventListener('click', () => navegarPara('minhasSolicitacoes'));
-document.getElementById('btn-voltar-menu-operacao')?.addEventListener('click', () => navegarPara('menuOperacao'));
-document.getElementById('btn-voltar-menu-solicitacoes')?.addEventListener('click', () => navegarPara('menuOperacao'));
 
 
 async function verificarUsuario() {
@@ -1258,34 +1289,8 @@ async function verificarUsuario() {
             estado.perfil = perfilEncontrado;
             void carregarEquipamentosExtrasSupabase();
             void carregarEquipamentosPendentesSupabase();
-            const navAdmin = document.getElementById('nav-admin');
-            const navHoraExtra = document.getElementById('nav-hora-extra');
-            const navProgramar = document.getElementById('nav-programar');
-            const navProgramarCalendario = document.getElementById('nav-programar-calendario');
-            const navQuemNaoApontou = document.getElementById('nav-quem-nao-apontou');
-            if (estado.perfil.funcao === 'admin') {
-                if (navAdmin) navAdmin.classList.remove('oculto');
-                if (navHoraExtra) navHoraExtra.classList.remove('oculto');
-                if (navProgramar) navProgramar.classList.remove('oculto');
-                if (navProgramarCalendario) navProgramarCalendario.classList.remove('oculto');
-                if (navQuemNaoApontou) navQuemNaoApontou.classList.remove('oculto');
-                document.getElementById('menu-usuario').classList.add('oculto');
-                document.getElementById('menu-admin').classList.remove('oculto');
-            } else {
-                if (navAdmin) navAdmin.classList.add('oculto');
-                if (navHoraExtra) navHoraExtra.classList.add('oculto');
-                if (navProgramar) navProgramar.classList.add('oculto');
-                if (navProgramarCalendario) navProgramarCalendario.classList.add('oculto');
-                if (navQuemNaoApontou) navQuemNaoApontou.classList.add('oculto');
-                document.getElementById('menu-usuario').classList.remove('oculto');
-                document.getElementById('menu-admin').classList.add('oculto');
-            }
             atualizarNomeUsuario();
-            if ((estado.perfil.tipo_perfil || '') === 'operacao') {
-                await navegarPara('menuOperacao');
-            } else {
-                await navegarPara('menu');
-            }
+            await navegarParaInicio();
         } else {
             console.error('Perfil não encontrado após retentativas.');
             await navegarPara('dashboard');
@@ -2064,7 +2069,6 @@ document.getElementById('btn-operacao-ir-incluir-equip')?.addEventListener('clic
 
 document.getElementById('nav-equipamentos-operacao')?.addEventListener('click', () => navegarPara('equipamentosOperacao'));
 document.getElementById('btn-operacao-equipamentos')?.addEventListener('click', () => navegarPara('equipamentosOperacao'));
-document.getElementById('btn-voltar-equipamentos-operacao')?.addEventListener('click', () => navegarPara('menuOperacao'));
 
 const VALOR_SEM_EQUIPAMENTO_APONTAMENTO = 'Sem equipamento';
 
@@ -2197,7 +2201,7 @@ document.getElementById('formulario-abrir-os')?.addEventListener('submit', async
         mostrarSucesso('Solicitação enviada!');
         e.target.reset();
         obterProximoNumeroOS().then(num => { const c = document.getElementById('os-numero'); if (c) c.value = num; });
-        navegarPara('menuOperacao');
+        navegarParaInicio();
     } catch (err) {
         mostrarErro('Erro', err.message || 'Não foi possível enviar. Execute supabase_setup_ordens_servico.sql');
     }
@@ -3521,7 +3525,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         btn.innerHTML = '<i data-lucide="check-circle"></i> SALVAR APONTAMENTO';
         btn.dataset.modo = '';
         await encerrarOrdemServicoSeConcluido(ordem, concluido);
-        await navegarPara('menu');
+        await navegarParaInicio();
 
     } catch (erro) {
         mostrarErro('Ops!', erro.message);
@@ -3811,8 +3815,6 @@ document.getElementById('btn-moinho-cancelar-form')?.addEventListener('click', (
     document.getElementById('form-moinho-ideias')?.reset();
 });
 document.getElementById('btn-menu-preventivas')?.addEventListener('click', () => navegarPara('preventivas'));
-document.getElementById('btn-voltar-menu-moinho')?.addEventListener('click', () => navegarPara('menu'));
-document.getElementById('btn-voltar-menu-preventivas')?.addEventListener('click', () => navegarPara('menu'));
 
 let filtrosAdmin = {
     unidade: '',
