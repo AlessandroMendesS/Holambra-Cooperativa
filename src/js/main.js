@@ -638,8 +638,8 @@ function mostrarSucesso(titulo) {
     });
 }
 
-const LIMITE_DIARIO_MINUTOS = 8 * 60 + 40;
-const LIMITE_DIARIO_TEXTO_LEGIVEL = '8 h 40 min';
+const LIMITE_DIARIO_MINUTOS = 9 * 60;
+const LIMITE_DIARIO_TEXTO_LEGIVEL = '9 h';
 
 function duracaoMinutosIntervalo(inicio, fim) {
     if (!inicio || !fim) return 0;
