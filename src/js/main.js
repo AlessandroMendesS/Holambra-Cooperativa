@@ -20,11 +20,6 @@ const estado = {
 let calendarioColabMesRef = new Date();
 let calendarioAdminEditandoId = null;
 
-const ADMIN_ACCOUNTS = [
-    { email: 'leticiamendes123z@gmail.com', senha: 'Hab16313@', nome: 'Administrador' },
-    { email: 'tanielli.costa@holambra.com.br', senha: 'Holambra@2026', nome: 'Tanielli Costa' }
-];
-
 const ULTRAMSG_CONFIG = {
     instanceId: 'instance170085',
     token: 'bulzhjv9i0i2k78a',
@@ -1322,11 +1317,6 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
     const senha = document.getElementById('login-senha').value;
     const modoEmail = document.getElementById('login-modo')?.value === 'email';
 
-    const adminEncontrado = ADMIN_ACCOUNTS.find((admin) =>
-        inputLogin.toLowerCase() === admin.email.toLowerCase() && senha === admin.senha
-    );
-    let isAdmin = !!adminEncontrado;
-
     let email = inputLogin;
 
     if (modoEmail) {
@@ -1334,27 +1324,23 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
             mostrarErro('Falha no Login', 'Informe o login no formato do cadastro (e-mail corporativo).');
             return;
         }
-        if (isAdmin) {
-            email = adminEncontrado.email;
-        } else {
-            const { data: porEmail, error: errEmail } = await supabase
-                .from('perfis')
-                .select('email, cpf')
-                .eq('email', inputLogin.trim())
-                .maybeSingle();
-            if (errEmail || !porEmail) {
-                mostrarErro('Falha no Login', 'Login não encontrado no cadastro de operação.');
-                return;
-            }
-            email = porEmail.email && String(porEmail.email).includes('@')
-                ? porEmail.email
-                : emailTecnicoPorCpf(porEmail.cpf);
-            if (!email) {
-                mostrarErro('Falha no Login', 'Não foi possível identificar o e-mail técnico de acesso.');
-                return;
-            }
+        const { data: porEmail, error: errEmail } = await supabase
+            .from('perfis')
+            .select('email, cpf')
+            .eq('email', inputLogin.trim())
+            .maybeSingle();
+        if (errEmail || !porEmail) {
+            mostrarErro('Falha no Login', 'Login não encontrado no cadastro.');
+            return;
         }
-    } else if (!isAdmin) {
+        email = porEmail.email && String(porEmail.email).includes('@')
+            ? porEmail.email
+            : emailTecnicoPorCpf(porEmail.cpf);
+        if (!email) {
+            mostrarErro('Falha no Login', 'Não foi possível identificar o e-mail técnico de acesso.');
+            return;
+        }
+    } else {
         const raw = inputLogin.trim();
         let perfilData = null;
         const rawNumero = normalizarNumeroWhatsapp(raw);
@@ -1427,111 +1413,14 @@ document.getElementById('formulario-login').addEventListener('submit', async (e)
         }
     }
 
-    let { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
 
-    if (error && isAdmin) {
-        if (error.message.includes('Invalid login') || error.message.includes('Email not confirmed') || error.message.includes('User not found')) {
-            Swal.fire({
-                title: 'Criando conta de administrador...',
-                text: 'Aguarde...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email: adminEncontrado.email,
-                password: adminEncontrado.senha,
-                options: {
-                    data: {
-                        nome_completo: adminEncontrado.nome,
-                        funcao: 'admin'
-                    },
-                    emailRedirectTo: window.location.origin
-                }
-            });
-
-            Swal.close();
-
-            if (signUpError) {
-                await new Promise(r => setTimeout(r, 1000));
-                const retry = await supabase.auth.signInWithPassword({ email, password: senha });
-                if (retry.error) {
-                    mostrarErro('Falha no Login', 'Verifique se o email foi confirmado ou tente novamente em alguns instantes.');
-                    return;
-                }
-                data = retry.data;
-            } else if (signUpData.user) {
-                if (signUpData.session) {
-                    data = signUpData;
-                } else {
-                    await new Promise(r => setTimeout(r, 1500));
-                    const loginRetry = await supabase.auth.signInWithPassword({ email, password: senha });
-                    if (loginRetry.error) {
-                        mostrarErro('Conta Criada', 'Verifique seu email para confirmar a conta ou tente fazer login novamente.');
-                        return;
-                    }
-                    data = loginRetry.data;
-                }
-            }
-        } else {
-            mostrarErro('Falha no Login', error.message);
-            return;
-        }
-    } else if (error) {
+    if (error) {
         mostrarErro('Falha no Login', 'Email ou senha incorretos.');
         return;
     }
 
     if (data && data.user) {
-        if (isAdmin) {
-            await new Promise(r => setTimeout(r, 1500));
-
-            let perfilData = null;
-            for (let i = 0; i < 5; i++) {
-                const { data: perfil, error: perfilError } = await supabase
-                    .from('perfis')
-                    .select('*')
-                    .eq('id', data.user.id)
-                    .single();
-
-                if (perfil && !perfilError) {
-                    perfilData = perfil;
-                    break;
-                }
-                await new Promise(r => setTimeout(r, 500));
-            }
-
-            if (perfilData) {
-                if (perfilData.funcao !== 'admin') {
-                    const { error: updateError } = await supabase
-                        .from('perfis')
-                        .update({ funcao: 'admin', email: email, nome_completo: adminEncontrado.nome })
-                        .eq('id', data.user.id);
-
-                    if (updateError) {
-                        console.error('Erro ao atualizar perfil admin:', updateError);
-                    }
-                }
-            } else {
-                const { error: insertError } = await supabase
-                    .from('perfis')
-                    .insert({
-                        id: data.user.id,
-                        email: email,
-                        nome_completo: adminEncontrado.nome,
-                        funcao: 'admin'
-                    });
-
-                if (insertError) {
-                    console.error('Erro ao criar perfil admin:', insertError);
-                    await supabase
-                        .from('perfis')
-                        .update({ funcao: 'admin', email: email, nome_completo: 'Administrador' })
-                        .eq('id', data.user.id);
-                }
-            }
-        }
-
         Toast.fire({ icon: 'success', title: 'Login realizado com sucesso' });
         await verificarUsuario();
     }
