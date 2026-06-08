@@ -1296,20 +1296,31 @@ async function verificarUsuario() {
     }
 }
 
-document.getElementById('btn-alternar-login-email')?.addEventListener('click', () => {
+function definirModoLogin(modo) {
     const hid = document.getElementById('login-modo');
     const label = document.getElementById('login-campo-label');
     const input = document.getElementById('login-email');
-    const btn = document.getElementById('btn-alternar-login-email');
-    if (!hid || !label || !input || !btn) return;
-    const irParaEmail = hid.value !== 'email';
-    hid.value = irParaEmail ? 'email' : 'nome';
-    label.textContent = irParaEmail ? 'Login (cadastro operação)' : 'Login (manutenção)';
-    input.placeholder = irParaEmail ? 'Email cadastrado no perfil' : 'Nome, e-mail ou número cadastrado no perfil';
+    const btnManut = document.getElementById('btn-login-manutencao');
+    const btnOper = document.getElementById('btn-login-operacao');
+    if (!hid || !label || !input) return;
+
+    const isOperacao = modo === 'email';
+    hid.value = isOperacao ? 'email' : 'nome';
+    label.textContent = isOperacao ? 'Login (cadastro operação)' : 'Login (manutenção)';
+    input.placeholder = isOperacao
+        ? 'Email cadastrado no perfil'
+        : 'Nome, e-mail ou número cadastrado no perfil';
     input.type = 'text';
-    input.autocomplete = irParaEmail ? 'username' : 'username';
-    btn.textContent = irParaEmail ? 'Entrar com login (manutenção)' : 'Entrar com login (operação)';
-});
+    input.autocomplete = 'username';
+
+    btnManut?.classList.toggle('login-modo-btn--ativo', !isOperacao);
+    btnManut?.setAttribute('aria-selected', String(!isOperacao));
+    btnOper?.classList.toggle('login-modo-btn--ativo', isOperacao);
+    btnOper?.setAttribute('aria-selected', String(isOperacao));
+}
+
+document.getElementById('btn-login-manutencao')?.addEventListener('click', () => definirModoLogin('nome'));
+document.getElementById('btn-login-operacao')?.addEventListener('click', () => definirModoLogin('email'));
 
 document.getElementById('formulario-login').addEventListener('submit', async (e) => {
     e.preventDefault();

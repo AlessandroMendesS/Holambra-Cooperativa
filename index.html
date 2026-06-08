@@ -101,10 +101,15 @@
                     
                     <form id="formulario-login">
                         <input type="hidden" id="login-modo" value="nome">
-                        <div class="grupo-input centro" style="margin-bottom: 1rem;">
-                            <button type="button" id="btn-alternar-login-email" class="btn btn-outline" style="max-width: 100%; text-transform: none; font-size: 0.85rem;">
-                                Entrar com login (operação)
-                            </button>
+                        <div class="grupo-input login-modo-wrap">
+                            <div class="login-modo-grupo" role="tablist" aria-label="Tipo de login">
+                                <button type="button" id="btn-login-manutencao" class="login-modo-btn login-modo-btn--ativo" data-modo="nome" role="tab" aria-selected="true">
+                                    Manutenção
+                                </button>
+                                <button type="button" id="btn-login-operacao" class="login-modo-btn" data-modo="email" role="tab" aria-selected="false">
+                                    Operação
+                                </button>
+                            </div>
                         </div>
                         <div class="grupo-input">
                             <label id="login-campo-label">Login (manutenção)</label>

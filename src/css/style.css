@@ -203,6 +203,53 @@ body::before {
     overflow: hidden;
 }
 
+.login-modo-wrap {
+    margin-bottom: 1.25rem;
+}
+
+.login-modo-grupo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    border: 1px solid var(--borda);
+}
+
+.login-modo-btn {
+    width: 100%;
+    min-height: 40px;
+    border: none;
+    background: transparent;
+    padding: 0.55rem 0.75rem;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    text-transform: none;
+    letter-spacing: 0.01em;
+}
+
+.login-modo-btn:hover:not(.login-modo-btn--ativo) {
+    color: var(--cor-primaria);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.login-modo-btn--ativo {
+    background: #fff;
+    color: var(--cor-primaria);
+    box-shadow: 0 1px 3px rgba(0, 65, 117, 0.1);
+}
+
+.login-modo-btn:focus-visible {
+    outline: 2px solid var(--cor-primaria);
+    outline-offset: 2px;
+}
+
 
 h2 {
     font-family: var(--fonte-display);
