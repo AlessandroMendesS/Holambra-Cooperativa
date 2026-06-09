@@ -1,6 +1,0 @@
-[build]
-  command = "node scripts/inject-supabase-env.mjs"
-  publish = "."
-
-[build.environment]
-  NODE_VERSION = "20"
