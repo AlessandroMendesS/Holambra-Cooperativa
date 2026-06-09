@@ -1,16 +1,36 @@
 
+let _client = null;
 
-const credenciais = {
-    url: 'https://unhnwdrcnrlmzhufcxpo.supabase.co',
-    chave: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuaG53ZHJjbnJsbXpodWZjeHBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNzgyODksImV4cCI6MjA4Njc1NDI4OX0.7aFSS7_M-m6HBeBrjNj4DZTec1ly5S7ew1-DgUxXiLQ'
-};
+export async function initSupabase() {
+    if (_client) return _client;
 
+    if (typeof window.supabase === 'undefined') {
+        throw new Error('Biblioteca do Supabase não carregou.');
+    }
 
-if (typeof window.supabase === 'undefined') {
-    console.error('Supabase library not loaded. Check script imports.');
-    alert('Erro Fatal: Biblioteca do Supabase não carregou. Verifique sua conexão.');
+    const resp = await fetch('/.netlify/functions/supabase-config', { cache: 'no-store' });
+    if (!resp.ok) {
+        throw new Error('Não foi possível carregar as credenciais do Supabase (Netlify Functions).');
+    }
+
+    const cfg = await resp.json();
+    if (cfg.error || !cfg.url || !cfg.anonKey) {
+        throw new Error(cfg.error || 'Resposta inválida da função supabase-config.');
+    }
+
+    _client = window.supabase.createClient(cfg.url, cfg.anonKey);
+    return _client;
 }
 
-const supabase = window.supabase.createClient(credenciais.url, credenciais.chave);
-
-export { supabase };
+export const supabase = new Proxy(
+    {},
+    {
+        get(_target, prop) {
+            if (!_client) {
+                throw new Error('Supabase ainda não foi inicializado.');
+            }
+            const val = _client[prop];
+            return typeof val === 'function' ? val.bind(_client) : val;
+        }
+    }
+);
