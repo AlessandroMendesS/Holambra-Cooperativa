@@ -6374,5 +6374,5 @@ initSupabase()
     .then(() => verificarUsuario())
     .catch((err) => {
         console.error(err);
-        alert('Não foi possível conectar ao sistema. Verifique as Environment variables SUPABASE_URL e SUPABASE_ANON_KEY na Netlify.');
+        alert('Não foi possível conectar ao sistema. Na Netlify, configure SUPABASE_URL e SUPABASE_ANON_KEY e faça um novo deploy (Deploys → Trigger deploy).');
     });

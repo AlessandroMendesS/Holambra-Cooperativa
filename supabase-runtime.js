@@ -1,0 +1,1 @@
+window.__SUPABASE_RUNTIME__={"url":"https://unhnwdrcnrlmzhufcxpo.supabase.co","anonKey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuaG53ZHJjbnJsbXpodWZjeHBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNzgyODksImV4cCI6MjA4Njc1NDI4OX0.7aFSS7_M-m6HBeBrjNj4DZTec1ly5S7ew1-DgUxXiLQ"};

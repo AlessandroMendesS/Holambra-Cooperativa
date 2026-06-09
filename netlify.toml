@@ -1,6 +1,6 @@
 [build]
+  command = "node scripts/inject-supabase-env.mjs"
   publish = "."
-  functions = "netlify/functions"
 
-[dev]
-  framework = "#static"
+[build.environment]
+  NODE_VERSION = "20"

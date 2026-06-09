@@ -1,6 +1,12 @@
 
 let _client = null;
 
+function lerConfigRuntime() {
+    const cfg = window.__SUPABASE_RUNTIME__;
+    if (!cfg?.url || !cfg?.anonKey) return null;
+    return { url: cfg.url, anonKey: cfg.anonKey };
+}
+
 export async function initSupabase() {
     if (_client) return _client;
 
@@ -8,14 +14,11 @@ export async function initSupabase() {
         throw new Error('Biblioteca do Supabase não carregou.');
     }
 
-    const resp = await fetch('/.netlify/functions/supabase-config', { cache: 'no-store' });
-    if (!resp.ok) {
-        throw new Error('Não foi possível carregar as credenciais do Supabase (Netlify Functions).');
-    }
-
-    const cfg = await resp.json();
-    if (cfg.error || !cfg.url || !cfg.anonKey) {
-        throw new Error(cfg.error || 'Resposta inválida da função supabase-config.');
+    const cfg = lerConfigRuntime();
+    if (!cfg) {
+        throw new Error(
+            'Credenciais do Supabase não encontradas. Na Netlify, configure SUPABASE_URL e SUPABASE_ANON_KEY e faça um novo deploy.'
+        );
     }
 
     _client = window.supabase.createClient(cfg.url, cfg.anonKey);
