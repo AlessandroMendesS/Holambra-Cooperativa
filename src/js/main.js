@@ -1,5 +1,5 @@
 
-import { supabase, initSupabase } from './supabase.js';
+import { supabase } from './supabase.js';
 
 const estado = {
     usuario: null,
@@ -6370,9 +6370,4 @@ async function carregarDashboardOperacao() {
     lucide.createIcons();
 }
 
-initSupabase()
-    .then(() => verificarUsuario())
-    .catch((err) => {
-        console.error(err);
-        alert('Não foi possível conectar ao sistema. Na Netlify, configure SUPABASE_URL e SUPABASE_ANON_KEY e faça um novo deploy (Deploys → Trigger deploy).');
-    });
+verificarUsuario();

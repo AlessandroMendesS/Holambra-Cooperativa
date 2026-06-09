@@ -1,39 +1,15 @@
+// Apis publica, não há necessidade de proteção , se quiser proteger me avisa - AA -Alessandro 
+const credenciais = {
+    url: 'https://unhnwdrcnrlmzhufcxpo.supabase.co',
+    chave: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuaG53ZHJjbnJsbXpodWZjeHBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNzgyODksImV4cCI6MjA4Njc1NDI4OX0.7aFSS7_M-m6HBeBrjNj4DZTec1ly5S7ew1-DgUxXiLQ'
+};
 
-let _client = null;
 
-function lerConfigRuntime() {
-    const cfg = window.__SUPABASE_RUNTIME__;
-    if (!cfg?.url || !cfg?.anonKey) return null;
-    return { url: cfg.url, anonKey: cfg.anonKey };
+if (typeof window.supabase === 'undefined') {
+    console.error('Supabase library not loaded. Check script imports.');
+    alert('Erro Fatal: Biblioteca do Supabase não carregou. Verifique sua conexão.');
 }
 
-export async function initSupabase() {
-    if (_client) return _client;
+const supabase = window.supabase.createClient(credenciais.url, credenciais.chave);
 
-    if (typeof window.supabase === 'undefined') {
-        throw new Error('Biblioteca do Supabase não carregou.');
-    }
-
-    const cfg = lerConfigRuntime();
-    if (!cfg) {
-        throw new Error(
-            'Credenciais do Supabase não encontradas. Na Netlify, configure SUPABASE_URL e SUPABASE_ANON_KEY e faça um novo deploy.'
-        );
-    }
-
-    _client = window.supabase.createClient(cfg.url, cfg.anonKey);
-    return _client;
-}
-
-export const supabase = new Proxy(
-    {},
-    {
-        get(_target, prop) {
-            if (!_client) {
-                throw new Error('Supabase ainda não foi inicializado.');
-            }
-            const val = _client[prop];
-            return typeof val === 'function' ? val.bind(_client) : val;
-        }
-    }
-);
+export { supabase };
