@@ -1171,6 +1171,7 @@ document.getElementById('btn-novo-apt').addEventListener('click', () => {
     apontamentoEditando = null;
     document.getElementById('formulario-apontamento').reset();
     popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
+    definirBloqueioEquipamentoApontamento(false);
     setEstadoFinalizadoApontamento(null);
     definirCabecalhoApontamentoNovo();
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
@@ -1187,6 +1188,7 @@ document.getElementById('btn-menu-apontamentos').addEventListener('click', () =>
     apontamentoEditando = null;
     document.getElementById('formulario-apontamento').reset();
     popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
+    definirBloqueioEquipamentoApontamento(false);
     setEstadoFinalizadoApontamento(null);
     definirCabecalhoApontamentoNovo();
     const btnSubmit = document.querySelector('#formulario-apontamento button[type="submit"]');
@@ -1976,10 +1978,90 @@ const VALOR_SEM_EQUIPAMENTO_APONTAMENTO = 'Sem equipamento';
 const VALOR_OS_EQUIP_NAO_NA_LISTA = '__os_equip_nao_na_lista__';
 const TEXTO_OS_EQUIP_GRAVADO_NAO_LISTADO = 'Não se encontra nesta lista';
 
+function extrairSetorCentroDeSetorProgramado(setorRaw) {
+    if (!setorRaw) return '';
+    const m = String(setorRaw).match(/\s·\s(.+)$/);
+    return m ? m[1].trim() : '';
+}
+
+async function buscarOrdemServicoPorNumero(numeroOs) {
+    const variantes = variantesNumeroOs(numeroOs);
+    if (!variantes.length) return null;
+    const { data, error } = await supabase
+        .from('ordens_servico')
+        .select('setor_centro, equipamento, centro_trabalho, setor, unidade')
+        .in('numero_solicitacao', variantes)
+        .limit(1);
+    if (error || !data?.length) return null;
+    return data[0];
+}
+
+function garantirOpcaoEquipamentoApontamento(valor) {
+    const equipamentoSel = document.getElementById('apt-equipamento');
+    if (!equipamentoSel || !valor) return;
+    if (![...equipamentoSel.options].some((o) => o.value === valor)) {
+        const opt = document.createElement('option');
+        opt.value = valor;
+        opt.textContent = valor;
+        equipamentoSel.appendChild(opt);
+    }
+    equipamentoSel.value = valor;
+}
+
+function definirBloqueioEquipamentoApontamento(bloqueado, valorPreservar = '') {
+    const equipamentoSel = document.getElementById('apt-equipamento');
+    if (!equipamentoSel) return;
+    if (bloqueado) {
+        if (valorPreservar) garantirOpcaoEquipamentoApontamento(valorPreservar);
+        equipamentoSel.disabled = true;
+        equipamentoSel.required = false;
+        equipamentoSel.dataset.bloqueadoEdicao = '1';
+        return;
+    }
+    delete equipamentoSel.dataset.bloqueadoEdicao;
+}
+
+async function preencherCamposDeOsProgramada(numeroOs, setorProgramadoRaw = '') {
+    const asc = document.getElementById('apt-setor-centro');
+    const centroSel = document.getElementById('apt-centro');
+    const os = await buscarOrdemServicoPorNumero(numeroOs);
+    const setorCentro = os?.setor_centro || extrairSetorCentroDeSetorProgramado(setorProgramadoRaw);
+
+    if (asc && setorCentro) {
+        if (SETORES.includes(setorCentro)) {
+            asc.value = setorCentro;
+        } else if (![...asc.options].some((o) => o.value === setorCentro)) {
+            const opt = document.createElement('option');
+            opt.value = setorCentro;
+            opt.textContent = setorCentro;
+            asc.appendChild(opt);
+            asc.value = setorCentro;
+        } else {
+            asc.value = setorCentro;
+        }
+    }
+
+    if (centroSel && os?.centro_trabalho) {
+        const centro = String(os.centro_trabalho).trim();
+        if ([...centroSel.options].some((o) => o.value === centro)) {
+            centroSel.value = centro;
+        }
+    }
+
+    if (!apontamentoEditando && os?.equipamento) {
+        const equipamentoSel = document.getElementById('apt-equipamento');
+        if (equipamentoSel && !equipamentoSel.dataset.bloqueadoEdicao) {
+            garantirOpcaoEquipamentoApontamento(String(os.equipamento).trim());
+        }
+    }
+}
+
 async function atualizarEquipamentosApontamento(unidade) {
     await carregarEquipamentosExtrasSupabase();
     const equipamentoSel = document.getElementById('apt-equipamento');
     if (!equipamentoSel) return;
+    const bloqueadoEdicao = equipamentoSel.dataset.bloqueadoEdicao === '1';
+    const valorBloqueado = bloqueadoEdicao ? equipamentoSel.value : '';
     const lista = obterListaEquipamentosParaUnidade(unidade);
     equipamentoSel.innerHTML = '';
     delete equipamentoSel.dataset.equipamentoOpcional;
@@ -1987,12 +2069,21 @@ async function atualizarEquipamentosApontamento(unidade) {
         equipamentoSel.disabled = true;
         equipamentoSel.required = false;
         equipamentoSel.innerHTML = '<option value="">Selecione primeiro a unidade</option>';
+        if (bloqueadoEdicao && valorBloqueado) {
+            garantirOpcaoEquipamentoApontamento(valorBloqueado);
+            definirBloqueioEquipamentoApontamento(true, valorBloqueado);
+        }
         return;
     }
     if (lista.length === 0) {
-        equipamentoSel.disabled = false;
+        equipamentoSel.disabled = bloqueadoEdicao;
         equipamentoSel.required = false;
-        equipamentoSel.dataset.equipamentoOpcional = '1';
+        if (!bloqueadoEdicao) equipamentoSel.dataset.equipamentoOpcional = '1';
+        if (bloqueadoEdicao && valorBloqueado) {
+            garantirOpcaoEquipamentoApontamento(valorBloqueado);
+            definirBloqueioEquipamentoApontamento(true, valorBloqueado);
+            return;
+        }
         const opt = document.createElement('option');
         opt.value = VALOR_SEM_EQUIPAMENTO_APONTAMENTO;
         opt.textContent = 'Sem equipamento na lista — pode apontar (ex.: CRE, repasse, serviço geral)';
@@ -2000,8 +2091,8 @@ async function atualizarEquipamentosApontamento(unidade) {
         equipamentoSel.appendChild(opt);
         return;
     }
-    equipamentoSel.disabled = false;
-    equipamentoSel.required = true;
+    equipamentoSel.disabled = bloqueadoEdicao;
+    equipamentoSel.required = !bloqueadoEdicao;
     equipamentoSel.innerHTML = '<option value="">Selecione o equipamento</option>';
     lista.forEach((eq) => {
         const opt = document.createElement('option');
@@ -2009,6 +2100,9 @@ async function atualizarEquipamentosApontamento(unidade) {
         opt.textContent = eq;
         equipamentoSel.appendChild(opt);
     });
+    if (bloqueadoEdicao && valorBloqueado) {
+        definirBloqueioEquipamentoApontamento(true, valorBloqueado);
+    }
 }
 
 async function verificarSuporteCampoEquipamentoApontamento() {
@@ -3124,6 +3218,13 @@ document.getElementById('apt-ordem-select')?.addEventListener('change', async fu
     if (val === '__outra__' || val === '') {
         if (aptDesc) aptDesc.value = '';
         if (aptUnidade) aptUnidade.value = '';
+        const asc = document.getElementById('apt-setor-centro');
+        if (asc) {
+            asc.value = '';
+            if (estado.perfil?.setor_centro_padrao && SETORES.includes(estado.perfil.setor_centro_padrao)) {
+                asc.value = estado.perfil.setor_centro_padrao;
+            }
+        }
         await atualizarEquipamentosApontamento('');
         if (val === '__outra__') {
             await preencherNumeroOrdemApontamentoAutomatico();
@@ -3133,6 +3234,7 @@ document.getElementById('apt-ordem-select')?.addEventListener('change', async fu
         if (opt && aptDesc) aptDesc.value = opt.dataset.problema || '';
         if (opt && aptUnidade) aptUnidade.value = opt.dataset.setor || '';
         await atualizarEquipamentosApontamento(aptUnidade?.value || '');
+        await preencherCamposDeOsProgramada(val, opt?.textContent || '');
     }
 });
 
@@ -3213,12 +3315,15 @@ async function abrirEdicaoApontamento(apt) {
     document.getElementById('apt-desc').value = apt.descricao;
     document.getElementById('apt-unidade').value = apt.unidade;
     await atualizarEquipamentosApontamento(apt.unidade);
-    if (document.getElementById('apt-equipamento')) {
-        document.getElementById('apt-equipamento').value = apt.equipamento || '';
-    }
+    definirBloqueioEquipamentoApontamento(true, apt.equipamento || '');
     popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
     const ascEd = document.getElementById('apt-setor-centro');
     if (ascEd && apt.setor_centro) ascEd.value = apt.setor_centro;
+    if (temNaProg && selectOS?.value && selectOS.value !== '__outra__') {
+        const optProg = selectOS.selectedOptions[0];
+        await preencherCamposDeOsProgramada(selectOS.value, optProg?.textContent || '');
+        if (ascEd && apt.setor_centro) ascEd.value = apt.setor_centro;
+    }
     document.getElementById('apt-centro').value = apt.centro_trabalho;
     document.getElementById('apt-data').value = apt.data_servico;
     document.getElementById('apt-inicio').value = apt.hora_inicio;
@@ -3276,7 +3381,9 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         }
         let desc = (document.getElementById('apt-desc').value || '').trim();
         const unidade = document.getElementById('apt-unidade').value;
-        let equipamento = document.getElementById('apt-equipamento')?.value || '';
+        let equipamento = isEdicao
+            ? (apontamentoEditando?.equipamento || document.getElementById('apt-equipamento')?.value || '')
+            : (document.getElementById('apt-equipamento')?.value || '');
         const setorCentroMt = document.getElementById('apt-setor-centro')?.value?.trim() || '';
         const idManutentor = document.getElementById('apt-manutentor').value;
         const centro = document.getElementById('apt-centro').value;
@@ -3303,8 +3410,8 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
         if (!setorCentroMt) {
             throw new Error('Selecione o setor (código / centro MT).');
         }
-        const equipamentoOpcional = document.getElementById('apt-equipamento')?.dataset?.equipamentoOpcional === '1';
-        if (!equipamentoOpcional && !equipamento) {
+        const equipamentoOpcional = !isEdicao && document.getElementById('apt-equipamento')?.dataset?.equipamentoOpcional === '1';
+        if (!isEdicao && !equipamentoOpcional && !equipamento) {
             throw new Error('Selecione o equipamento.');
         }
         if (equipamentoOpcional && !equipamento) {
@@ -3418,6 +3525,7 @@ document.getElementById('formulario-apontamento').addEventListener('submit', asy
 
         e.target.reset();
         popularSelectSetoresMT('apt-setor-centro', 'Selecione o setor (código)…');
+        definirBloqueioEquipamentoApontamento(false);
         setEstadoFinalizadoApontamento(null);
         await atualizarEquipamentosApontamento('');
         apontamentoEditando = null;
